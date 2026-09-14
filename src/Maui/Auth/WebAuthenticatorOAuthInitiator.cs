@@ -23,7 +23,7 @@ public sealed class WebAuthenticatorOAuthInitiator(
     public async Task<IReadOnlyDictionary<string, string>?> RunBrowserFlowAsync(string provider, string? linkToken = null)
     {
         var callbackUrl = $"{callbackScheme}://auth";
-        var loginUrl = $"{apiBaseUrl}/api/auth/native/login/{provider.ToLowerInvariant()}" +
+        var loginUrl = $"{apiBaseUrl.TrimEnd('/')}/api/auth/native/login/{provider.ToLowerInvariant()}" +
                        $"?redirect={Uri.EscapeDataString(callbackUrl)}";
         if (!string.IsNullOrEmpty(linkToken))
             loginUrl += $"&link_token={Uri.EscapeDataString(linkToken)}";
