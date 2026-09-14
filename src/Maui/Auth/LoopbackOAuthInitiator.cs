@@ -44,7 +44,7 @@ public sealed class LoopbackOAuthInitiator(string apiBaseUrl, ILogger<LoopbackOA
 
         try
         {
-            var loginUrl = $"{apiBaseUrl}/api/auth/native/login/{provider.ToLowerInvariant()}" +
+            var loginUrl = $"{apiBaseUrl.TrimEnd('/')}/api/auth/native/login/{provider.ToLowerInvariant()}" +
                            $"?redirect={Uri.EscapeDataString(redirectUri)}" +
                            $"&state={Uri.EscapeDataString(state)}";
             if (!string.IsNullOrEmpty(linkToken))
