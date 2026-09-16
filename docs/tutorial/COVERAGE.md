@@ -234,7 +234,7 @@
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (107 files)
+## 3.4 — The web client & auth UI (109 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
@@ -339,10 +339,12 @@
 - `tests/Ui.Tests/LocaleReloadLoopGuardTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/NotifyBillingTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/PreferenceScopingTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/PreferenceSyncRefreshTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/ReconcileMatrixTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SeatLimitCopyTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SignupRefusedCopyTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SwitcherStateTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/SystemBarThemeSyncTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 
 ## 3.5 — Localization (EN/ES) (11 files)
 
@@ -689,7 +691,7 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 
-## A.1 — Appendix — MAUI shells & parity (34 files)
+## A.1 — Appendix — MAUI shells & parity (38 files)
 
 - `src/Maui/App.xaml`
 - `src/Maui/App.xaml.cs`
@@ -697,6 +699,7 @@
 - `src/Maui/MainPage.xaml.cs`
 - `src/Maui/MauiProgram.cs`
 - `src/Maui/Platforms/Android/AndroidManifest.xml`
+- `src/Maui/Platforms/Android/AndroidSystemBarTheme.cs`
 - `src/Maui/Platforms/Android/MainActivity.cs`
 - `src/Maui/Platforms/Android/MainApplication.cs`
 - `src/Maui/Platforms/Android/Resources/values/colors.xml`
@@ -721,6 +724,9 @@
 - `src/Maui/ShareFileDownloadLauncher.cs`
 - `src/Maui/wwwroot/index.html`
 - `src/Shared.Ui/AppResumeNotifier.cs` — refresh-on-resume seam (NATIVE-4 G2)
+- `src/Shared.Ui/Components/SystemBarThemeSync.razor` — renderless: relays theme.js's applied theme to ISystemBarTheme
+- `src/Shared.Ui/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
+- `tests/Api.Tests/NativeChromeGateTests.cs` — Android bar colours = app.css tokens; top inset applied once
 - `tests/E2E.Tests/NativeSmokeTests.cs` — NATIVE-7 emulator/WebView2 smoke
 - `tests/native-smoke-android/package-lock.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/package.json` — Android playwright-core smoke harness
@@ -1052,4 +1058,4 @@
 - `tests/E2E.Tests/README.md` — docs
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 885 tracked files · 587 built in lessons · 298 bucketed · 0 unmapped
+**Totals:** 891 tracked files · 593 built in lessons · 298 bucketed · 0 unmapped

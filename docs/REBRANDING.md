@@ -133,6 +133,15 @@ The palette is semantic tokens, single-sourced for web **and** all native shells
 - **`src/Infrastructure/Email/BrandedEmail.cs`** — the colour constants at the top (`Green`,
   `GreenDark`, `Sage`, `SageLight`, `Surface`, `Border`, `Ink`, `Muted`) — rename them to match
   your palette while you're there. They're hard-coded because email HTML can't use CSS variables.
+- **The Android system bars** — `src/Maui/Platforms/Android/Resources/values/colors.xml` (the theme's
+  `colorPrimary`/`colorAccent` = `--bs-primary`, `colorPrimaryDark` = `--brand-dark`) and
+  `SystemBarColors` in `src/Maui/Platforms/Android/AndroidSystemBarTheme.cs`, whose `Light`/`Dark` must
+  equal the header's background in each theme (here `--bs-primary` in both; if your header takes a
+  different surface per theme, use those) and `LightGround`/`DarkGround` app.css's `--app-bg` in each
+  theme. The status bar is drawn by the OS above the header (or above the bare page on the sign-in
+  screens), and the page paints it through `SystemBarThemeSync`. `NativeChromeGateTests` fails while
+  these disagree with app.css. Before 2026-09-16 the template hard-coded its sage in `MainActivity` in
+  every theme and no rebrand step named it, so downstream Android apps (JiggerJot, y-el-vuelto) wore it.
 
 ## 5. App identifier & OAuth callback scheme — "perezosoft" / app id
 These must all match each other **and** your OAuth provider registration:

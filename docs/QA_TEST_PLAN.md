@@ -1463,6 +1463,9 @@ Then it walks back through the app's pages and only leaves the app at the root
 **Walkthrough:** as QA-DSK-09: signed out, switch to **Español** (re-renders) → **swipe-close** the
 app → relaunch. **Expected:** still Spanish (OS Preferences bootstrap, NATIVE-5). Signed-in accounts
 reconcile to their server-saved locale — by design.
+**Signed in (2026-09-16):** Settings → Language → **Español**. **Expected:** the app reloads once, in
+Spanish, and **stays** Spanish — before the fix it read the old language from the sign-in token, saved
+it back and reloaded again.
 
 ### QA-AND-10 — Data export via the share sheet 🟠 (Android)
 **Walkthrough:** owner → **Household** → **Data** → **Export my data** → **Download**. **Expected:**
@@ -1492,11 +1495,18 @@ Then no control is hidden under the status bar or gesture areas
 bottom-of-screen buttons (Settings danger zone) in both orientations. **Expected:** nothing sits
 under the status bar or the gesture-nav pill; everything tappable. *(Flagged 🔍 by the parity audit —
 if this fails, it becomes a small safe-area fix slice.)*
+**Also, in both themes (2026-09-16):**
+- The **status bar** is the header's colour (the brand green, light icons) on signed-in screens; on the
+  sign-in screen it is the page's ground — near-white with dark icons in Light, near-black with light
+  icons in Dark. Switching the theme repaints it at once, and **Auto** follows the phone's dark-theme toggle.
+- **No empty band** between the status bar and the header.
 
 ### QA-AND-14 — Theme: dark mode survives an app restart 🟢 (Android)
 **Walkthrough:** as QA-DSK-15 on Android — pick **Dark** (hamburger → header controls), force-stop
 the app (or swipe it away) and relaunch. **Expected:** boots dark, no light flash (Android WebView
 localStorage persists). **Auto** follows the system dark theme toggle live.
+**Then (2026-09-16):** signed in, pick **Light** in Settings and immediately switch the language (which
+reloads the app). **Expected:** still Light after the reload — and the status bar follows each change.
 
 ### QA-AND-15 — OAuth sign-in survives process death (NATIVE-12) 🟠 (Android)
 **Gherkin**
@@ -2743,3 +2753,13 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   `BillingWebhookHandlerTests.SubscriptionActivated_*` pin it; the dunning tests now count dunning notices only.
   The cancelled state reads honestly: "Your paid subscription ended on <date>" instead of "renews", and no
   portal button (nothing live to manage; Upgrade is the way back) — `NotifyBillingTests.Billing_CancelledSubscription_*`.
+- **Updated 2026-09-16** — **Android system bars, ported from JiggerJot** (found on a Pixel 10 Pro XL /
+  Android 16 emulator). The status bar was a hard-coded sage whatever the theme, and on the headerless
+  sign-in screen it sat over the page's ground in both themes; it now follows the page (`SystemBarThemeSync`
+  → `ISystemBarTheme`, Android only → `SystemBarColors`, held to app.css by `NativeChromeGateTests`).
+  Current WebViews report the status-bar inset to CSS, so the header's `env(safe-area-inset-top)` added it
+  a second time under `MainActivity`'s padding — the shell now hands the WebView insets with the top spent.
+  And a theme or language picked in the app came undone at the next WebView reload, because the native
+  session keeps its sign-in token across the reload and the reconcile trusted its stale claims — both
+  switchers now refresh the session after a successful save (`PreferenceSyncRefreshTests`).
+  **QA-AND-09**, **QA-AND-13** and **QA-AND-14** carry the new checks. No new cases.
