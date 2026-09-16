@@ -10,7 +10,7 @@
 # Usage: publish-deploy-branch.sh <branch>          e.g. deploy/staging
 # Env:   HOOK          the Render deploy hook for this target — unset ⇒ nothing will deploy, skip quietly
 #        MIRROR_TOKEN  a GitHub token with contents:write on MIRROR_REPO
-#        MIRROR_REPO   owner/name on github.com (repo variable GITHUB_MIRROR_REPO)
+#        MIRROR_REPO   owner/name on github.com (repo variable DEPLOY_MIRROR_REPO)
 # Exit:  0 = published (or deliberately skipped); 1 = a deploy is configured but cannot be published.
 
 set -euo pipefail
@@ -26,7 +26,7 @@ if [ -z "${HOOK:-}" ]; then
   exit 0
 fi
 if [ -z "${MIRROR_TOKEN:-}" ] || [ -z "${MIRROR_REPO:-}" ]; then
-  echo "::error::a deploy hook is set but GITHUB_MIRROR_TOKEN / GITHUB_MIRROR_REPO are not — Render would rebuild a stale $BRANCH. Add them in Settings → Actions."
+  echo "::error::a deploy hook is set but DEPLOY_MIRROR_TOKEN / DEPLOY_MIRROR_REPO are not — Render would rebuild a stale $BRANCH. Add them in Settings → Actions."
   exit 1
 fi
 

@@ -453,9 +453,9 @@ git push -u github my-branch        # before `gh pr create` — PRs still live o
    (auto-deploy stays **off**). Copy the **Deploy Hook**.
 2. **Forgejo** → repo → **Settings → Actions**:
    - Secret **`RENDER_DEPLOY_HOOK_STAGING`** = that hook (and `RENDER_DEPLOY_HOOK_PROD` when prod exists).
-   - Secret **`GITHUB_MIRROR_TOKEN`** = a GitHub **fine-grained** token, only this repository,
+   - Secret **`DEPLOY_MIRROR_TOKEN`** = a GitHub **fine-grained** token, only this repository,
      *Contents: Read and write* (it pushes `deploy/*` and reads the compare API for the smoke).
-   - Variables **`GITHUB_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
+   - Variables **`DEPLOY_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
      (when prod exists), **`POSTMAN_WORKSPACE_ID`**; secret **`POSTMAN_API_KEY`**.
    - Enable **Actions** for the repo (Settings → Units) if it was switched off during the migration.
 3. **GitHub** → **Settings → Secrets → Actions**: delete `RENDER_DEPLOY_HOOK_STAGING`. GitHub's
