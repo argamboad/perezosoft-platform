@@ -2761,5 +2761,7 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   a second time under `MainActivity`'s padding — the shell now hands the WebView insets with the top spent.
   And a theme or language picked in the app came undone at the next WebView reload, because the native
   session keeps its sign-in token across the reload and the reconcile trusted its stale claims — both
-  switchers now refresh the session after a successful save (`PreferenceSyncRefreshTests`).
+  switchers now remember the saved value in the session after a successful save, with no request
+  (`PreferenceSyncClaimTests`; a first cut refreshed the session instead, which on the web rotated the
+  refresh cookie under a reload and came back signed out).
   **QA-AND-09**, **QA-AND-13** and **QA-AND-14** carry the new checks. No new cases.
