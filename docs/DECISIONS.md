@@ -472,6 +472,22 @@ the reference `ExpiredTokenCleanupJob` deletes expired login/refresh tokens hour
 single-instance per the baseline; Hangfire/Quartz remains the documented multi-node swap-in. The JOBS
 epic (outbox, inbox, scheduler) is now done — **BILLING is unblocked.**
 
+*Amendment (2026-09-16) — JOBS-4: file attachments ride the email outbox, capped at 10 MiB.* A
+downstream app needs to email a generated PDF. `IEmailSender.SendAsync` gains
+`IReadOnlyList<EmailAttachment>? attachments = null` (new Core record `EmailAttachment(FileName,
+Content, MediaType)`), placed after `inlineImages` and before the `CancellationToken` — so the token
+must now be passed **by name** (a positional token no longer compiles, which is the point: it can't
+silently rebind). The attachment bytes travel **inside the outbox payload** (base64 in the JSON
+`EmailOutboxPayload.Attachments`) rather than via `IFileStorage` + a key: one-row atomicity is kept,
+and the handler stays storage-free. That is only acceptable because the size is bounded:
+`EmailAttachment.MaxTotalBytes` = 10 MiB (Brevo's limit), checked by `EmailAttachment.Validate`
+**before enqueueing** in `OutboxEmailSender` (an oversize mail would otherwise sit in the outbox failing
+until it dead-letters) and again in `SmtpEmailSender`; a blank file name / media type is refused the
+same way. Violations throw `ArgumentException` (a programming error in the caller, not a delivery
+failure — so not `EmailSendException`). `EmailOutboxPayload.Attachments` is nullable **and defaulted**,
+so payloads enqueued by the previous build still replay. *Revisit* if an app needs attachments past the
+cap: that is the point to switch to storage-key references in the payload.
+
 **ADR-008 — Observability (structured logging + OpenTelemetry + health checks) and a tenant-scoped audit log. Implementation DEFERRED. (2026-06-25)**
 Two complementary concerns shipped as one slice group.
 **(a) Operational observability** — structured (JSON) logging with per-request scopes enriched with

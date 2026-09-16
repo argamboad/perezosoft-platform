@@ -182,6 +182,8 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Infrastructure/Email/SmtpEmailSender.cs", "2.3", "MailKit quarantined here"),
     ("src/Infrastructure/Email/SmtpSettings.cs", "2.3", ""),
     ("tests/Api.Tests/SmtpSettingsTests.cs", "2.3", "incl. the SMTP-revocation knob (PR #125)"),
+    ("tests/Api.Tests/Email/SmtpMessageBuilderTests.cs", "2.3", "MIME shape: CID images + attachment parts (JOBS-4)"),
+    ("tests/Core.Tests/EmailAttachmentTests.cs", "2.3", "attachment guard: 10 MiB total, non-blank name/type (JOBS-4)"),
     ("src/Infrastructure/Email/BrandedEmail.cs", "2.3", "inline-branded templates — the rebrand trap"),
     ("src/Infrastructure/Email/EmailStrings.resx", "2.3", "localized in 3.5"),
     ("src/Infrastructure/Email/EmailStrings.es.resx", "3.5", ""),
