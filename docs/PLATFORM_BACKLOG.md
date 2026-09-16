@@ -32,7 +32,7 @@
 | 10 | ~~Postgres RLS tenancy backstop~~ (§11) → **✅ DONE** (ADR-020 + addendum) | `RLS` | Was the prod-activation prerequisite; built 2026-07-06 | none |
 | 11 | Local + self-hosted CI (§13) → **PLANNED** (ROADMAP post-terminal wave, 2026-09-08) | `LOCALCI` | Actions minutes are the finished platform's only running cost pressure | none (repo private) |
 | 12 | Stack flavors — spec + conformance kit + React/Angular/Flutter fronts, Node/Go/Spring/FastAPI backs, tiered DBs (§14) → **PLANNED** (ROADMAP flavors wave, 2026-09-08) | `FLAVORS` | The platform's value is its contract, not its C#; other stacks' devs get nothing from it today | `SPEC` epic first |
-| — | Multi-household membership (§16) → **DECIDED: DEFERRED** (ADR-028, 2026-09-16) | `MULTIHOME` | Re-opens the one-tenant-per-user assumption every tenancy gate is proven against; one persona, nobody asking; two accounts model it today | none (trigger: real users ask) |
+| — | Multi-household membership (§16) → **DECIDED: DEFERRED** (ADR-029, 2026-09-16) | `MULTIHOME` | Re-opens the one-tenant-per-user assumption every tenancy gate is proven against; one persona, nobody asking; two accounts model it today | none (trigger: real users ask) |
 
 ---
 
@@ -247,6 +247,10 @@ silently seeing 0 rows (the RLS-2/RLS-8 bug shape).
 - **Deps:** none. **Size:** ~1 slice + an adoption sweep; the sweep is the risk.
 
 ## 13. Local + self-hosted CI — `LOCALCI` → **PLANNED (ROADMAP post-terminal wave, 2026-09-08; stories written: `docs/stories/localci.md`)**
+
+> **2026-09-16 — LOCALCI-4 (ADR-028) changed the shape:** the repo now lives on a self-hosted Forgejo that
+> runs the whole pipeline itself (`.forgejo/workflows/`, R80), so piece (a) below is superseded for this
+> repo. Piece (b) and LOCALCI-3 stand.
 **What:** run the CI gates on the maintainer's own hardware — (a) self-hosted GitHub runners that
 `ci.yml` selects through repo variables, hosted runners as the always-available fallback; (b) a local
 pre-push gate runner that mirrors the PR-blocking jobs with GitHub uninvolved.
@@ -453,16 +457,16 @@ built and tested it, traps and all), 6 is small and prevents a whole class of si
 
 ---
 
-## 16. Multi-household membership — `MULTIHOME` → **DECIDED: DEFERRED (ADR-028, 2026-09-16)**
+## 16. Multi-household membership — `MULTIHOME` → **DECIDED: DEFERRED (ADR-029, 2026-09-16)**
 **What:** one user in several tenants — owner of their own household *and* member of another — with a
 household picker and an active-household switch. The persona (from `vuelto`): a son who runs his own
 money in a household he owns while keeping access to the family budget. Today ADR-003 forbids it
 (`TenantMembership` unique on `UserId`; invitation accept *moves*, never adds).
 
-**Why deferred (ADR-028):** it re-opens the one assumption every tenancy gate was proven against, for
+**Why deferred (ADR-029):** it re-opens the one assumption every tenancy gate was proven against, for
 one persona in one app with nobody asking; two accounts model it today. Trigger: real users ask.
 
-**Design (binding if built — the constraints are in ADR-028):**
+**Design (binding if built — the constraints are in ADR-029):**
 - **Token:** the JWT still carries exactly one `tenant_id`, the *active* household.
   `POST /api/auth/switch-household/{tenantId}` verifies membership and re-mints the access token.
   Never a per-request header — the RLS backstop, query filter, stamping interceptor and quotas all

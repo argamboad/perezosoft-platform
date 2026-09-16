@@ -164,7 +164,7 @@ hash) opt out with `IgnoreQueryFilters()`.
 invariant cleanly; the global filter turns "never leak across tenants" (ADR-C2) from a per-query
 convention into a structural guarantee, so feature slices can't forget to scope.
 *(Relaxing "exactly one tenant" to several — own household + family household — was considered and
-**deferred** in ADR-028, which also fixes the constraints any future implementation must keep.)*
+**deferred** in ADR-029, which also fixes the constraints any future implementation must keep.)*
 
 *Amendment (2026-06-22) — scoping is now structural on BOTH read and write.* The original query
 filter scoped reads only; nothing stamped or validated `TenantId` on insert, so a slice that forgot
@@ -1378,7 +1378,58 @@ is not green-listed, so it admits nobody new — the leak is cosmetic, not a hol
 
 **Ports downstream** (`vuelto`, `jigger-jot`) once the platform suite is green, like LOCALCI-3.
 
-**ADR-028 — Multi-household membership (one user in several tenants) is DECIDED: DEFERRED, with the design that must survive if it is ever built. (2026-09-16)**
+**ADR-028 — The self-hosted Forgejo is the primary forge and runs the full CI/CD; GitHub stays a mirror whose own CI runs only when pushed to on purpose (LOCALCI-4). (2026-09-16)**
+The maintainer moved day-to-day git to a private Forgejo on the Windows desk (WSL2 + Docker, reachable over
+Tailscale) so that routine pushes cost nothing and leave nothing on a third-party server. GitHub keeps the
+repository — Render builds from it, and pushing there on purpose still runs the GitHub pipeline unchanged.
+The Forgejo pipeline must do everything the GitHub one does, deploys included. This supersedes
+LOCALCI-1's approach (route GitHub Actions to self-hosted runners) for this repo: the runners belong to
+Forgejo, and GitHub keeps its hosted ones.
+
+**Decision:**
+1. **Two workflow files, held together by a test.** `.forgejo/workflows/ci.yml` is a copy of
+   `.github/workflows/ci.yml` (each forge reads only its own directory once `.forgejo/workflows` exists).
+   `ForgejoCiParityTests` (**R80**) fails when the job list, a `runs-on` line, a pinned version or the change
+   classifier differs; the LOCALCI-3 gate tests run against both files. Every deliberate difference is
+   marked `LOCALCI-4:` in the copy.
+2. **The runners carry the hosted labels.** `ubuntu-latest` is a container image
+   (`forgejo-ci/ubuntu:24.04`: catthehacker's act image + Docker CLI, PowerShell, `gh`, JDK 17, the Android
+   SDK with the smoke's system image, the pinned .NET SDK and Android workload) on the WSL runner, which runs
+   jobs inside Docker-in-Docker with host networking and `/dev/kvm` passed through. Every WSL job shares that
+   one network namespace, so the two jobs that bind fixed ports (`e2e`, `native-smoke-android`) use
+   `ubuntu-host-ports` — the same image on a second WSL runner that takes one job at a time, which also
+   serializes them across runs and repos. That is the only `runs-on` difference the parity test allows, and
+   it fails for any Linux job with service containers left on the shared runner. `windows-latest` is the
+   Windows desk in host mode (a logon task, so WebView2 has a session). `macos-26` will be the MacBook.
+   Identical labels are what make `runs-on` comparable line for line.
+3. **Apple jobs require `vars.CI_MACOS_RUNNER`.** A job whose label no runner carries queues forever on
+   Forgejo (GitHub would expire it in 24 h), so until the Mac is registered the Apple legs are skipped.
+4. **Deploys publish to `deploy/*` branches on GitHub.** Render only builds from GitHub, and GitHub's
+   `ci.yml` only triggers on `main`, `develop` and pull requests. The deploy job force-pushes the tested
+   commit to `deploy/staging` (or `deploy/prod`) with a token scoped to that repository, fires the Render
+   hook, and runs the same `deploy-smoke.sh`. Each Render service tracks its `deploy/*` branch with
+   auto-deploy off. No GitHub Actions run for a deploy.
+5. **Prod is a manual dispatch.** Forgejo has no Environments and no required reviewers. `deploy-prod` runs
+   only on `workflow_dispatch` from `main`; a push to `main` runs every gate and deploys nothing. The
+   dispatched run re-runs the gates first (`changes` fails open without a diff base).
+6. **GitHub's deploy hooks are removed from GitHub.** With both pipelines holding the hook, a deliberate push
+   to GitHub's `develop` would fire a second deploy of whatever `deploy/staging` holds. Without the secret,
+   GitHub's deploy jobs already skip with a notice (DEPLOY-3's opt-in design) — a settings change, not a
+   code change.
+
+**Consequences.** The desk is now a deploy path: deploys need the laptop on (the accepted trade-off of
+SETUP.md; GitHub stays the emergency route — restore the hook secret there and push). Runners are not
+clean machines: the smoke's Postgres is recreated per run, port-binding Linux jobs queue behind each other,
+and the image's SDK/workload pins join the CLAUDE.md
+bump-together playbook. The Render deploy-hook and the GitHub mirror token live in Forgejo's secrets only.
+
+**Rejected — one shared, forge-aware `ci.yml`.** It would remove the duplication but thread
+`github.server_url` conditions through the file GitHub runs today, for every future reader of both.
+**Rejected — pushing `develop` to GitHub to deploy.** It runs the whole GitHub pipeline, and its deploy job,
+on every deploy. **Rejected — image-backed Render services.** Faster builds, but it means new services, a
+registry account, and losing the "redeploy from GitHub" escape hatch; revisit if Render's build time bites.
+
+**ADR-029 — Multi-household membership (one user in several tenants) is DECIDED: DEFERRED, with the design that must survive if it is ever built. (2026-09-16)**
 The question keeps coming back, so it is answered here once. ADR-003 fixed **one tenant per user**
 (`TenantMembership` unique on `UserId`; accepting an invitation *moves* you, `ReHomeAsync` gives every
 departing member a fresh tenant-of-one). The persona that genuinely needs more is real and comes from

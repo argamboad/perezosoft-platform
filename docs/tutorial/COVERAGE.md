@@ -58,7 +58,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (9 files)
+## 1.4 — Configuration & the options pattern (10 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -69,6 +69,7 @@
 - `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — pins every config-gated feature CLOSED under empty config (v3 S0-G3)
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
+- `tests/Api.Tests/ForgejoCiParityTests.cs` — the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)
 
 ## 1.5 — The error envelope (1 files)
 
@@ -657,8 +658,11 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (6 files)
+## 8.3 — The deploy pipeline & CI gates (9 files)
 
+- `.forgejo/scripts/publish-deploy-branch.sh` — Forgejo copies + the deploy-branch publisher (LOCALCI-4)
+- `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo â€” a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
+- `.forgejo/workflows/postman-sync.yml` — Forgejo copies + the deploy-branch publisher (LOCALCI-4)
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
 - `.github/workflows/postman-sync.yml`
@@ -864,7 +868,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (194 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (196 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -958,6 +962,8 @@
 - `docs/stories/theme.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1061,4 +1067,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 894 tracked files · 595 built in lessons · 299 bucketed · 0 unmapped
+**Totals:** 900 tracked files · 599 built in lessons · 301 bucketed · 0 unmapped
