@@ -515,6 +515,11 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/wwwroot/js/bfcache-guard.js", "3.4", "reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)"),
     ("tests/Api.Tests/BfcacheGuardTests.cs", "3.4", "pins the guard's contract + presence in BOTH hosts' index.html"),
 
+    # ---- drift absorbed 2026-09-16 (Android system bars, ported from JiggerJot) ----
+    ("src/Shared.Ui/ISystemBarTheme.cs", "A.1", "OS-drawn system-bar seam — Android paints its status bar from the page's theme"),
+    ("src/Shared.Ui/Components/SystemBarThemeSync.razor", "A.1", "renderless: relays theme.js's applied theme to ISystemBarTheme"),
+    ("tests/Api.Tests/NativeChromeGateTests.cs", "A.1", "Android bar colours = app.css tokens; top inset applied once"),
+
     # ---- drift absorbed 2026-07-14 (PREFS-1 / ADR-022 + BILLING-9) ----
     ("tests/Api.Tests/Billing/AcceptSeatQuotaTests.cs", "5.3", "BILLING-9: seat quota re-checked at invitation ACCEPT (402 seat_limit_reached)"),
     ("tests/Api.Tests/AccountControllerTests.cs", "3.5", "PREFS-1/ADR-022: theme+locale preference-endpoint storage rules"),

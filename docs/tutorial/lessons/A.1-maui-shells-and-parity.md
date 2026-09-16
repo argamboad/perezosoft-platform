@@ -134,10 +134,14 @@ verdicts and the smoke harness (§6) exist to close.
 
 Some gaps can't be fixed in the shared RCL at all, because they're *below* the web platform. The
 sharpest example: Android's edge-to-edge display laid the WebView under the transparent status bar, so
-the clock drew over the app header. The instinct is `env(safe-area-inset-top)` in CSS — but **Android
-WebView always resolves `env()` to 0** (it's a WKWebView/iOS mechanism). So the fix is *native*:
-`MainActivity` pads the content by the status-bar inset via `ViewCompat.SetOnApplyWindowInsetsListener`
-and paints the strip brand green. The lesson: a hybrid app has a floor of genuinely
+the clock drew over the app header. The instinct is `env(safe-area-inset-top)` in CSS — but **you
+can't rely on Android WebView for it**: older versions resolve `env()` to 0, and current ones report the
+inset. So the fix is *native*: `MainActivity` pads the content by the status-bar inset via
+`ViewCompat.SetOnApplyWindowInsetsListener` and hands the WebView insets with the top already spent, so
+the header's `env()` is 0 on every WebView and the height is never added twice. The strip behind the
+clock is the OS's, too, so no stylesheet colours it: `SystemBarThemeSync` (RCL) relays each theme
+`theme.js` applies to an `ISystemBarTheme` that only the Android host registers, and `SystemBarColors`
+paints the header's colour, or the page's ground on the sign-in screens. The lesson: a hybrid app has a floor of genuinely
 platform-native concerns (insets, back button, window lifecycle, secure storage) that no amount of
 shared web code reaches — and recognizing which layer a gap lives in is half of fixing it. The seams
 handle the "same behavior, different mechanism" gaps; the native floor handles the "the OS itself is
