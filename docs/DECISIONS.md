@@ -1429,6 +1429,28 @@ bump-together playbook. The Render deploy-hook and the GitHub mirror token live 
 on every deploy. **Rejected — image-backed Render services.** Faster builds, but it means new services, a
 registry account, and losing the "redeploy from GitHub" escape hatch; revisit if Render's build time bites.
 
+**Addendum (2026-09-16, same day, after the first green runs) — deploys and smokes are on demand; the
+deploy pushes the real branch to GitHub; points 4–6 above are superseded.** Two things became clear once
+the pipeline ran on one machine: (a) a develop push that runs the emulator and the WebView2 smoke every
+time costs 20 minutes of a laptop the maintainer is also working on, for legs that rarely change; and
+(b) keeping GitHub deploying too was wanted after all ("I don't mind if GitHub deploys again when I push"),
+which makes the `deploy/*` branches pointless — Render can follow only one branch, and it stays on
+`develop`. So:
+- **Pushes and PRs run the gates, `e2e` and the native *builds* only** (≈10 min). The native **smokes**
+  run from `workflow_dispatch` (`smokes` = windows | android | apple | all) and on the Monday schedule.
+  The builds stay per push on purpose: they are free in wall clock and catch compile rot within one merge.
+- **Deploys run only from `workflow_dispatch`** (`deploy` = staging on `develop` | prod on `main`), never on
+  a push, and only after every gate and every smoke *selected in that run* is green (a smoke not selected
+  is skipped, and a skip is not a failure). Staging no longer tracks `develop` automatically: the
+  maintainer decides when.
+- **The deploy pushes the commit to the same branch on GitHub** — a plain fast-forward, never forced; if
+  GitHub is ahead the deploy stops and says so — then fires the hook and runs the shared smoke. GitHub's
+  pipeline runs on that push and re-deploys the same commit; accepted as harmless. GitHub keeps its hook,
+  Render keeps `develop`, nothing to reconfigure. "The deploy from Forgejo" and "the push to GitHub" are
+  the same button.
+- The earlier rejection of "pushing `develop` to GitHub to deploy" is withdrawn: its cost (GitHub's run
+  and second deploy) was re-weighed against the operational simplicity and accepted.
+
 **ADR-029 — Multi-household membership (one user in several tenants) is DECIDED: DEFERRED, with the design that must survive if it is ever built. (2026-09-16)**
 The question keeps coming back, so it is answered here once. ADR-003 fixed **one tenant per user**
 (`TenantMembership` unique on `UserId`; accepting an invitation *moves* you, `ReHomeAsync` gives every

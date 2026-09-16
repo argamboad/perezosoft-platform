@@ -449,29 +449,38 @@ git push -u github my-branch        # before `gh pr create` — PRs still live o
 | `windows-latest` | the Windows desk, host mode (logon task) | `DOTNET_INSTALL_DIR=C:/forgejo-runner/_tool/dotnet`. **Stop the dev stack before it takes jobs** — the smoke fails fast if 5432/5238 are busy. |
 | `macos-26` | the MacBook (not registered yet) | Set repo variable **`CI_MACOS_RUNNER`** once it is Online; until then the Apple jobs skip instead of queueing forever. |
 
-**One-time setup, in this order:**
-1. **Render** → the staging service → **Settings → Build & Deploy → Branch** = `deploy/staging`
-   (auto-deploy stays **off**). Copy the **Deploy Hook**.
-2. **Forgejo** → repo → **Settings → Actions**:
-   - Secret **`RENDER_DEPLOY_HOOK_STAGING`** = that hook (and `RENDER_DEPLOY_HOOK_PROD` when prod exists).
-   - Secret **`DEPLOY_MIRROR_TOKEN`** = a GitHub **fine-grained** token, only this repository,
-     *Contents: Read and write* (it pushes `deploy/*` and reads the compare API for the smoke).
-   - Variables **`DEPLOY_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
-     (when prod exists), **`POSTMAN_WORKSPACE_ID`**; secret **`POSTMAN_API_KEY`**.
-   - Enable **Actions** for the repo (Settings → Units) if it was switched off during the migration.
-3. **GitHub** → **Settings → Secrets → Actions**: delete `RENDER_DEPLOY_HOOK_STAGING`. GitHub's
-   `deploy-staging` then skips with a notice, so a deliberate push to GitHub never deploys a second time.
-4. **Prod** (when you have a prod service): point it at `deploy/prod`, add its hook + base URL to Forgejo.
+**One-time setup** (nothing changes on Render or GitHub — Render keeps following GitHub's `develop`,
+GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings → Actions**:
+- Secret **`RENDER_DEPLOY_HOOK_STAGING`** = the same hook GitHub has (Render → service → Settings → Deploy
+  Hook); `RENDER_DEPLOY_HOOK_PROD` when prod exists.
+- Secret **`DEPLOY_MIRROR_TOKEN`** = a GitHub **fine-grained** token, only this repository,
+  *Contents: Read and write* (it pushes `develop`/`main` and reads the compare API for the smoke).
+- Variables **`DEPLOY_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
+  (when prod exists), **`POSTMAN_WORKSPACE_ID`**; secret **`POSTMAN_API_KEY`**.
+- Enable **Actions** for the repo (Settings → Units) if it was switched off during the migration.
 
-**How a deploy runs.** A push to `develop` on Forgejo runs the gates; if they are green, `deploy-staging`
-force-pushes the commit to `deploy/staging` on GitHub (`.forgejo/scripts/publish-deploy-branch.sh` refuses
-any other branch), fires the hook, and runs `.github/scripts/deploy-smoke.sh`. GitHub runs **no** Actions
-for that push — its `ci.yml` only triggers on `main`, `develop` and pull requests.
-**Prod** deploys only from **Actions → CI → Run workflow** on `main`; a push to `main` just runs the gates.
-**Rollback:** re-run an older green `develop` run (it re-publishes that commit), or Render → Deploys →
-Redeploy.
-**Laptop off = no deploy.** Emergency route: restore the hook secret on GitHub and push `develop` there —
-the GitHub pipeline deploys as it always did (switch the Render branch back to `develop` first).
+**What runs when.**
+
+| Event | Runs | Wall clock |
+|---|---|---|
+| Push / PR, docs only | `changes`, `secret-scan`, `qa-artifacts` | ≈ 1 min |
+| Push / PR with code | + `build-test`, `license-scan`, `docker-build`, `e2e`, Android + Windows **builds** | ≈ 10 min |
+| **Run workflow**, `smokes=…` | the above + the selected native **smokes** (windows / android / apple / all) | + 3–10 min |
+| **Run workflow**, `deploy=staging` (on `develop`) | the above, then `deploy-staging` — only if every gate and every selected smoke is green | + 5–8 min |
+| **Run workflow**, `deploy=prod` (on `main`) | same, `deploy-prod` | |
+| Monday 06:00 UTC | all three smokes (the weekly safety net for legs that no longer run per push) | |
+
+The native smokes and the deploys never run on a push. Pick both inputs in one dispatch to smoke and
+deploy in a single run.
+
+**How a deploy runs.** `deploy-staging` pushes the commit to `develop` **on GitHub**
+(`.forgejo/scripts/push-to-github.sh` — `develop`/`main` only, a plain fast-forward, never forced), fires
+the Render hook, and runs `.github/scripts/deploy-smoke.sh`. That push also triggers GitHub's own pipeline,
+which re-deploys the same commit; accepted. If GitHub's `develop` has a commit Forgejo's does not, the push
+is refused and the deploy stops: `git fetch github && git merge github/develop`, push to Forgejo, dispatch
+again. **Rollback:** dispatch `deploy=staging` on an older commit (Actions → Run workflow lets you pick the
+ref), or Render → Deploys → Redeploy.
+**Laptop off = no deploy.** GitHub is the other route: `git push github develop` deploys as it always did.
 
 ---
 

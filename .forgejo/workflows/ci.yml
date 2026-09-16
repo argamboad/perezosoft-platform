@@ -11,8 +11,13 @@
 #   - The hosted-image-only steps (freeing disk, the udev KVM rule) are replaced by what the desk needs.
 #   - e2e and native-smoke-android run on `ubuntu-host-ports` (same image, one job at a time): they bind
 #     fixed ports, and the WSL runner's jobs share one network namespace.
-#   - Deploys push the commit to a `deploy/*` branch on GitHub (Render builds from GitHub; GitHub's
-#     ci.yml never triggers on those branches) and prod is a manual workflow_dispatch on main.
+#   - The native SMOKES run on demand (`smokes` input) and on the Monday schedule, not on every develop
+#     push: they are the slow, CPU-hungry legs and the desk is one machine. The native BUILDS still run
+#     on every push — they are cheap and catch compile rot within one merge (NATIVE-1).
+#   - Deploys run ONLY from "Run workflow" (`deploy` input), never on a push. A deploy pushes the commit
+#     to the same branch on GitHub (Render follows GitHub's develop/main; GitHub's own pipeline runs and
+#     re-deploys the same commit, harmlessly) and only after every gate — and every smoke selected in the
+#     same run — is green.
 name: CI
 
 on:
@@ -20,12 +25,23 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  # LOCALCI-3. The Apple smoke bills 87 minutes because macOS runners cost 10x, so in hosted-fallback
-  # mode it runs on a cadence instead of on every push. A scheduled run is ONLY that job — every
-  # other one carries `github.event_name != 'schedule'`.
+  # LOCALCI-3/4. A scheduled run is ONLY the native smokes (all three, the Apple one once a Mac exists) —
+  # the weekly safety net for legs that no longer run per push. Every other job carries
+  # `github.event_name != 'schedule'`.
   schedule:
     - cron: "0 6 * * 1" # Mondays, 06:00 UTC
   workflow_dispatch:
+    inputs:
+      smokes:
+        description: Native smokes to run (the gates and builds always run)
+        type: choice
+        default: none
+        options: [none, windows, android, apple, all]
+      deploy:
+        description: Deploy after everything is green (staging from develop, prod from main)
+        type: choice
+        default: none
+        options: [none, staging, prod]
 
 # Least privilege for every job (v3 audit DEP-8). No job here consumes GITHUB_TOKEN — nothing pushes,
 # comments, or releases — but several execute freshly-downloaded third-party binaries (gitleaks, mailpit,
@@ -432,12 +448,13 @@ jobs:
     #
     # `vars.CI_MACOS_RUNNER` is LOCALCI-1's variable and does not exist yet; an unset variable reads
     # as empty, which is exactly the hosted-fallback branch. Nothing here waits on that slice.
-    # LOCALCI-4: every case needs the Mac here, the scheduled and dispatched ones included.
+    # LOCALCI-4: on demand or on the schedule, and only with a Mac registered.
     if: >-
       needs.changes.outputs.native == 'true'
       && vars.CI_MACOS_RUNNER != ''
-      && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-          || (github.event_name == 'push' && github.ref == 'refs/heads/develop'))
+      && (github.event_name == 'schedule'
+          || (github.event_name == 'workflow_dispatch'
+              && (github.event.inputs.smokes == 'apple' || github.event.inputs.smokes == 'all')))
     # Same Xcode reasoning as native-build-apple: pinned image + workload set 10.0.400.1 (iOS
     # 26.5.10315, requires Xcode 26.6) + DEVELOPER_DIR pinning the image's default Xcode 26.6.
     runs-on: macos-26
@@ -582,9 +599,12 @@ jobs:
   # Deliberately NOT in the deploy-staging needs — a native run must not block web deploys (ADR-018).
   native-smoke-windows:
     needs: changes
+    # LOCALCI-4: on demand (`smokes` input) or on the Monday schedule, not per push.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/develop'
-      && needs.changes.outputs.native == 'true'
+      needs.changes.outputs.native == 'true'
+      && (github.event_name == 'schedule'
+          || (github.event_name == 'workflow_dispatch'
+              && (github.event.inputs.smokes == 'windows' || github.event.inputs.smokes == 'all')))
     runs-on: windows-latest
     timeout-minutes: 45
     defaults:
@@ -704,9 +724,12 @@ jobs:
   # the app process is up.
   native-smoke-android:
     needs: changes
+    # LOCALCI-4: on demand (`smokes` input) or on the Monday schedule, not per push.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/develop'
-      && needs.changes.outputs.native == 'true'
+      needs.changes.outputs.native == 'true'
+      && (github.event_name == 'schedule'
+          || (github.event_name == 'workflow_dispatch'
+              && (github.event.inputs.smokes == 'android' || github.event.inputs.smokes == 'all')))
     # LOCALCI-4: the one-job-at-a-time WSL runner — see e2e.
     runs-on: ubuntu-host-ports
     timeout-minutes: 45
@@ -965,16 +988,29 @@ jobs:
         # this diagnostic silently print nothing on every failure.
         run: tail -n 80 api.log web.log || true
 
-  # Deploy staging (DEPLOY-3, ADR-017; LOCALCI-4, ADR-028). Runs ONLY on a push to develop, and only after
-  # every test/build gate above is green. Render builds from the GitHub repository, so the commit is first
-  # pushed to the `deploy/staging` branch there — the branch the staging service tracks (auto-deploy off).
-  # GitHub's own ci.yml only triggers on main/develop/pull requests, so that push runs NO GitHub Actions.
-  # Then the deploy hook fires and the same version-gated smoke as GitHub's job verifies what went live.
-  # Everything optional stays optional: no hook ⇒ notice and pass; a hook without the mirror token fails
-  # (Render would rebuild a stale branch and the smoke could never see this commit).
+  # Deploy staging (DEPLOY-3, ADR-017; LOCALCI-4, ADR-028 addendum). Runs ONLY from "Run workflow" with
+  # deploy=staging on develop — never on a push — and only after every gate, and every native smoke
+  # selected in the same run, is green (a smoke that was not selected is skipped, and a skip is not a
+  # failure). Render builds from GitHub's develop, so the commit is first pushed there — a plain
+  # fast-forward, never forced: if GitHub's develop has a commit Forgejo does not, the deploy stops and
+  # says so. GitHub's own pipeline then runs on that push and re-deploys the same commit (harmless; the
+  # user accepted it). Then the hook fires and the same version-gated smoke as GitHub's job verifies what
+  # went live. Everything optional stays optional: no hook ⇒ notice and pass; a hook without the mirror
+  # token fails (Render would rebuild a stale develop and the smoke could never see this commit).
   deploy-staging:
-    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e, native-build,
+            native-smoke-windows, native-smoke-android, native-smoke-apple]
+    if: >-
+      !cancelled()
+      && github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'staging'
+      && github.ref == 'refs/heads/develop'
+      && needs.build-test.result == 'success' && needs.secret-scan.result == 'success'
+      && needs.qa-artifacts.result == 'success' && needs.license-scan.result == 'success'
+      && needs.docker-build.result == 'success' && needs.e2e.result == 'success'
+      && needs.native-build.result == 'success'
+      && needs.native-smoke-windows.result != 'failure' && needs.native-smoke-windows.result != 'cancelled'
+      && needs.native-smoke-android.result != 'failure' && needs.native-smoke-android.result != 'cancelled'
+      && needs.native-smoke-apple.result != 'failure' && needs.native-smoke-apple.result != 'cancelled'
     concurrency:
       group: deploy-staging
       cancel-in-progress: true
@@ -982,14 +1018,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5 # for .github/scripts/deploy-smoke.sh
         with:
-          fetch-depth: 0 # the mirror push needs the full history, not a shallow tip
+          fetch-depth: 0 # the push to GitHub needs the full history, not a shallow tip
 
-      - name: Publish the commit to deploy/staging on GitHub
+      - name: Push develop to GitHub
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}
           MIRROR_TOKEN: ${{ secrets.DEPLOY_MIRROR_TOKEN }}
           MIRROR_REPO: ${{ vars.DEPLOY_MIRROR_REPO }}
-        run: bash .forgejo/scripts/publish-deploy-branch.sh deploy/staging
+        run: bash .forgejo/scripts/push-to-github.sh develop
 
       - name: Trigger Render deploy
         env:
@@ -1022,12 +1058,22 @@ jobs:
           bash .github/scripts/deploy-smoke.sh "$BASE" "$EXPECT"
 
   # Deploy prod (DEPLOY-3; LOCALCI-4). GitHub gates prod behind the `production` Environment; Forgejo has no
-  # environments, so the gate is the trigger itself: prod deploys ONLY from a manual "Run workflow" on main
-  # (Actions → CI → Run workflow). A plain push to main runs every gate and deploys nothing. The dispatched
-  # run re-runs the gates first (`changes` fails open on a dispatch, so every one of them runs).
+  # environments, so the gate is the trigger itself: "Run workflow" with deploy=prod on main. A plain push
+  # to main runs every gate and deploys nothing. Same green-everything rule and same GitHub push as staging.
   deploy-prod:
-    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e, native-build,
+            native-smoke-windows, native-smoke-android, native-smoke-apple]
+    if: >-
+      !cancelled()
+      && github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'prod'
+      && github.ref == 'refs/heads/main'
+      && needs.build-test.result == 'success' && needs.secret-scan.result == 'success'
+      && needs.qa-artifacts.result == 'success' && needs.license-scan.result == 'success'
+      && needs.docker-build.result == 'success' && needs.e2e.result == 'success'
+      && needs.native-build.result == 'success'
+      && needs.native-smoke-windows.result != 'failure' && needs.native-smoke-windows.result != 'cancelled'
+      && needs.native-smoke-android.result != 'failure' && needs.native-smoke-android.result != 'cancelled'
+      && needs.native-smoke-apple.result != 'failure' && needs.native-smoke-apple.result != 'cancelled'
     concurrency:
       group: deploy-prod
       cancel-in-progress: true
@@ -1037,12 +1083,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Publish the commit to deploy/prod on GitHub
+      - name: Push main to GitHub
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_PROD }}
           MIRROR_TOKEN: ${{ secrets.DEPLOY_MIRROR_TOKEN }}
           MIRROR_REPO: ${{ vars.DEPLOY_MIRROR_REPO }}
-        run: bash .forgejo/scripts/publish-deploy-branch.sh deploy/prod
+        run: bash .forgejo/scripts/push-to-github.sh main
 
       - name: Trigger Render prod deploy
         env:
