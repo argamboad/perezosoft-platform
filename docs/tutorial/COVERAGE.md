@@ -661,7 +661,7 @@
 ## 8.3 — The deploy pipeline & CI gates (9 files)
 
 - `.forgejo/scripts/publish-deploy-branch.sh` — Forgejo copies + the deploy-branch publisher (LOCALCI-4)
-- `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo â€” a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
+- `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
 - `.forgejo/workflows/postman-sync.yml` — Forgejo copies + the deploy-branch publisher (LOCALCI-4)
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
