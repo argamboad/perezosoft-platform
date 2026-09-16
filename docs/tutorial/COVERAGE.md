@@ -120,7 +120,7 @@
 - `tests/Api.Tests/CookieServiceTests.cs`
 - `tests/Api.Tests/SessionServiceTests.cs`
 
-## 2.3 — Email I — the IEmailSender seam (7 files)
+## 2.3 — Email I — the IEmailSender seam (9 files)
 
 - `src/Core/Abstractions/IEmailSender.cs` — the ONLY way to send email
 - `src/Infrastructure/Email/Assets/logo.png`
@@ -128,7 +128,9 @@
 - `src/Infrastructure/Email/EmailStrings.resx` — localized in 3.5
 - `src/Infrastructure/Email/SmtpEmailSender.cs` — MailKit quarantined here
 - `src/Infrastructure/Email/SmtpSettings.cs`
+- `tests/Api.Tests/Email/SmtpMessageBuilderTests.cs` — MIME shape: CID images + attachment parts (JOBS-4)
 - `tests/Api.Tests/SmtpSettingsTests.cs` — incl. the SMTP-revocation knob (PR #125)
+- `tests/Core.Tests/EmailAttachmentTests.cs` — attachment guard: 10 MiB total, non-blank name/type (JOBS-4)
 
 ## 2.4 — Passwordless: magic link + OTP (12 files)
 
@@ -866,7 +868,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (194 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (196 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -960,6 +962,8 @@
 - `docs/stories/theme.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1063,4 +1067,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 896 tracked files · 597 built in lessons · 299 bucketed · 0 unmapped
+**Totals:** 900 tracked files · 599 built in lessons · 301 bucketed · 0 unmapped
