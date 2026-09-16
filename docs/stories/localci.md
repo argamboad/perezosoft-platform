@@ -586,17 +586,21 @@ pipeline, unchanged. LOCALCI-1's `vars.CI_*_RUNNER` routing is therefore not nee
 `CI_MACOS_RUNNER` survives with a Forgejo meaning ("the Mac runner exists").
 
 **As a** platform maintainer
-**I want** every push to Forgejo to run the same gates, smokes and deploys GitHub runs
-**So that** routine work costs no minutes and GitHub only runs when I push to it on purpose
+**I want** every push to Forgejo to run the same gates GitHub runs, the native smokes and the deploy when
+I ask for them, and a deploy that is also my push to GitHub
+**So that** routine work costs no minutes and a few minutes of wall clock, and shipping is one deliberate
+button
 
-**What landed:**
+**What landed** (shape settled the same day in the ADR-028 addendum):
 - `.forgejo/workflows/ci.yml` + `postman-sync.yml` — held copies of the GitHub workflows. Deliberate
   differences are marked `LOCALCI-4:` in the file: Apple jobs need `vars.CI_MACOS_RUNNER`; Windows jobs
   declare `pwsh` and start their own Postgres container; the hosted-image-only steps (free disk, udev KVM)
-  are replaced; `e2e` + `native-smoke-android` run on `ubuntu-host-ports`; deploys publish to `deploy/*`
-  on GitHub first; prod is a `workflow_dispatch` on `main`.
-- `.forgejo/scripts/publish-deploy-branch.sh` — force-pushes the tested commit to a `deploy/*` branch on
-  GitHub (refuses any other branch; token in a header, never the URL).
+  are replaced; `e2e` + `native-smoke-android` run on `ubuntu-host-ports`; the native **smokes** run only
+  from the `smokes` dispatch input or the Monday schedule; the deploys run only from the `deploy` dispatch
+  input, behind every gate and every selected smoke.
+- `.forgejo/scripts/push-to-github.sh` — fast-forwards `develop`/`main` on GitHub to the tested commit
+  (never forced, refuses any other branch; token in a header, never the URL). Render follows GitHub's
+  `develop`, so this is what makes the commit deployable; GitHub's pipeline re-deploys it, harmlessly.
 - `ForgejoCiParityTests` (**R80**) + the three LOCALCI-3 gate tests now `[Theory]` over both files.
 - Runners (server-side, not in the repo): `linux-local` (`ubuntu-latest`, 6 jobs), `linux-ports`
   (`ubuntu-host-ports`, 1 job), `windows-desk` (`windows-latest`, host mode). Image `forgejo-ci/ubuntu:24.04`.
@@ -610,23 +614,39 @@ Scenario: A pull request on Forgejo runs the PR gates
   Then build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e and both native-build legs
        run on the desk's runners, and the Apple, smoke and deploy jobs are skipped
 
-Scenario: A develop push runs the develop-only legs
-  Given a code push to develop on Forgejo and no Mac runner registered
+Scenario: A develop push runs the gates and builds only
+  Given a code push to develop on Forgejo
   When CI runs
-  Then native-smoke-android and native-smoke-windows run, and both Apple jobs are skipped (not queued)
+  Then the gates, e2e and both native builds run, and the smokes and deploys are skipped
 
-Scenario: Staging deploys without running GitHub Actions
+Scenario: Smokes on demand
+  Given "Run workflow" on develop with smokes=all and no Mac runner registered
+  When CI runs
+  Then native-smoke-windows and native-smoke-android run after the gates, and the Apple jobs are
+       skipped (not queued)
+
+Scenario: Deploy is a button, and it is also the push to GitHub
   Given RENDER_DEPLOY_HOOK_STAGING, DEPLOY_MIRROR_TOKEN and DEPLOY_MIRROR_REPO are set in Forgejo
-  And the Render staging service tracks deploy/staging with auto-deploy off
-  When a green develop run reaches deploy-staging
-  Then the commit is on GitHub's deploy/staging, Render deploys it, the version-gated smoke passes
-  And GitHub shows no workflow run for that push
+  And "Run workflow" on develop with deploy=staging (and any smokes)
+  When every gate and every selected smoke is green
+  Then GitHub's develop fast-forwards to the commit, Render deploys it, the version-gated smoke passes
+  And a red smoke selected in the same run blocks the deploy; an unselected (skipped) one does not
+
+Scenario: GitHub is ahead
+  Given GitHub's develop has a commit Forgejo's develop does not
+  When deploy=staging is dispatched
+  Then the push is refused, the deploy stops naming the fix, and nothing is force-pushed
 
 Scenario: Prod needs a person
   Given a push to main on Forgejo
   When CI runs
   Then every gate runs and deploy-prod is skipped
-  And deploy-prod runs only from "Run workflow" on main
+  And deploy-prod runs only from "Run workflow" with deploy=prod on main
+
+Scenario: Weekly safety net
+  Given no one dispatched a smoke all week
+  When Monday 06:00 UTC arrives
+  Then all three smokes run and nothing else does
 
 Scenario: The two workflows cannot drift
   Given a pin, job or runs-on changed in one workflow only
@@ -638,15 +658,15 @@ Scenario: Port-binding jobs never overlap
   Then their e2e and native-smoke-android jobs run one after another on linux-ports
 ```
 
-**Operator steps** (runbook §10): Render staging branch → `deploy/staging`; Forgejo secrets
-`RENDER_DEPLOY_HOOK_STAGING`, `DEPLOY_MIRROR_TOKEN` (fine-grained, this repo, Contents RW), `POSTMAN_API_KEY`;
-variables `DEPLOY_MIRROR_REPO`, `STAGING_BASE_URL`, `POSTMAN_WORKSPACE_ID`; delete
-`RENDER_DEPLOY_HOOK_STAGING` from GitHub.
+**Operator steps** (runbook §10): Forgejo secrets `RENDER_DEPLOY_HOOK_STAGING` (the same hook GitHub
+has), `DEPLOY_MIRROR_TOKEN` (fine-grained, this repo, Contents RW), `POSTMAN_API_KEY`; variables
+`DEPLOY_MIRROR_REPO`, `STAGING_BASE_URL`, `POSTMAN_WORKSPACE_ID`. Nothing changes on Render or GitHub.
 
 **Out of scope:** the Mac runner (SETUP.md chapter 7 — then set `CI_MACOS_RUNNER`); porting to `vuelto` and
 `jigger-jot` (after this is green end to end); the Forgejo server itself (compose, backups — not repo code).
-**Definition of done:** R80 green; one PR run and one develop run observed green on Forgejo (Apple legs
-skipped); one staging deploy observed through `deploy/staging` with no GitHub run; GitHub hook secret removed.
+**Definition of done:** R80 green; one PR run and one develop push observed green on Forgejo (smokes and
+deploys skipped); one `smokes=all` dispatch green (Apple skipped); one `deploy=staging` dispatch observed
+fast-forwarding GitHub's `develop` and passing the deploy smoke.
 
 ---
 

@@ -114,31 +114,70 @@ public class ForgejoCiParityTests
     }
 
     [Fact]
-    public void ForgejoDeploys_PublishOnlyToDeployBranches_AndProdIsAManualDispatch()
+    public void ForgejoDeploys_RunOnlyFromADispatch_BehindEveryGateAndSelectedSmoke()
     {
         var github = Jobs(Read(GitHubCi));
         var forgejo = Jobs(Read(ForgejoCi));
+        string[] smokes = ["native-smoke-windows", "native-smoke-android", "native-smoke-apple"];
 
-        foreach (var (job, branch) in new[] { ("deploy-staging", "deploy/staging"), ("deploy-prod", "deploy/prod") })
+        foreach (var (job, target, branch) in new[] { ("deploy-staging", "staging", "develop"), ("deploy-prod", "prod", "main") })
         {
             var body = forgejo[job];
-            // Same gates as GitHub: a deploy never runs past a red or missing check.
-            Assert.Equal(Needs(github[job]), Needs(body));
-            // Render builds from GitHub — the commit must be published there, to the deploy branch only.
-            Assert.Contains($"publish-deploy-branch.sh {branch}", body, StringComparison.Ordinal);
+
+            // Every gate GitHub's deploy waits for, plus the native builds and the three smokes.
+            var githubNeeds = NeedsList(github[job]);
+            var forgejoNeeds = NeedsList(body);
+            Assert.True(githubNeeds.IsSubsetOf(forgejoNeeds), $"{job} dropped a gate GitHub's deploy waits for: {string.Join(", ", githubNeeds.Except(forgejoNeeds))}");
+            Assert.True(forgejoNeeds.IsSupersetOf(smokes.Append("native-build")), $"{job} must wait for the native builds and every smoke");
+
+            // Trigger: a dispatch that asked for this target, on the branch Render follows for it — never a push.
+            Assert.Contains($"github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == '{target}'", body, StringComparison.Ordinal);
+            Assert.Contains($"github.ref == 'refs/heads/{branch}'", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("github.event_name == 'push'", body, StringComparison.Ordinal);
+
+            // `!cancelled()` lets it run past a SKIPPED smoke; every gate must then be checked explicitly,
+            // and a smoke may be anything but red.
+            Assert.Contains("!cancelled()", body, StringComparison.Ordinal);
+            foreach (var gate in githubNeeds.Append("native-build"))
+                Assert.Contains($"needs.{gate}.result == 'success'", body, StringComparison.Ordinal);
+            foreach (var smoke in smokes)
+            {
+                Assert.Contains($"needs.{smoke}.result != 'failure'", body, StringComparison.Ordinal);
+                Assert.Contains($"needs.{smoke}.result != 'cancelled'", body, StringComparison.Ordinal);
+            }
+
+            // Render builds from GitHub — the commit goes to the same branch there, through the guarded script.
+            Assert.Contains($"push-to-github.sh {branch}", body, StringComparison.Ordinal);
             // No GitHub Environments on Forgejo: an `environment:` key would be silently ignored.
             Assert.DoesNotMatch(@"(?m)^\s+environment:", body);
         }
 
-        Assert.Contains("github.event_name == 'push' && github.ref == 'refs/heads/develop'", forgejo["deploy-staging"], StringComparison.Ordinal);
+        // The script only knows the two Render branches, and never overwrites what GitHub has.
+        var script = Read(".forgejo/scripts/push-to-github.sh");
+        Assert.Contains("develop|main) ;;", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("--force", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("git push", Read(ForgejoCi), StringComparison.Ordinal); // only through the script
+    }
 
-        var prodIf = Regex.Match(forgejo["deploy-prod"], @"(?m)^    if:\s*(.+)$").Groups[1].Value;
-        Assert.Equal("github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'", prodIf.Trim());
+    [Fact]
+    public void ForgejoSmokes_RunOnDemandOrOnTheSchedule_NeverPerPush()
+    {
+        // The smokes are the slow legs and the desk is one machine: they run when asked for (`smokes`
+        // input) or on the Monday schedule, and the dispatch offers exactly the targets the jobs answer to.
+        var yml = Read(ForgejoCi);
+        Assert.Matches(@"(?ms)^      smokes:\n.*?options: \[none, windows, android, apple, all\]", yml);
+        Assert.Matches(@"(?ms)^      deploy:\n.*?options: \[none, staging, prod\]", yml);
 
-        // A push to develop/main on GitHub would run GitHub's whole CI — the thing this setup avoids.
-        var script = Read(".forgejo/scripts/publish-deploy-branch.sh");
-        Assert.Contains("deploy/*) ;;", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("git push", Read(ForgejoCi), StringComparison.Ordinal); // only through the guarded script
+        var forgejo = Jobs(yml);
+        foreach (var (job, target) in new[] { ("native-smoke-windows", "windows"), ("native-smoke-android", "android"), ("native-smoke-apple", "apple") })
+        {
+            var body = forgejo[job];
+            Assert.Contains("github.event_name == 'schedule'", body, StringComparison.Ordinal);
+            Assert.Contains($"github.event.inputs.smokes == '{target}' || github.event.inputs.smokes == 'all'", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("github.event_name == 'push'", body, StringComparison.Ordinal);
+        }
+        // The native BUILDS keep running per push — compile rot is caught within one merge (NATIVE-1).
+        Assert.DoesNotContain("workflow_dispatch", forgejo["native-build"], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -200,7 +239,13 @@ public class ForgejoCiParityTests
 
     private static string RunsOn(string job) => Regex.Match(job, @"(?m)^    runs-on:\s*(.+)$").Groups[1].Value.Trim();
 
-    private static string Needs(string job) => Regex.Match(job, @"(?m)^    needs:\s*(.+)$").Groups[1].Value.Trim();
+    // `needs: a` or `needs: [a, b,\n    c]` — the list may wrap onto following lines.
+    private static HashSet<string> NeedsList(string job)
+    {
+        var m = Regex.Match(job, @"(?ms)^    needs:\s*(\[[^\]]*\]|\S+)");
+        Assert.True(m.Success, "no `needs:` in job");
+        return [.. Regex.Matches(m.Groups[1].Value, @"[a-z][a-z0-9-]*").Select(x => x.Value)];
+    }
 
     private static string Classifier(string yml, string name)
     {
