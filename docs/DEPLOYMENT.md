@@ -188,6 +188,9 @@ generated redirect URIs match what you register. Render redeploys on the env cha
 
 ## 6. Continuous deployment (DEPLOY-3, optional)
 
+> **This repo deploys from Forgejo, not from here (ADR-028) — see §10.** The steps below describe the
+> GitHub pipeline, which still works for any clone that lives on GitHub alone.
+
 By default you deploy by pushing to the branch Render tracks. To instead gate deploys on **green CI** and
 run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.yml`:
 
@@ -421,6 +424,55 @@ lowercase app name). Without it, email-code sign-in still works and OAuth is ref
 Desktop uses a localhost loopback instead and needs nothing.
 
 **iOS / macCatalyst** need a Mac, an Apple developer identity and provisioning — out of scope for this guide.
+
+## 10. Forgejo as the primary forge — CI/CD from the desk (LOCALCI-4, ADR-028)
+
+Day-to-day git lives on a private Forgejo (`origin`); GitHub (`github`) is a mirror you push to on
+purpose. `.forgejo/workflows/ci.yml` runs the same pipeline as GitHub's, on the maintainer's machines.
+The server itself (compose file, runners, CI image, backups) is set up by the separate Forgejo guide
+(`SETUP.md` in the maintainer's `Portafolio/forgejo` folder); this section covers what the **repo** needs.
+
+**Remotes.**
+```bash
+git remote -v                       # origin = ssh://git@localhost:2222/argamboad/<repo>.git, github = GitHub
+git push                            # → Forgejo: runs the Forgejo pipeline
+git push github develop             # → GitHub, on purpose: runs the GitHub pipeline (no deploy — see step 3)
+git push -u github my-branch        # before `gh pr create` — PRs still live on GitHub when you want one
+```
+
+**Runners** (labels match GitHub's so `runs-on` is identical in both files — R80):
+
+| Label | Machine | Notes |
+|---|---|---|
+| `ubuntu-latest` | WSL runner → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Jobs share one network, so `native-smoke-android` waits for `e2e`. |
+| `windows-latest` | the Windows desk, host mode (logon task) | `DOTNET_INSTALL_DIR=C:/forgejo-runner/_tool/dotnet`. **Stop the dev stack before it takes jobs** — the smoke fails fast if 5432/5238 are busy. |
+| `macos-26` | the MacBook (not registered yet) | Set repo variable **`CI_MACOS_RUNNER`** once it is Online; until then the Apple jobs skip instead of queueing forever. |
+
+**One-time setup, in this order:**
+1. **Render** → the staging service → **Settings → Build & Deploy → Branch** = `deploy/staging`
+   (auto-deploy stays **off**). Copy the **Deploy Hook**.
+2. **Forgejo** → repo → **Settings → Actions**:
+   - Secret **`RENDER_DEPLOY_HOOK_STAGING`** = that hook (and `RENDER_DEPLOY_HOOK_PROD` when prod exists).
+   - Secret **`GITHUB_MIRROR_TOKEN`** = a GitHub **fine-grained** token, only this repository,
+     *Contents: Read and write* (it pushes `deploy/*` and reads the compare API for the smoke).
+   - Variables **`GITHUB_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
+     (when prod exists), **`POSTMAN_WORKSPACE_ID`**; secret **`POSTMAN_API_KEY`**.
+   - Enable **Actions** for the repo (Settings → Units) if it was switched off during the migration.
+3. **GitHub** → **Settings → Secrets → Actions**: delete `RENDER_DEPLOY_HOOK_STAGING`. GitHub's
+   `deploy-staging` then skips with a notice, so a deliberate push to GitHub never deploys a second time.
+4. **Prod** (when you have a prod service): point it at `deploy/prod`, add its hook + base URL to Forgejo.
+
+**How a deploy runs.** A push to `develop` on Forgejo runs the gates; if they are green, `deploy-staging`
+force-pushes the commit to `deploy/staging` on GitHub (`.forgejo/scripts/publish-deploy-branch.sh` refuses
+any other branch), fires the hook, and runs `.github/scripts/deploy-smoke.sh`. GitHub runs **no** Actions
+for that push — its `ci.yml` only triggers on `main`, `develop` and pull requests.
+**Prod** deploys only from **Actions → CI → Run workflow** on `main`; a push to `main` just runs the gates.
+**Rollback:** re-run an older green `develop` run (it re-publishes that commit), or Render → Deploys →
+Redeploy.
+**Laptop off = no deploy.** Emergency route: restore the hook secret on GitHub and push `develop` there —
+the GitHub pipeline deploys as it always did (switch the Render branch back to `develop` first).
+
+---
 
 ## Prod, later
 
