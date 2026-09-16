@@ -69,6 +69,10 @@ sequenced below by value, not by dependency.
 
 - **Redis distributed cache** (`CACHE`) — only when you outgrow a single node (breaks the "Postgres-only
   run cost" on purpose-deferred terms).
+- **Multi-household membership** (`MULTIHOME`) — **decided: deferred (ADR-028, 2026-09-16)**; one user in
+  several tenants (own household + family household). Design + slice ladder in `PLATFORM_BACKLOG.md` §16;
+  the binding constraint is *the JWT keeps one `tenant_id` — switching re-mints, never a header*.
+  Trigger: real users ask. Two accounts model it today.
 - **Not planned** (integrations, not core): full-text/vector search, marketing email/CRM, product-analytics
   pipeline. i18n expansion is already shipped (EN/ES; FR/DE/PT scaffolded — `docs/LOCALIZATION.md`).
 
