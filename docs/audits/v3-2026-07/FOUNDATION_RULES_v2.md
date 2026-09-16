@@ -166,6 +166,11 @@ Each rule: **[machine]** (arch test / analyzer / CI gate) or **[review]** · cat
 - **R76 [machine]** — The `Notes` exemplar models the shared `ErrorResponse` shape; `new { error … }`
   anonymous error objects are banned in `Features/**`; the R3 machine half (outbound-to-user-URL requests
   route through `IOutboundUrlGuard`) lands. *(R71/R76-cand; TR-5, S0-G4.)*
+- **R80 [machine]** — The Forgejo pipeline (`.forgejo/workflows/`) is a held copy of the GitHub one: same
+  jobs, same `runs-on` labels (port-binding Linux jobs excepted: `ubuntu-host-ports`), same pins, same change classifier (plus its own path); Apple jobs wait for
+  `vars.CI_MACOS_RUNNER`; deploys publish only to `deploy/*` branches; prod is a `workflow_dispatch` on
+  `main`. Enforced by `ForgejoCiParityTests` + the LOCALCI-3 gate tests over both files. *(LOCALCI-4,
+  ADR-028; R77–R79 are reserved for LOCALCI-1/2.)*
 
 ## Standing TDD mandate (review, carried from R7/CONTRIBUTING)
 
