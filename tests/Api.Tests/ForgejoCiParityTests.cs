@@ -152,12 +152,18 @@ public class ForgejoCiParityTests
     }
 
     [Fact]
-    public void ForgejoWindowsJobs_DeclareTheirShell()
+    public void ForgejoShells_MatchGitHubsDefaults()
     {
-        // Forgejo's default `run:` shell is bash on every OS; the Windows steps are PowerShell.
-        var forgejo = Jobs(Read(ForgejoCi));
+        // GitHub runs an unspecified bash step as `bash -e {0}` (no pipefail); Forgejo adds pipefail, which
+        // failed two steps written for GitHub on the first runs. The copy pins GitHub's semantics.
+        var yml = Read(ForgejoCi);
+        var header = yml[..yml.IndexOf("\njobs:", StringComparison.Ordinal)];
+        Assert.Matches(@"(?m)^defaults:\n  run:\n    shell: bash -e \{0\}$", header);
+
+        // Forgejo's default shell is bash on every OS; the Windows steps are PowerShell.
+        var forgejo = Jobs(yml);
         Assert.Contains("shell: pwsh", forgejo["native-smoke-windows"], StringComparison.Ordinal);
-        Assert.Contains("matrix.os == 'windows-latest' && 'pwsh'", forgejo["native-build"], StringComparison.Ordinal);
+        Assert.Contains("matrix.os == 'windows-latest' && 'pwsh' || 'bash -e {0}'", forgejo["native-build"], StringComparison.Ordinal);
     }
 
     [Fact]

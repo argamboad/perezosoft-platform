@@ -4,6 +4,7 @@
 # image on the WSL runner, `windows-latest` is the Windows desk in host mode, `macos-26` the MacBook), so
 # every job id and `runs-on` line matches GitHub's and `ForgejoCiParityTests` can hold the two files
 # together. The deliberate differences, each marked `LOCALCI-4:` below:
+#   - Unspecified shells are pinned to GitHub's `bash -e {0}` (Forgejo's default adds pipefail).
 #   - Apple jobs need `vars.CI_MACOS_RUNNER` (a Mac with no runner would queue them forever).
 #   - Windows jobs declare `pwsh` (Forgejo's default shell is bash even on Windows) and bring their own
 #     Postgres (no preinstalled service on the desk).
@@ -32,6 +33,13 @@ on:
 # `contents: read` is all `actions/checkout` needs. Grant any future write scope per-job, never here.
 permissions:
   contents: read
+
+# LOCALCI-4: GitHub runs an unspecified `run:` shell as `bash -e {0}` — NO pipefail. Forgejo's default adds
+# `-o pipefail`, which turns steps written for GitHub into failures (`pid=$(adb shell pidof … | tr …)` while
+# the app is still starting; `grep -rl … | xargs -r` when nothing matches). Pin GitHub's semantics here.
+defaults:
+  run:
+    shell: bash -e {0}
 
 jobs:
   build-test:
@@ -239,7 +247,7 @@ jobs:
     # LOCALCI-4: Forgejo's default shell is bash on every OS; the Windows desk runs these in pwsh.
     defaults:
       run:
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash -e {0}' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -905,11 +913,9 @@ jobs:
         # it on the live image (the source ships under varying names/formats: .list vs deb822
         # .sources). The `ls` documents the actual layout in the job log. Ubuntu's own sources
         # (ubuntu.sources) never reference dl.google.com, so they can't match.
-        # LOCALCI-4: the desk's image ships no Chrome source, and grep's "no match" (exit 1) would fail
-        # the step under pipefail — `|| true` keeps "nothing to drop" a success.
         run: |
           ls -la /etc/apt/sources.list.d/
-          { grep -rl "dl.google.com" /etc/apt/sources.list.d/ || true; } | xargs -r sudo rm -fv
+          grep -rl "dl.google.com" /etc/apt/sources.list.d/ | xargs -r sudo rm -fv
 
       - name: Install Chromium (Playwright)
         run: pwsh tests/E2E.Tests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
