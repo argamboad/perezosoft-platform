@@ -163,6 +163,8 @@ hash) opt out with `IgnoreQueryFilters()`.
 *Rationale:* membership models "a user moves between tenants" and the always-in-exactly-one-tenant
 invariant cleanly; the global filter turns "never leak across tenants" (ADR-C2) from a per-query
 convention into a structural guarantee, so feature slices can't forget to scope.
+*(Relaxing "exactly one tenant" to several — own household + family household — was considered and
+**deferred** in ADR-028, which also fixes the constraints any future implementation must keep.)*
 
 *Amendment (2026-06-22) — scoping is now structural on BOTH read and write.* The original query
 filter scoped reads only; nothing stamped or validated `TenantId` on insert, so a slice that forgot
@@ -1359,3 +1361,53 @@ they own, so someone who arrived by invitation can end up owning a household. Th
 is not green-listed, so it admits nobody new — the leak is cosmetic, not a hole.
 
 **Ports downstream** (`vuelto`, `jigger-jot`) once the platform suite is green, like LOCALCI-3.
+
+**ADR-028 — Multi-household membership (one user in several tenants) is DECIDED: DEFERRED, with the design that must survive if it is ever built. (2026-09-16)**
+The question keeps coming back, so it is answered here once. ADR-003 fixed **one tenant per user**
+(`TenantMembership` unique on `UserId`; accepting an invitation *moves* you, `ReHomeAsync` gives every
+departing member a fresh tenant-of-one). The persona that genuinely needs more is real and comes from
+the budget app (`vuelto`): a son who **owns** his own household to run his own money *and* is a
+**member** of the family household — the same person owns data in one context and is a guest in
+another.
+
+**Decision: not now.** Design detail and slice ladder live in `PLATFORM_BACKLOG.md` §16 (`MULTIHOME`).
+
+**Why deferred:**
+1. **The cost is where it lands, not how many slices.** Loosening "a user has one tenant" re-opens
+   the one assumption every v2/v3 tenancy gate was proven against (ADR-003/020, the erasure
+   completeness rules, LB-ADM-3's deterministic membership lookup). The failure mode of a mistake is
+   cross-tenant data exposure — the worst bug class the platform has — so the change would have to
+   re-run the audit suite's Phase 4 adversarial pass before it could be trusted.
+2. **Demand is one persona in one app, with no user asking yet.** Two accounts (two email addresses)
+   models the son's case today with zero platform risk. It is clunky; if that clunkiness becomes a
+   complaint from real users, that is the trigger, and it will come with a far better idea of what
+   "switching" should feel like than exists now.
+3. **The template pays a tax nobody else does:** Postman parity, 34 E2E journeys, 156 QA cases and
+   their PDFs, the FOUNDATION_RULES arch tests, DATA_MODEL/FLOWS/ARCHITECTURE diagrams, 51 tutorial
+   lessons that quote the current entity, then a port to each downstream app. That sync work is
+   realistically the largest line item.
+
+**Rejected alternatives:**
+- **A "personal wallet" scoped inside the family household** — app-level, no platform change, and it
+  is the wrong ownership: the owner sees it, the owner's dissolve/erasure wipes it, and the son cannot
+  take it with him when he moves out. It is a scope in someone else's tenant, not his money.
+- **Per-request tenant selection (a header on every call).** Even if the feature is built, this is
+  ruled out: the RLS backstop, the query filter, the stamping interceptor and every quota all anchor
+  on the JWT `tenant_id` claim. Selection must re-mint the token, never ride on the request.
+
+**Constraints that bind any future implementation (so the option stays open cheaply):**
+1. **The JWT keeps exactly one `tenant_id` — the *active* household.** Switching = an authenticated
+   endpoint that verifies membership and re-mints the access token. Scoping, RLS, quotas and every
+   gate stay untouched.
+2. **The link-entity shape is the enabler** (ADR-003's "membership, not `User.TenantId`"): the unique
+   index moves from `user_id` to `(user_id, tenant_id)`; nothing else in the schema changes.
+3. **The GATES-2 green list (ADR-027) must fire at every household-founding path.** Today the single
+   choke point is `UserService.CreateUserWithTenantAsync`; a "create another household" action for a
+   signed-in user is a second front door and must run the same check.
+4. **Notifications gain a nullable `tenant_id`** (ADR-013's per-user carve-out otherwise shows a
+   family announcement inside the son's own budget). Preferences stay per user (ADR-C2).
+5. **Erasure walks every membership** — solo owner → dissolve, member → drop the row — which the
+   per-user-AND-per-tenant completeness rule already anticipates.
+
+**Trigger to revisit:** a shipped app has users asking for it (or a second app with the persona).
+Build on the platform first — tenancy is chassis, not a vertical — then port, like GATES.

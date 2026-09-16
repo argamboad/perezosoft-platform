@@ -46,7 +46,8 @@ One OAuth identity linked to a `User` (a user may link several providers).
 
 ### TenantMembership *(the user→tenant link — source of truth for tenancy)*
 - `id` (UUIDv7), `tenant_id` (FK → Tenant), `user_id` (FK → User)
-- **unique on `user_id`** — a user is in exactly one tenant at a time
+- **unique on `user_id`** — a user is in exactly one tenant at a time (multi-membership: decided-deferred,
+  ADR-028 / `PLATFORM_BACKLOG.md` §16 — if ever built, the index becomes `(user_id, tenant_id)`)
 - `role` — `owner` | `admin` | `member` (exactly one owner per tenant; `admin` is a delegated-management
   tier — ADR-009), `joined_at`. Capabilities per role are defined in `RolePermissions`, not ad-hoc checks.
 

@@ -32,6 +32,7 @@
 | 10 | ~~Postgres RLS tenancy backstop~~ (§11) → **✅ DONE** (ADR-020 + addendum) | `RLS` | Was the prod-activation prerequisite; built 2026-07-06 | none |
 | 11 | Local + self-hosted CI (§13) → **PLANNED** (ROADMAP post-terminal wave, 2026-09-08) | `LOCALCI` | Actions minutes are the finished platform's only running cost pressure | none (repo private) |
 | 12 | Stack flavors — spec + conformance kit + React/Angular/Flutter fronts, Node/Go/Spring/FastAPI backs, tiered DBs (§14) → **PLANNED** (ROADMAP flavors wave, 2026-09-08) | `FLAVORS` | The platform's value is its contract, not its C#; other stacks' devs get nothing from it today | `SPEC` epic first |
+| — | Multi-household membership (§16) → **DECIDED: DEFERRED** (ADR-028, 2026-09-16) | `MULTIHOME` | Re-opens the one-tenant-per-user assumption every tenancy gate is proven against; one persona, nobody asking; two accounts model it today | none (trigger: real users ask) |
 
 ---
 
@@ -449,6 +450,47 @@ side is fixed (`NEW_APP_GUIDE.md` Phase 2 + "Phase 3 → ports", `REBRANDING.md`
 **Dependencies:** none. Items 1, 3, 4, 5 are doc/script work; items 2 and 6 are real platform
 primitives — 2 is the one to schedule, and its design is no longer speculative (a downstream app has
 built and tested it, traps and all), 6 is small and prevents a whole class of silent misconfiguration.
+
+---
+
+## 16. Multi-household membership — `MULTIHOME` → **DECIDED: DEFERRED (ADR-028, 2026-09-16)**
+**What:** one user in several tenants — owner of their own household *and* member of another — with a
+household picker and an active-household switch. The persona (from `vuelto`): a son who runs his own
+money in a household he owns while keeping access to the family budget. Today ADR-003 forbids it
+(`TenantMembership` unique on `UserId`; invitation accept *moves*, never adds).
+
+**Why deferred (ADR-028):** it re-opens the one assumption every tenancy gate was proven against, for
+one persona in one app with nobody asking; two accounts model it today. Trigger: real users ask.
+
+**Design (binding if built — the constraints are in ADR-028):**
+- **Token:** the JWT still carries exactly one `tenant_id`, the *active* household.
+  `POST /api/auth/switch-household/{tenantId}` verifies membership and re-mints the access token.
+  Never a per-request header — the RLS backstop, query filter, stamping interceptor and quotas all
+  anchor on the claim.
+- **Schema:** unique index `user_id` → `(user_id, tenant_id)`. Role stays per membership (owner of
+  one, member of another; RBAC unchanged). `User.LastTenantId` (nullable, a preference → ADR-C2
+  carve-out) picks the landing household at sign-in; oldest membership when null.
+  `Notification.TenantId` nullable so a family announcement doesn't surface inside another household.
+- **Invitations:** accept = **add**, not move. Seat re-check (BILLING-9) unchanged per tenant.
+  `ReHomeAsync` only when the departing user would be left with *no* membership.
+- **Leave / remove:** with another membership held, just drop the row — simpler than today's
+  re-home. Sole owner of a solo tenant still dissolves.
+- **Found another household:** a new action for a signed-in user (today only signup founds one via
+  `UserService.CreateUserWithTenantAsync`). ⚠️ Second front door for the **GATES-2 green list** —
+  must run the same check or a non-listed invitee founds households through the side.
+- **Erasure:** walk all memberships (solo owner → dissolve, member → drop) — per-user AND per-tenant
+  completeness.
+- **Billing:** untouched in principle — each household is its own tenant/plan; a person is one seat
+  in each.
+- **`ITenantRepository.GetMembershipAsync(userId)`** (the single-membership overload LB-ADM-3
+  already flagged) goes away; every caller moves to the `(userId, tenantId)` overload.
+
+**Slice ladder (≈5):** MULTIHOME-1 schema + resolution + switch endpoint → MULTIHOME-2 invite add-not-move +
+leave/erasure rewrite → MULTIHOME-3 found-another-household + green-list gate → MULTIHOME-4 header picker +
+notification tenant tag + native shells → MULTIHOME-5 E2E/QA/Postman/lessons/diagrams sync (real work
+here, not a footnote). Then **re-run AUDIT_SUITE Phase 4** (adversarial slice pass) before trusting it.
+**Deps:** none. **Size:** M–L; the sync + re-audit is most of it. **Ports:** `vuelto` needs it;
+decide up front whether `jigger-jot` takes it or stays one-tenant.
 
 ---
 
