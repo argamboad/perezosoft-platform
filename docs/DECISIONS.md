@@ -1377,7 +1377,11 @@ Forgejo, and GitHub keeps its hosted ones.
 2. **The runners carry the hosted labels.** `ubuntu-latest` is a container image
    (`forgejo-ci/ubuntu:24.04`: catthehacker's act image + Docker CLI, PowerShell, `gh`, JDK 17, the Android
    SDK with the smoke's system image, the pinned .NET SDK and Android workload) on the WSL runner, which runs
-   jobs inside Docker-in-Docker with host networking and `/dev/kvm` passed through. `windows-latest` is the
+   jobs inside Docker-in-Docker with host networking and `/dev/kvm` passed through. Every WSL job shares that
+   one network namespace, so the two jobs that bind fixed ports (`e2e`, `native-smoke-android`) use
+   `ubuntu-host-ports` — the same image on a second WSL runner that takes one job at a time, which also
+   serializes them across runs and repos. That is the only `runs-on` difference the parity test allows, and
+   it fails for any Linux job with service containers left on the shared runner. `windows-latest` is the
    Windows desk in host mode (a logon task, so WebView2 has a session). `macos-26` will be the MacBook.
    Identical labels are what make `runs-on` comparable line for line.
 3. **Apple jobs require `vars.CI_MACOS_RUNNER`.** A job whose label no runner carries queues forever on
@@ -1397,8 +1401,8 @@ Forgejo, and GitHub keeps its hosted ones.
 
 **Consequences.** The desk is now a deploy path: deploys need the laptop on (the accepted trade-off of
 SETUP.md; GitHub stays the emergency route — restore the hook secret there and push). Runners are not
-clean machines: the smoke's Postgres is recreated per run, the WSL jobs share one network namespace (so
-`native-smoke-android` waits for `e2e`), and the image's SDK/workload pins join the CLAUDE.md
+clean machines: the smoke's Postgres is recreated per run, port-binding Linux jobs queue behind each other,
+and the image's SDK/workload pins join the CLAUDE.md
 bump-together playbook. The Render deploy-hook and the GitHub mirror token live in Forgejo's secrets only.
 
 **Rejected — one shared, forge-aware `ci.yml`.** It would remove the duplication but thread

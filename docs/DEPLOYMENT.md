@@ -444,7 +444,8 @@ git push -u github my-branch        # before `gh pr create` — PRs still live o
 
 | Label | Machine | Notes |
 |---|---|---|
-| `ubuntu-latest` | WSL runner → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Jobs share one network, so `native-smoke-android` waits for `e2e`. |
+| `ubuntu-latest` | WSL runner `linux-local` (6 jobs at once) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. |
+| `ubuntu-host-ports` | WSL runner `linux-ports` (1 job at a time), same image | `e2e` + `native-smoke-android`: they bind fixed ports and every WSL job shares one network, so they queue here — across runs and repos. |
 | `windows-latest` | the Windows desk, host mode (logon task) | `DOTNET_INSTALL_DIR=C:/forgejo-runner/_tool/dotnet`. **Stop the dev stack before it takes jobs** — the smoke fails fast if 5432/5238 are busy. |
 | `macos-26` | the MacBook (not registered yet) | Set repo variable **`CI_MACOS_RUNNER`** once it is Online; until then the Apple jobs skip instead of queueing forever. |
 

@@ -246,6 +246,10 @@ silently seeing 0 rows (the RLS-2/RLS-8 bug shape).
 - **Deps:** none. **Size:** ~1 slice + an adoption sweep; the sweep is the risk.
 
 ## 13. Local + self-hosted CI — `LOCALCI` → **PLANNED (ROADMAP post-terminal wave, 2026-09-08; stories written: `docs/stories/localci.md`)**
+
+> **2026-09-16 — LOCALCI-4 (ADR-028) changed the shape:** the repo now lives on a self-hosted Forgejo that
+> runs the whole pipeline itself (`.forgejo/workflows/`, R80), so piece (a) below is superseded for this
+> repo. Piece (b) and LOCALCI-3 stand.
 **What:** run the CI gates on the maintainer's own hardware — (a) self-hosted GitHub runners that
 `ci.yml` selects through repo variables, hosted runners as the always-available fallback; (b) a local
 pre-push gate runner that mirrors the PR-blocking jobs with GitHub uninvolved.

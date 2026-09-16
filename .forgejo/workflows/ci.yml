@@ -8,7 +8,8 @@
 #   - Windows jobs declare `pwsh` (Forgejo's default shell is bash even on Windows) and bring their own
 #     Postgres (no preinstalled service on the desk).
 #   - The hosted-image-only steps (freeing disk, the udev KVM rule) are replaced by what the desk needs.
-#   - native-smoke-android waits for e2e: both bind 5432/5238/8025 in the runner's shared network.
+#   - e2e and native-smoke-android run on `ubuntu-host-ports` (same image, one job at a time): they bind
+#     fixed ports, and the WSL runner's jobs share one network namespace.
 #   - Deploys push the commit to a `deploy/*` branch on GitHub (Render builds from GitHub; GitHub's
 #     ci.yml never triggers on those branches) and prod is a manual workflow_dispatch on main.
 name: CI
@@ -694,14 +695,12 @@ jobs:
   # fails to start from a plain `adb install`), and the WebView devtools socket only exists after
   # the app process is up.
   native-smoke-android:
-    # LOCALCI-4: after e2e, never beside it — the WSL runner's jobs share one network namespace and both
-    # bind 5432/5238/8025. `!cancelled()` keeps a red or skipped e2e from also skipping this smoke.
-    needs: [changes, e2e]
+    needs: changes
     if: >-
-      !cancelled()
-      && github.event_name == 'push' && github.ref == 'refs/heads/develop'
+      github.event_name == 'push' && github.ref == 'refs/heads/develop'
       && needs.changes.outputs.native == 'true'
-    runs-on: ubuntu-latest
+    # LOCALCI-4: the one-job-at-a-time WSL runner — see e2e.
+    runs-on: ubuntu-host-ports
     timeout-minutes: 45
     services:
       db:
@@ -855,7 +854,10 @@ jobs:
   e2e:
     needs: changes
     if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    # LOCALCI-4: the WSL runner's jobs share one network namespace, and this job binds fixed ports
+    # (5432/1025/8025 services, 5238/5169 servers). `ubuntu-host-ports` is the same image on a runner that
+    # takes one job at a time, so no two port-binding jobs — from any run or repo — ever overlap.
+    runs-on: ubuntu-host-ports
     services:
       db:
         image: postgres:17
@@ -903,9 +905,11 @@ jobs:
         # it on the live image (the source ships under varying names/formats: .list vs deb822
         # .sources). The `ls` documents the actual layout in the job log. Ubuntu's own sources
         # (ubuntu.sources) never reference dl.google.com, so they can't match.
+        # LOCALCI-4: the desk's image ships no Chrome source, and grep's "no match" (exit 1) would fail
+        # the step under pipefail — `|| true` keeps "nothing to drop" a success.
         run: |
           ls -la /etc/apt/sources.list.d/
-          grep -rl "dl.google.com" /etc/apt/sources.list.d/ | xargs -r sudo rm -fv
+          { grep -rl "dl.google.com" /etc/apt/sources.list.d/ || true; } | xargs -r sudo rm -fv
 
       - name: Install Chromium (Playwright)
         run: pwsh tests/E2E.Tests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium

@@ -114,6 +114,7 @@ RULES: list[tuple[str, str, str]] = [
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
+    ("tests/Api.Tests/ForgejoCiParityTests.cs", "1.4", "the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)"),
     ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)"),
     ("*/Perezosoft.*.csproj", "1.1", "created here; PackageReferences added as lessons need them"),
     ("src/Api/Properties/launchSettings.json", "1.1", ""),
@@ -468,6 +469,8 @@ RULES: list[tuple[str, str, str]] = [
     (".github/workflows/ci.yml", "1.6", "born here (build+test+secret/license gates); every part adds jobs — e2e 3.6, docker 8.2, deploy 8.3, native A.1"),
     (".github/forbidden-licenses.json", "1.6", "copyleft ban (R26)"),
     (".github/*", "8.3", ""),
+    (".forgejo/workflows/ci.yml", "8.3", "the same pipeline on the self-hosted Forgejo â€” a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)"),
+    (".forgejo/*", "8.3", "Forgejo copies + the deploy-branch publisher (LOCALCI-4)"),
 
     ("render.yaml", "8.2", "Render blueprint (ADR-017)"),
 

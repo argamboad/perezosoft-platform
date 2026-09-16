@@ -6,6 +6,8 @@
 > in `docs/ROADMAP.md` (post-terminal wave). Stories use Gherkin acceptance criteria.
 > **Status: 📋 PLANNED (2026-09-08)** — written pick-up-ready: every slice lists its exact edits,
 > commands, tests, and doc touch-points. **Decision record: ADR-025 (draft below, paste at pickup).**
+> **2026-09-16: LOCALCI-4 (Forgejo as the primary forge, ADR-028) is in progress and supersedes
+> LOCALCI-1 for this repo** — see its section below. LOCALCI-3 ✅; LOCALCI-2 still applies.
 
 **Epic key:** `LOCALCI`
 
@@ -569,6 +571,82 @@ caching NuGet/workloads on hosted runners (a separate, smaller win — note it i
 the expected skip/run pattern; one scheduled run observed (trigger it via `workflow_dispatch` to avoid
 waiting a week); `docs/tutorial/lessons/1.6-ci-from-commit-one.md` quotes swept + COVERAGE/PDF regen;
 merged after green CI.
+
+---
+
+### LOCALCI-4 — Forgejo as the primary forge: the full pipeline on the maintainer's machines
+
+**Status: 🚧 In progress** (2026-09-16) — ADR-028, rule **R80**, runbook `DEPLOYMENT.md` §10.
+
+**Why it overtook LOCALCI-1.** The maintainer moved day-to-day git to a private, self-hosted Forgejo
+(WSL2 + Docker on the Windows desk, Tailscale for the Mac). With Forgejo as `origin`, the cheapest CI is
+not "GitHub Actions on self-hosted runners" but Forgejo's own Actions — nothing is billed and nothing
+leaves the desk. GitHub stays a mirror (`github` remote): a deliberate push there still runs the GitHub
+pipeline, unchanged. LOCALCI-1's `vars.CI_*_RUNNER` routing is therefore not needed for this repo;
+`CI_MACOS_RUNNER` survives with a Forgejo meaning ("the Mac runner exists").
+
+**As a** platform maintainer
+**I want** every push to Forgejo to run the same gates, smokes and deploys GitHub runs
+**So that** routine work costs no minutes and GitHub only runs when I push to it on purpose
+
+**What landed:**
+- `.forgejo/workflows/ci.yml` + `postman-sync.yml` — held copies of the GitHub workflows. Deliberate
+  differences are marked `LOCALCI-4:` in the file: Apple jobs need `vars.CI_MACOS_RUNNER`; Windows jobs
+  declare `pwsh` and start their own Postgres container; the hosted-image-only steps (free disk, udev KVM)
+  are replaced; `e2e` + `native-smoke-android` run on `ubuntu-host-ports`; deploys publish to `deploy/*`
+  on GitHub first; prod is a `workflow_dispatch` on `main`.
+- `.forgejo/scripts/publish-deploy-branch.sh` — force-pushes the tested commit to a `deploy/*` branch on
+  GitHub (refuses any other branch; token in a header, never the URL).
+- `ForgejoCiParityTests` (**R80**) + the three LOCALCI-3 gate tests now `[Theory]` over both files.
+- Runners (server-side, not in the repo): `linux-local` (`ubuntu-latest`, 6 jobs), `linux-ports`
+  (`ubuntu-host-ports`, 1 job), `windows-desk` (`windows-latest`, host mode). Image `forgejo-ci/ubuntu:24.04`.
+
+**Acceptance criteria**
+
+```gherkin
+Scenario: A pull request on Forgejo runs the PR gates
+  Given a branch pushed to Forgejo with a PR into develop
+  When CI runs
+  Then build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e and both native-build legs
+       run on the desk's runners, and the Apple, smoke and deploy jobs are skipped
+
+Scenario: A develop push runs the develop-only legs
+  Given a code push to develop on Forgejo and no Mac runner registered
+  When CI runs
+  Then native-smoke-android and native-smoke-windows run, and both Apple jobs are skipped (not queued)
+
+Scenario: Staging deploys without running GitHub Actions
+  Given RENDER_DEPLOY_HOOK_STAGING, DEPLOY_MIRROR_TOKEN and DEPLOY_MIRROR_REPO are set in Forgejo
+  And the Render staging service tracks deploy/staging with auto-deploy off
+  When a green develop run reaches deploy-staging
+  Then the commit is on GitHub's deploy/staging, Render deploys it, the version-gated smoke passes
+  And GitHub shows no workflow run for that push
+
+Scenario: Prod needs a person
+  Given a push to main on Forgejo
+  When CI runs
+  Then every gate runs and deploy-prod is skipped
+  And deploy-prod runs only from "Run workflow" on main
+
+Scenario: The two workflows cannot drift
+  Given a pin, job or runs-on changed in one workflow only
+  When Api.Tests run
+  Then ForgejoCiParityTests fails naming the difference
+
+Scenario: Port-binding jobs never overlap
+  Given a PR run and a develop run in progress at the same time
+  Then their e2e and native-smoke-android jobs run one after another on linux-ports
+```
+
+**Operator steps** (runbook §10): Render staging branch → `deploy/staging`; Forgejo secrets
+`RENDER_DEPLOY_HOOK_STAGING`, `DEPLOY_MIRROR_TOKEN` (fine-grained, this repo, Contents RW), `POSTMAN_API_KEY`;
+variables `DEPLOY_MIRROR_REPO`, `STAGING_BASE_URL`, `POSTMAN_WORKSPACE_ID`; delete
+`RENDER_DEPLOY_HOOK_STAGING` from GitHub.
+
+**Out of scope:** the Mac runner (SETUP.md chapter 7 — then set `CI_MACOS_RUNNER`); porting to `vuelto` and
+`jigger-jot` (after this is green end to end); the Forgejo server itself (compose, backups — not repo code).
+**Definition of done:** R80 green; one PR run and one develop run observed green on Forgejo (Apple legs
+skipped); one staging deploy observed through `deploy/staging` with no GitHub run; GitHub hook secret removed.
 
 ---
 

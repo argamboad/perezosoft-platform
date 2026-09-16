@@ -26,12 +26,31 @@ public class ForgejoCiParityTests
             + $"(github-only: [{string.Join(", ", github.Keys.Except(forgejo.Keys))}], "
             + $"forgejo-only: [{string.Join(", ", forgejo.Keys.Except(github.Keys))}]).");
 
-        // The Forgejo runners carry the hosted labels on purpose, so `runs-on` is identical line for line.
+        // The Forgejo runners carry the hosted labels on purpose, so `runs-on` is identical line for line —
+        // except the jobs that bind fixed host ports, which go to the one-job-at-a-time WSL runner (the
+        // WSL runner's jobs share one network namespace). A new port-binding job belongs in this list.
+        var hostPortJobs = new Dictionary<string, string>
+        {
+            ["e2e"] = "ubuntu-host-ports",
+            ["native-smoke-android"] = "ubuntu-host-ports",
+        };
         var drifted = github.Keys
-            .Where(id => RunsOn(github[id]) != RunsOn(forgejo[id]))
+            .Where(id => (hostPortJobs.GetValueOrDefault(id) ?? RunsOn(github[id])) != RunsOn(forgejo[id]))
             .Select(id => $"{id} ({RunsOn(github[id])} vs {RunsOn(forgejo[id])})")
             .ToList();
         Assert.True(drifted.Count == 0, "runs-on differs between the two workflows: " + string.Join(", ", drifted));
+        Assert.All(hostPortJobs.Keys, id => Assert.Equal("ubuntu-latest", RunsOn(github[id])));
+
+        // The list above cannot go stale silently: a Linux job with service containers or a server bound to
+        // a localhost port is a port-binding job, and it must be on the host-ports runner.
+        var unsafeJobs = forgejo
+            .Where(j => RunsOn(j.Value) == "ubuntu-latest"
+                && (Regex.IsMatch(j.Value, @"(?m)^    services:") || j.Value.Contains("--urls http://localhost", StringComparison.Ordinal)))
+            .Select(j => j.Key)
+            .ToList();
+        Assert.True(unsafeJobs.Count == 0,
+            "These Linux jobs bind fixed ports but run on the shared runner — move them to ubuntu-host-ports "
+            + "and add them to hostPortJobs: " + string.Join(", ", unsafeJobs));
     }
 
     [Fact]
