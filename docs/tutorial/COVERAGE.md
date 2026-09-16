@@ -856,7 +856,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (193 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (194 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1050,6 +1050,7 @@
 - `docs/tutorial/lessons/A.1-maui-shells-and-parity.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `tests/E2E.Tests/README.md` — docs
+- `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 885 tracked files · 587 built in lessons · 298 bucketed · 0 unmapped
+**Totals:** 886 tracked files · 587 built in lessons · 299 bucketed · 0 unmapped
