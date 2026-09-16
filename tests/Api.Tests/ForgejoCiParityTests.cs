@@ -88,6 +88,12 @@ public class ForgejoCiParityTests
         // R61 applies to the copy too: the SDK comes from global.json, never from the workflow.
         Assert.Contains("global-json-file: global.json", forgejo);
         Assert.DoesNotContain("dotnet-version:", forgejo);
+
+        // GitHub keeps least privilege on the job token (DEP-8); Forgejo ignores the key and warns on every
+        // run, so the copy leaves it out — and must keep the note saying why.
+        Assert.Matches(@"(?m)^permissions:\n  contents: read$", github);
+        Assert.DoesNotMatch(@"(?m)^permissions:", forgejo);
+        Assert.Contains("Forgejo does not support that key", forgejo, StringComparison.Ordinal);
     }
 
     [Fact]
