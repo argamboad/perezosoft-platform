@@ -70,10 +70,24 @@ Two traps the first downstream app fell into, so the conceptualization avoids th
 3. **Number app decisions with an app prefix** (`JJ-001…` for JiggerJot) in a closing section of
    `docs/DECISIONS.md`. The plain `ADR-001+` range is taken by the platform's own build decisions
    (ADR-C11 amendment); cite those as `ADR-…`/`ADR-C…`.
-4. Create the two branches and protect them: **`main` is deploy-only** (protect it; nothing lands
-   there except release merges), **`develop` is the working branch** — one branch + PR per slice.
+4. Create the two branches: **`main` is deploy-only** (nothing lands there except release merges),
+   **`develop` is the working branch** — one branch + PR per slice.
 5. Push. **CI runs immediately and should be green** (build, ~500 tests, secret/license/QA-doc
    gates, native builds, browser E2E). The deploy jobs stay skipped until Phase 7's secrets exist.
+6. **Protect both branches — every new repo, before the first slice.** Once the first CI run has
+   reported (a required check GitHub has never seen still blocks), run:
+
+   ```powershell
+   ./tools/protect-branches.ps1 -Repo <owner>/<app> -Checks build-test,e2e,secret-scan
+   ```
+
+   `develop` then needs those checks green on an up-to-date branch, resolved conversations, and no
+   force pushes or deletion; `main` needs the same plus a pull request (0 approvals — a solo
+   maintainer). Admins are not bound, so the owner can still bypass in an emergency. **A personal
+   GitHub account has no account-wide ruleset**, so nothing protects a new repo automatically — this
+   step is the rule. A **private** repo needs GitHub Pro for branch protection; the script reports
+   the 403 rather than failing silently. Only list checks the repo's CI actually runs on pull
+   requests: a required check that never reports blocks every merge.
 
 ## Phase 3 — Rebrand + fill the placeholders (first Claude Code session)
 

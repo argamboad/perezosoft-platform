@@ -99,6 +99,7 @@ RULES: list[tuple[str, str, str]] = [
     (".claude/*", "META", "assistant config"),
     (".vscode/*", "META", "editor run/debug config — not part of the rebuilt app"),
     ("tools/publish-native.ps1", "META", "maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed"),
+    ("tools/protect-branches.ps1", "META", "maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app"),
 
     # ---- Part 0 ----
     (".gitignore", "0.2", ""),
