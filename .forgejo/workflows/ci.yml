@@ -43,12 +43,10 @@ on:
         default: none
         options: [none, staging, prod]
 
-# Least privilege for every job (v3 audit DEP-8). No job here consumes GITHUB_TOKEN — nothing pushes,
-# comments, or releases — but several execute freshly-downloaded third-party binaries (gitleaks, mailpit,
-# dotnet tools), so the default write-all token would hand those a repo-write credential for no reason.
-# `contents: read` is all `actions/checkout` needs. Grant any future write scope per-job, never here.
-permissions:
-  contents: read
+# LOCALCI-4: GitHub's copy carries `permissions: contents: read` (v3 audit DEP-8, least privilege for the
+# job token). Forgejo does not support that key — it warns on every run and ignores it — so it is left out
+# here. Nothing in this pipeline writes with the job token: the one push (to GitHub, in the deploy jobs)
+# uses DEPLOY_MIRROR_TOKEN. Job-token capabilities on Forgejo are granted under Authorized Integrations.
 
 # LOCALCI-4: GitHub runs an unspecified `run:` shell as `bash -e {0}` — NO pipefail. Forgejo's default adds
 # `-o pipefail`, which turns steps written for GitHub into failures (`pid=$(adb shell pidof … | tr …)` while
