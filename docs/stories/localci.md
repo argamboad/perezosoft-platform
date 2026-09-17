@@ -601,6 +601,10 @@ button
 - `.forgejo/scripts/push-to-github.sh` — fast-forwards `develop`/`main` on GitHub to the tested commit
   (never forced, refuses any other branch; token in a header, never the URL). Render follows GitHub's
   `develop`, so this is what makes the commit deployable; GitHub's pipeline re-deploys it, harmlessly.
+- **Knobs** — four repo variables that change the triggers without a commit (`CI_SMOKES_ON_PUSH`,
+  `CI_DEPLOY_ON_PUSH`, `CI_WEEKLY_SMOKES`, `CI_MACOS_RUNNER`; table in `DEPLOYMENT.md` §10). Set the first
+  two to `all` / `staging` and Forgejo behaves exactly like GitHub. `ForgejoKnobs_AreTheDocumentedFour`
+  fails on an undocumented `vars.CI_*`.
 - `ForgejoCiParityTests` (**R80**) + the three LOCALCI-3 gate tests now `[Theory]` over both files.
 - Runners (server-side, not in the repo): `linux-local` (`ubuntu-latest`, 6 jobs), `linux-ports`
   (`ubuntu-host-ports`, 1 job), `windows-desk` (`windows-latest`, host mode). Image `forgejo-ci/ubuntu:24.04`.

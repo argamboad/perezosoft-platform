@@ -18,6 +18,16 @@
 #     to the same branch on GitHub (Render follows GitHub's develop/main; GitHub's own pipeline runs and
 #     re-deploys the same commit, harmlessly) and only after every gate — and every smoke selected in the
 #     same run — is green.
+#
+# KNOBS — repo variables (Settings → Actions → Variables) that change the behaviour above without a
+# commit. Unset means the default. Documented for operators in docs/DEPLOYMENT.md §10.
+#   CI_SMOKES_ON_PUSH   none* | windows | android | apple | all — also run these smokes on every code
+#                       push to develop (GitHub's behaviour), not only on demand.
+#   CI_DEPLOY_ON_PUSH   none* | staging — also deploy staging on every green code push to develop
+#                       (GitHub's behaviour). Prod is never deployed on a push, whatever this says.
+#   CI_WEEKLY_SMOKES    on* | off — the Monday 06:00 UTC smoke run.
+#   CI_MACOS_RUNNER     unset* | anything — set once the MacBook runner is Online; until then the Apple
+#                       jobs skip instead of queueing forever.
 name: CI
 
 on:
@@ -446,13 +456,16 @@ jobs:
     #
     # `vars.CI_MACOS_RUNNER` is LOCALCI-1's variable and does not exist yet; an unset variable reads
     # as empty, which is exactly the hosted-fallback branch. Nothing here waits on that slice.
-    # LOCALCI-4: on demand or on the schedule, and only with a Mac registered.
+    # LOCALCI-4: on demand, on the schedule, or per develop push when CI_SMOKES_ON_PUSH says so — and
+    # only with a Mac registered.
     if: >-
       needs.changes.outputs.native == 'true'
       && vars.CI_MACOS_RUNNER != ''
-      && (github.event_name == 'schedule'
+      && ((github.event_name == 'schedule' && vars.CI_WEEKLY_SMOKES != 'off')
           || (github.event_name == 'workflow_dispatch'
-              && (github.event.inputs.smokes == 'apple' || github.event.inputs.smokes == 'all')))
+              && (github.event.inputs.smokes == 'apple' || github.event.inputs.smokes == 'all'))
+          || (github.event_name == 'push' && github.ref == 'refs/heads/develop'
+              && (vars.CI_SMOKES_ON_PUSH == 'apple' || vars.CI_SMOKES_ON_PUSH == 'all')))
     # Same Xcode reasoning as native-build-apple: pinned image + workload set 10.0.400.1 (iOS
     # 26.5.10315, requires Xcode 26.6) + DEVELOPER_DIR pinning the image's default Xcode 26.6.
     runs-on: macos-26
@@ -597,12 +610,15 @@ jobs:
   # Deliberately NOT in the deploy-staging needs — a native run must not block web deploys (ADR-018).
   native-smoke-windows:
     needs: changes
-    # LOCALCI-4: on demand (`smokes` input) or on the Monday schedule, not per push.
+    # LOCALCI-4: on demand (`smokes` input), on the Monday schedule, or per develop push when the
+    # CI_SMOKES_ON_PUSH knob says so.
     if: >-
       needs.changes.outputs.native == 'true'
-      && (github.event_name == 'schedule'
+      && ((github.event_name == 'schedule' && vars.CI_WEEKLY_SMOKES != 'off')
           || (github.event_name == 'workflow_dispatch'
-              && (github.event.inputs.smokes == 'windows' || github.event.inputs.smokes == 'all')))
+              && (github.event.inputs.smokes == 'windows' || github.event.inputs.smokes == 'all'))
+          || (github.event_name == 'push' && github.ref == 'refs/heads/develop'
+              && (vars.CI_SMOKES_ON_PUSH == 'windows' || vars.CI_SMOKES_ON_PUSH == 'all')))
     runs-on: windows-latest
     timeout-minutes: 45
     defaults:
@@ -722,12 +738,15 @@ jobs:
   # the app process is up.
   native-smoke-android:
     needs: changes
-    # LOCALCI-4: on demand (`smokes` input) or on the Monday schedule, not per push.
+    # LOCALCI-4: on demand (`smokes` input), on the Monday schedule, or per develop push when the
+    # CI_SMOKES_ON_PUSH knob says so.
     if: >-
       needs.changes.outputs.native == 'true'
-      && (github.event_name == 'schedule'
+      && ((github.event_name == 'schedule' && vars.CI_WEEKLY_SMOKES != 'off')
           || (github.event_name == 'workflow_dispatch'
-              && (github.event.inputs.smokes == 'android' || github.event.inputs.smokes == 'all')))
+              && (github.event.inputs.smokes == 'android' || github.event.inputs.smokes == 'all'))
+          || (github.event_name == 'push' && github.ref == 'refs/heads/develop'
+              && (vars.CI_SMOKES_ON_PUSH == 'android' || vars.CI_SMOKES_ON_PUSH == 'all')))
     # LOCALCI-4: the one-job-at-a-time WSL runner — see e2e.
     runs-on: ubuntu-host-ports
     timeout-minutes: 45
@@ -998,10 +1017,13 @@ jobs:
   deploy-staging:
     needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e, native-build,
             native-smoke-windows, native-smoke-android, native-smoke-apple]
+    # The trigger: a dispatch that asked for staging, or — with the CI_DEPLOY_ON_PUSH knob — every code
+    # push to develop (GitHub's behaviour). Either way, on develop only and behind everything below.
     if: >-
       !cancelled()
-      && github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'staging'
       && github.ref == 'refs/heads/develop'
+      && ((github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'staging')
+          || (github.event_name == 'push' && vars.CI_DEPLOY_ON_PUSH == 'staging'))
       && needs.build-test.result == 'success' && needs.secret-scan.result == 'success'
       && needs.qa-artifacts.result == 'success' && needs.license-scan.result == 'success'
       && needs.docker-build.result == 'success' && needs.e2e.result == 'success'
