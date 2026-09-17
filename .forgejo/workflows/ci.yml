@@ -919,7 +919,12 @@ jobs:
   # the HTTP API, and appsettings.Development already allow-lists the Web origin for CORS + Mailpit SMTP.
   # OAuth/desktop/Android stay manual (they need an external provider / native runners).
   e2e:
-    needs: changes
+    # LOCALCI-4: after the heavy builds, not beside them. On one machine, Blazor's boot inside the
+    # test browser died ("An unhandled error has occurred" at NN%) in 5 of the first 14 runs, every
+    # time while build-test and the native builds were compiling in parallel, never once the machine
+    # was quiet. Waiting for them costs ~3 minutes per run and gives the browser the machine to itself.
+    # A red build also skips e2e, which is fine: there is nothing to test.
+    needs: [changes, build-test, native-build]
     if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
     # LOCALCI-4: the WSL runner's jobs share one network namespace, and this job binds fixed ports
     # (5432/1025/8025 services, 5238/5169 servers). `ubuntu-host-ports` is the same image on a runner that

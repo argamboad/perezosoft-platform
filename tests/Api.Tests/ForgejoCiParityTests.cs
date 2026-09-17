@@ -198,6 +198,19 @@ public class ForgejoCiParityTests
     }
 
     [Fact]
+    public void ForgejoE2e_WaitsForTheHeavyBuilds()
+    {
+        // One machine: the test browser's Blazor boot failed 5 times in 14 runs, always while build-test
+        // and the native builds were compiling beside it. e2e therefore runs after them on Forgejo. GitHub
+        // keeps them parallel (one VM per job). Only additions are allowed — `changes` must stay.
+        var github = NeedsList(Jobs(Read(GitHubCi))["e2e"]);
+        var forgejo = NeedsList(Jobs(Read(ForgejoCi))["e2e"]);
+        Assert.Equal(new HashSet<string> { "changes" }, github);
+        Assert.True(forgejo.IsSupersetOf(["changes", "build-test", "native-build"]),
+            $"Forgejo's e2e must wait for the heavy builds (needs: [{string.Join(", ", forgejo)}])");
+    }
+
+    [Fact]
     public void ForgejoKnobs_AreTheDocumentedFour_AndProdNeverDeploysOnAPush()
     {
         // Every `vars.CI_*` the workflow reads must be one of the documented knobs (header comment + runbook
