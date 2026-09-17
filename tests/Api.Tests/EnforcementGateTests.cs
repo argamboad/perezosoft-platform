@@ -42,6 +42,27 @@ public class EnforcementGateTests
     }
 
     [Fact]
+    public void Dockerfile_GivesTheAppUserAWritableStorageDir()
+    {
+        // Local-disk file storage (ADR-010) defaults to ./storage under the app base dir = /app/storage. The runtime
+        // runs as the non-root `app` user, and WORKDIR /app is created by root, so without this the first file write
+        // (CSV export, report PDF, household export) fails with "Access to the path '/app/storage' is denied" —
+        // found on a downstream app's staging, 2026-09-17. The directory must exist, owned by `app`, BEFORE `USER app`.
+        var dockerfile = File.ReadAllText(Path.Combine(RepoRoot(), "Dockerfile"));
+        var runtime = dockerfile[dockerfile.IndexOf("AS runtime", StringComparison.Ordinal)..];
+        var userAt = runtime.IndexOf("USER app", StringComparison.Ordinal);
+        Assert.True(userAt > 0, "The runtime stage must switch to the non-root `app` user.");
+
+        var beforeUser = runtime[..userAt];
+        Assert.Matches(@"mkdir -p [^\n]*/app/storage", beforeUser);
+        Assert.Matches(@"chown [^\n]*app:app [^\n]*/app/storage", beforeUser);
+
+        // CI proves it on the built image, in both workflow copies (R80 keeps them together).
+        foreach (var workflow in new[] { Path.Combine(".github", "workflows", "ci.yml"), Path.Combine(".forgejo", "workflows", "ci.yml") })
+            Assert.Contains("/app/storage/.write-probe", File.ReadAllText(Path.Combine(RepoRoot(), workflow)));
+    }
+
+    [Fact]
     public void HostIndexHtml_ReferenceTheIdenticalRclScriptSet() // R68
     {
         // The RCL's js contracts (theme pre-paint, MFA QR) must load in BOTH hosts — a script added
