@@ -68,7 +68,9 @@ public class ForgejoCiParityTests
             ("postgres image", @"image:\s*postgres:(\S+)"),
             ("MAUI workload set", @"workload restore \S+ --version (\S+)"),
             ("Xcode", @"DEVELOPER_DIR:\s*(\S+)"),
-            ("action versions", @"uses:\s*(actions/[\w-]+@v\d+)"),
+            // upload-artifact is the one action whose version legitimately differs: v4+ refuses to run
+            // off github.com, so the Forgejo copy pins v3 (asserted below).
+            ("action versions", @"uses:\s*(actions/(?!upload-artifact)[\w-]+@v\d+)"),
             ("Java", @"java-version:\s*""([^""]+)"""),
             ("Python", @"python-version:\s*""([^""]+)"""),
             ("Android system image", @"""(system-images;[^""]+)"""),
@@ -84,6 +86,12 @@ public class ForgejoCiParityTests
                 drifted.Add($"{name}: github [{string.Join(", ", a)}] vs forgejo [{string.Join(", ", b)}]");
         }
         Assert.True(drifted.Count == 0, "Bump pins in BOTH workflows together: " + string.Join("; ", drifted));
+
+        // upload-artifact: GitHub on the current major, Forgejo on v3 (the last one that works off
+        // github.com), and never as the verdict of the job that uses it.
+        Assert.Matches(@"uses:\s*actions/upload-artifact@v[4-9]\d*", github);
+        Assert.Matches(@"(?m)^\s+continue-on-error: true\n\s+uses: actions/upload-artifact@v3$", forgejo);
+        Assert.DoesNotMatch(@"uses:\s*actions/upload-artifact@v(?!3\b)\d+", forgejo);
 
         // R61 applies to the copy too: the SDK comes from global.json, never from the workflow.
         Assert.Contains("global-json-file: global.json", forgejo);

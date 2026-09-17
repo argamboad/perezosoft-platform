@@ -580,8 +580,12 @@ jobs:
           [ "$ok" = "1" ] || { echo "::error::the iOS app never reached /api/auth/providers — Blazor did not boot or cannot reach the API"; tail -40 api.log; exit 1; }
 
       - name: Screenshot artifacts
+        # LOCALCI-4: upload-artifact v4+ refuses to run anywhere but github.com ("not currently supported
+        # on GHES"); v3 uses the artifact API Forgejo implements. And a screenshot is a diagnostic, never
+        # the verdict — the smoke above passed or failed on its own — so this step cannot turn it red.
         if: always()
-        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        uses: actions/upload-artifact@v3
         with:
           name: apple-smoke-screenshots
           path: |
