@@ -136,10 +136,12 @@ public class ForgejoCiParityTests
             Assert.True(githubNeeds.IsSubsetOf(forgejoNeeds), $"{job} dropped a gate GitHub's deploy waits for: {string.Join(", ", githubNeeds.Except(forgejoNeeds))}");
             Assert.True(forgejoNeeds.IsSupersetOf(smokes.Append("native-build")), $"{job} must wait for the native builds and every smoke");
 
-            // Trigger: a dispatch that asked for this target, on the branch Render follows for it — never a push.
+            // Trigger: a dispatch that asked for this target, on the branch Render follows for it. A push
+            // deploys only staging, and only through the CI_DEPLOY_ON_PUSH knob (checked in the knobs test).
             Assert.Contains($"github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == '{target}'", body, StringComparison.Ordinal);
             Assert.Contains($"github.ref == 'refs/heads/{branch}'", body, StringComparison.Ordinal);
-            Assert.DoesNotContain("github.event_name == 'push'", body, StringComparison.Ordinal);
+            if (target == "prod")
+                Assert.DoesNotContain("github.event_name == 'push'", body, StringComparison.Ordinal);
 
             // `!cancelled()` lets it run past a SKIPPED smoke; every gate must then be checked explicitly,
             // and a smoke may be anything but red.
@@ -166,10 +168,11 @@ public class ForgejoCiParityTests
     }
 
     [Fact]
-    public void ForgejoSmokes_RunOnDemandOrOnTheSchedule_NeverPerPush()
+    public void ForgejoSmokes_RunOnDemandOrOnTheSchedule_AndPerPushOnlyThroughTheKnob()
     {
-        // The smokes are the slow legs and the desk is one machine: they run when asked for (`smokes`
-        // input) or on the Monday schedule, and the dispatch offers exactly the targets the jobs answer to.
+        // The smokes are the slow legs and the desk is one machine: by default they run when asked for
+        // (`smokes` input) or on the Monday schedule. The dispatch offers exactly the targets the jobs
+        // answer to, and the only way back to GitHub's per-push behaviour is the CI_SMOKES_ON_PUSH knob.
         var yml = Read(ForgejoCi);
         Assert.Matches(@"(?ms)^      smokes:\n.*?options: \[none, windows, android, apple, all\]", yml);
         Assert.Matches(@"(?ms)^      deploy:\n.*?options: \[none, staging, prod\]", yml);
@@ -178,12 +181,36 @@ public class ForgejoCiParityTests
         foreach (var (job, target) in new[] { ("native-smoke-windows", "windows"), ("native-smoke-android", "android"), ("native-smoke-apple", "apple") })
         {
             var body = forgejo[job];
-            Assert.Contains("github.event_name == 'schedule'", body, StringComparison.Ordinal);
+            Assert.Contains("github.event_name == 'schedule' && vars.CI_WEEKLY_SMOKES != 'off'", body, StringComparison.Ordinal);
             Assert.Contains($"github.event.inputs.smokes == '{target}' || github.event.inputs.smokes == 'all'", body, StringComparison.Ordinal);
-            Assert.DoesNotContain("github.event_name == 'push'", body, StringComparison.Ordinal);
+            Assert.Contains($"github.event_name == 'push' && github.ref == 'refs/heads/develop'\n              && (vars.CI_SMOKES_ON_PUSH == '{target}' || vars.CI_SMOKES_ON_PUSH == 'all')", body, StringComparison.Ordinal);
         }
         // The native BUILDS keep running per push — compile rot is caught within one merge (NATIVE-1).
         Assert.DoesNotContain("workflow_dispatch", forgejo["native-build"], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ForgejoKnobs_AreTheDocumentedFour_AndProdNeverDeploysOnAPush()
+    {
+        // Every `vars.CI_*` the workflow reads must be one of the documented knobs (header comment + runbook
+        // §10), and the deploy-on-push knob may only ever reach staging.
+        var yml = Read(ForgejoCi);
+        string[] knobs = ["CI_SMOKES_ON_PUSH", "CI_DEPLOY_ON_PUSH", "CI_WEEKLY_SMOKES", "CI_MACOS_RUNNER"];
+
+        var used = Regex.Matches(yml, @"vars\.(CI_[A-Z_]+)").Select(m => m.Groups[1].Value).ToHashSet();
+        Assert.True(used.SetEquals(knobs), $"CI_* variables read by the workflow: [{string.Join(", ", used)}] — keep the header's KNOBS list and DEPLOYMENT.md §10 in step");
+        foreach (var knob in knobs)
+            Assert.Contains($"#   {knob}", yml, StringComparison.Ordinal); // listed in the header
+
+        var forgejo = Jobs(yml);
+        Assert.Contains("github.event_name == 'push' && vars.CI_DEPLOY_ON_PUSH == 'staging'", forgejo["deploy-staging"], StringComparison.Ordinal);
+        Assert.DoesNotContain("CI_DEPLOY_ON_PUSH", forgejo["deploy-prod"], StringComparison.Ordinal);
+        Assert.DoesNotContain("github.event_name == 'push'", forgejo["deploy-prod"], StringComparison.Ordinal);
+
+        // The operator doc names each knob.
+        var runbook = Read("docs/DEPLOYMENT.md");
+        foreach (var knob in knobs)
+            Assert.Contains($"`{knob}`", runbook, StringComparison.Ordinal);
     }
 
     [Fact]

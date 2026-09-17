@@ -470,8 +470,22 @@ GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings →
 | **Run workflow**, `deploy=prod` (on `main`) | same, `deploy-prod` | |
 | Monday 06:00 UTC | all three smokes (the weekly safety net for legs that no longer run per push) | |
 
-The native smokes and the deploys never run on a push. Pick both inputs in one dispatch to smoke and
-deploy in a single run.
+By default the native smokes and the deploys never run on a push. Pick both inputs in one dispatch to
+smoke and deploy in a single run.
+
+**Knobs** — repo variables (Forgejo → repo → Settings → Actions → Variables) that change the table above
+without a commit. Set one to turn a behaviour on, delete it to go back to the default; the next run picks
+it up. The workflow header lists the same four, and `ForgejoKnobs_AreTheDocumentedFour` fails if the
+workflow reads a `CI_*` variable that is not documented here.
+
+| Variable | Values | Default | Effect |
+|---|---|---|---|
+| `CI_SMOKES_ON_PUSH` | `windows` · `android` · `apple` · `all` | unset (none) | Also run those native smokes on **every code push to `develop`** — GitHub's behaviour. Costs 3–10 min per merge and the desk's CPU while you work. |
+| `CI_DEPLOY_ON_PUSH` | `staging` | unset (manual only) | Also deploy staging on **every green code push to `develop`** — GitHub's behaviour: staging tracks `develop`. Combine with `CI_SMOKES_ON_PUSH` and the deploy waits for those smokes too. **Prod is never deployed on a push**, whatever this says. |
+| `CI_WEEKLY_SMOKES` | `off` | unset (on) | Switch off the Monday 06:00 UTC smoke run (e.g. while the laptop is away). |
+| `CI_MACOS_RUNNER` | anything non-empty | unset | Set once the MacBook runner is Online. Until then the Apple jobs **skip**; with it set and the Mac asleep they **wait** for it. |
+
+Any value not listed reads as the default (an unknown `CI_SMOKES_ON_PUSH` matches no smoke).
 
 **How a deploy runs.** `deploy-staging` pushes the commit to `develop` **on GitHub**
 (`.forgejo/scripts/push-to-github.sh` — `develop`/`main` only, a plain fast-forward, never forced), fires
