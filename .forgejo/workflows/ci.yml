@@ -500,6 +500,9 @@ jobs:
           brew services start postgresql@17
           for i in $(seq 1 30); do "$PGBIN/pg_isready" -h localhost && break; sleep 2; done
           "$PGBIN/pg_isready" -h localhost || { echo "::error::Postgres never became ready"; exit 1; }
+          # LOCALCI-4 (the LOCALCI-1b idempotency fix): the Mac is not a fresh VM — the database from the
+          # previous run is still there, and `createdb` alone failed the second run ever made.
+          "$PGBIN/dropdb" -h localhost --if-exists smoke
           "$PGBIN/createdb" -h localhost smoke
 
       - name: Boot a simulator
@@ -601,6 +604,16 @@ jobs:
           tail -n 60 api.log || true
           tail -n 30 catalyst-app.log || true
           xcrun simctl spawn "$UDID" log show --last 5m --predicate 'process == "Perezosoft.Maui"' --style compact 2>/dev/null | tail -n 40 || true
+
+      - name: Leave the Mac as we found it
+        # LOCALCI-4: a hosted runner is thrown away after the job; the MacBook is not. Stop what the
+        # smoke started so it is not still running Postgres, a simulator and an API an hour later.
+        if: always()
+        continue-on-error: true
+        run: |
+          pkill -f "Perezosoft.Api" || true
+          [ -n "${UDID:-}" ] && xcrun simctl shutdown "$UDID" || true
+          brew services stop postgresql@17 || true
 
   # Native smoke — Windows (NATIVE-7, ADR-018). Runs the REAL MAUI Windows app against a real API +
   # Postgres and asserts BOOT-TO-LOGIN: the app process stays up and its Blazor login page reaches the
