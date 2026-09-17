@@ -483,7 +483,8 @@ workflow reads a `CI_*` variable that is not documented here.
 | `CI_SMOKES_ON_PUSH` | `windows` · `android` · `apple` · `all` | unset (none) | Also run those native smokes on **every code push to `develop`** — GitHub's behaviour. Costs 3–10 min per merge and the desk's CPU while you work. |
 | `CI_DEPLOY_ON_PUSH` | `staging` | unset (manual only) | Also deploy staging on **every green code push to `develop`** — GitHub's behaviour: staging tracks `develop`. Combine with `CI_SMOKES_ON_PUSH` and the deploy waits for those smokes too. **Prod is never deployed on a push**, whatever this says. |
 | `CI_WEEKLY_SMOKES` | `off` | unset (on) | Switch off the Monday 06:00 UTC smoke run (e.g. while the laptop is away). |
-| `CI_MACOS_RUNNER` | anything non-empty | unset | Set once the MacBook runner is Online. Until then the Apple jobs **skip**; with it set and the Mac asleep they **wait** for it. |
+| `CI_MACOS_RUNNER` | anything non-empty | unset | Set once the MacBook runner is Online. Until then the Apple jobs **skip**. |
+| `CI_MACOS_PROBE` | `host:port` (e.g. `100.103.211.64:22`) | unset (assume awake) | What the `mac` job connects to in order to decide whether the MacBook is awake. Asleep ⇒ the Apple jobs **skip with a warning** instead of queueing for `ABANDONED_JOB_TIMEOUT` (24 h) or being killed as zombies mid-build (10 min) and turning the run red. Wake it and re-run the workflow. |
 
 Any value not listed reads as the default (an unknown `CI_SMOKES_ON_PUSH` matches no smoke).
 

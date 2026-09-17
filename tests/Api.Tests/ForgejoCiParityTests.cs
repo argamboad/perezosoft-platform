@@ -21,10 +21,14 @@ public class ForgejoCiParityTests
         var github = Jobs(Read(GitHubCi));
         var forgejo = Jobs(Read(ForgejoCi));
 
-        Assert.True(github.Keys.ToHashSet().SetEquals(forgejo.Keys),
-            "The two CI workflows must define the same jobs — add or remove the job in BOTH files "
+        // The copy may add jobs that only exist because the runners are the maintainer's own machines.
+        // Each one is listed here with its reason; everything else must match GitHub job for job.
+        string[] forgejoOnly = ["mac"]; // is the MacBook awake? — it is a laptop, not a datacenter VM
+        Assert.True(github.Keys.ToHashSet().SetEquals(forgejo.Keys.Except(forgejoOnly)),
+            "The two CI workflows must define the same jobs — add or remove the job in BOTH files, or "
+            + "list a Forgejo-only job in this test with its reason "
             + $"(github-only: [{string.Join(", ", github.Keys.Except(forgejo.Keys))}], "
-            + $"forgejo-only: [{string.Join(", ", forgejo.Keys.Except(github.Keys))}]).");
+            + $"forgejo-only: [{string.Join(", ", forgejo.Keys.Except(github.Keys).Except(forgejoOnly))}]).");
 
         // The Forgejo runners carry the hosted labels on purpose, so `runs-on` is identical line for line —
         // except the jobs that bind fixed host ports, which go to the one-job-at-a-time WSL runner (the
@@ -34,6 +38,8 @@ public class ForgejoCiParityTests
             ["e2e"] = "ubuntu-host-ports",
             ["native-smoke-android"] = "ubuntu-host-ports",
         };
+        Assert.All(forgejoOnly, id => Assert.Equal("ubuntu-latest", RunsOn(forgejo[id]))); // never on the machine it asks about
+
         var drifted = github.Keys
             .Where(id => (hostPortJobs.GetValueOrDefault(id) ?? RunsOn(github[id])) != RunsOn(forgejo[id]))
             .Select(id => $"{id} ({RunsOn(github[id])} vs {RunsOn(forgejo[id])})")
@@ -216,7 +222,7 @@ public class ForgejoCiParityTests
         // Every `vars.CI_*` the workflow reads must be one of the documented knobs (header comment + runbook
         // §10), and the deploy-on-push knob may only ever reach staging.
         var yml = Read(ForgejoCi);
-        string[] knobs = ["CI_SMOKES_ON_PUSH", "CI_DEPLOY_ON_PUSH", "CI_WEEKLY_SMOKES", "CI_MACOS_RUNNER"];
+        string[] knobs = ["CI_SMOKES_ON_PUSH", "CI_DEPLOY_ON_PUSH", "CI_WEEKLY_SMOKES", "CI_MACOS_RUNNER", "CI_MACOS_PROBE"];
 
         var used = Regex.Matches(yml, @"vars\.(CI_[A-Z_]+)").Select(m => m.Groups[1].Value).ToHashSet();
         Assert.True(used.SetEquals(knobs), $"CI_* variables read by the workflow: [{string.Join(", ", used)}] — keep the header's KNOBS list and DEPLOYMENT.md §10 in step");
@@ -235,13 +241,25 @@ public class ForgejoCiParityTests
     }
 
     [Fact]
-    public void ForgejoAppleJobs_WaitForARegisteredMac()
+    public void ForgejoAppleJobs_WaitForARegisteredMacThatIsAwake()
     {
-        // A job whose label no runner carries queues forever on Forgejo — so the Apple legs only exist
-        // once the Mac is registered and CI_MACOS_RUNNER says so.
+        // A job whose label no runner carries would queue for 24 h on Forgejo, and one whose runner
+        // disappears mid-job is killed as a zombie and turns the run red — neither is a defect in the
+        // code. The `mac` job answers "is the MacBook there?" on an always-on runner, and the Apple jobs
+        // gate on it, so an absent Mac means SKIPPED (neutral) plus a warning, not red and not queued.
         var forgejo = Jobs(Read(ForgejoCi));
         foreach (var job in new[] { "native-build-apple", "native-smoke-apple" })
-            Assert.Contains("vars.CI_MACOS_RUNNER != ''", forgejo[job], StringComparison.Ordinal);
+        {
+            Assert.Contains("needs.mac.outputs.online == 'true'", forgejo[job], StringComparison.Ordinal);
+            Assert.Contains("mac", NeedsList(forgejo[job]));
+        }
+
+        var mac = forgejo["mac"];
+        Assert.Contains("vars.CI_MACOS_RUNNER", mac, StringComparison.Ordinal); // the on/off knob still decides
+        Assert.Contains("vars.CI_MACOS_PROBE", mac, StringComparison.Ordinal);  // host:port to test
+        Assert.Contains("::warning::", mac, StringComparison.Ordinal);          // an absent Mac is a warning
+        Assert.Contains("online=true", mac, StringComparison.Ordinal);
+        Assert.Contains("online=false", mac, StringComparison.Ordinal);
     }
 
     [Fact]

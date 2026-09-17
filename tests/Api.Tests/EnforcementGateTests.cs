@@ -78,7 +78,9 @@ public class EnforcementGateTests
         //                  exists to catch.
         //   changes      — it is the gate.
         //   deploy-*     — they gate transitively, through the jobs they need.
-        string[] alwaysRun = ["changes", "secret-scan", "qa-artifacts", "deploy-staging", "deploy-prod"];
+        //   mac         — LOCALCI-4, Forgejo only: a seconds-long probe asking whether the MacBook is
+        //                 awake, so the Apple jobs can skip instead of queueing. It gates nothing itself.
+        string[] alwaysRun = ["changes", "secret-scan", "qa-artifacts", "deploy-staging", "deploy-prod", "mac"];
 
         var ci = File.ReadAllLines(Path.Combine(RepoRoot(), workflow));
 

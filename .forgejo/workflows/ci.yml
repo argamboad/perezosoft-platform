@@ -28,6 +28,10 @@
 #   CI_WEEKLY_SMOKES    on* | off — the Monday 06:00 UTC smoke run.
 #   CI_MACOS_RUNNER     unset* | anything — set once the MacBook runner is Online; until then the Apple
 #                       jobs skip instead of queueing forever.
+#   CI_MACOS_PROBE      unset* | host:port — TCP address that answers while the MacBook is awake (its
+#                       Tailscale IP and SSH port). The `mac` job probes it so an asleep Mac SKIPS the
+#                       Apple jobs with a warning instead of queueing them for 24 h or failing the run.
+#                       Unset ⇒ assume the Mac is there.
 name: CI
 
 on:
@@ -329,6 +333,47 @@ jobs:
   # WHOLE workflow, and two gates must run no matter what the change looks like (see below). A
   # skipped job is not a failed one — GitHub reports a skipped required check as passing — so a
   # docs-only pull request still merges.
+  # LOCALCI-4, Forgejo only: is the MacBook there right now? It is a laptop, not a datacenter VM — it
+  # sleeps, closes and leaves the network. Forgejo would otherwise leave an Apple job "waiting" for
+  # ABANDONED_JOB_TIMEOUT (24 h), or, if the Mac vanishes mid-job, kill it as a zombie after
+  # ZOMBIE_TASK_TIMEOUT (10 m) and mark the run RED — for a machine being asleep, which is not a
+  # defect. This job answers the question on an always-on runner, so the Apple jobs can SKIP with a
+  # warning instead: a skipped job is neutral, the run stays green, and re-running it later once the
+  # Mac is awake picks the Apple legs up.
+  #
+  # The probe is a TCP connect to `vars.CI_MACOS_PROBE` (host:port, e.g. the Mac's Tailscale IP and its
+  # SSH port). Unset ⇒ assume the Mac is there, which is the behaviour of any clone that never
+  # configured this. It follows that turning Remote Login off on the Mac reads as "asleep".
+  mac:
+    if: github.event_name != 'schedule' || vars.CI_WEEKLY_SMOKES != 'off'
+    runs-on: ubuntu-latest
+    outputs:
+      online: ${{ steps.probe.outputs.online }}
+    steps:
+      - id: probe
+        env:
+          RUNNER: ${{ vars.CI_MACOS_RUNNER }}
+          PROBE: ${{ vars.CI_MACOS_PROBE }}
+        run: |
+          if [ -z "$RUNNER" ]; then
+            echo "online=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CI_MACOS_RUNNER is not set — the Apple jobs are off. Set it once the Mac runner is registered."
+            exit 0
+          fi
+          if [ -z "$PROBE" ]; then
+            echo "online=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::CI_MACOS_PROBE is not set — assuming the Mac is online."
+            exit 0
+          fi
+          host=${PROBE%:*}; port=${PROBE##*:}
+          if timeout 5 bash -c "</dev/tcp/$host/$port" 2>/dev/null; then
+            echo "online=true" >> "$GITHUB_OUTPUT"
+            echo "The Mac runner answered at $PROBE."
+          else
+            echo "online=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::The Mac ($PROBE) is not reachable — the Apple jobs are skipped, not failed. Wake it and re-run this workflow to build and smoke them."
+          fi
+
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -386,14 +431,14 @@ jobs:
   # Apple half of the native build gate (NATIVE-1). Develop pushes only, and only when the push
   # touched native-relevant paths (see `changes`): macOS runners bill at 10× on a private repo.
   native-build-apple:
-    needs: changes
+    needs: [changes, mac]
     # Develop pushes only, and only when the push could have broken it. The develop-only test moved
     # here from the gate job when LOCALCI-3 made that gate serve every job.
-    # LOCALCI-4: + a registered Mac. Without one the job would sit queued forever.
+    # LOCALCI-4: + a Mac that is registered AND awake right now (see the `mac` job).
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/develop'
       && needs.changes.outputs.native == 'true'
-      && vars.CI_MACOS_RUNNER != ''
+      && needs.mac.outputs.online == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -448,7 +493,7 @@ jobs:
   # email is sent in a boot smoke. Not in deploy-staging needs (same accepted-risk note as the
   # other native smokes). macOS bills 10× — develop pushes with native-relevant changes only.
   native-smoke-apple:
-    needs: changes
+    needs: [changes, mac]
     # LOCALCI-3, and the one cadence change in this slice. At 87 billed minutes it is the most
     # expensive job in the workflow, so in hosted-fallback mode it moves to Monday mornings and to
     # manual dispatch. The moment a self-hosted Mac is configured it is free, and it goes back to
@@ -457,10 +502,10 @@ jobs:
     # `vars.CI_MACOS_RUNNER` is LOCALCI-1's variable and does not exist yet; an unset variable reads
     # as empty, which is exactly the hosted-fallback branch. Nothing here waits on that slice.
     # LOCALCI-4: on demand, on the schedule, or per develop push when CI_SMOKES_ON_PUSH says so — and
-    # only with a Mac registered.
+    # only with a Mac that is registered and awake (see the `mac` job).
     if: >-
       needs.changes.outputs.native == 'true'
-      && vars.CI_MACOS_RUNNER != ''
+      && needs.mac.outputs.online == 'true'
       && ((github.event_name == 'schedule' && vars.CI_WEEKLY_SMOKES != 'off')
           || (github.event_name == 'workflow_dispatch'
               && (github.event.inputs.smokes == 'apple' || github.event.inputs.smokes == 'all'))
