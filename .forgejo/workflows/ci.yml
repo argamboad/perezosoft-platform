@@ -501,8 +501,10 @@ jobs:
           for i in $(seq 1 30); do "$PGBIN/pg_isready" -h localhost && break; sleep 2; done
           "$PGBIN/pg_isready" -h localhost || { echo "::error::Postgres never became ready"; exit 1; }
           # LOCALCI-4 (the LOCALCI-1b idempotency fix): the Mac is not a fresh VM — the database from the
-          # previous run is still there, and `createdb` alone failed the second run ever made.
-          "$PGBIN/dropdb" -h localhost --if-exists smoke
+          # previous run is still there (`createdb` alone failed the second run ever made), and a previous
+          # run's API may still hold a connection to it (`dropdb` without --force failed the third).
+          pkill -f "Perezosoft.Api" || true
+          "$PGBIN/dropdb" -h localhost --if-exists --force smoke
           "$PGBIN/createdb" -h localhost smoke
 
       - name: Boot a simulator
