@@ -152,8 +152,8 @@ classDiagram
         IssueAsync = refresh token + JWT
     }
     class RefreshTokenService {
-        Issue / Inspect / Revoke
-        status: Valid Expired Unknown Reuse
+        Issue / Inspect / MarkRotated / Revoke
+        status: Valid Expired Unknown Reuse RotatedWithinGrace
     }
     class JwtTokenService {
         IssueAccessToken (tenant_id claim)
