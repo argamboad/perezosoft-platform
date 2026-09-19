@@ -1648,7 +1648,9 @@ the API directly:
   foreign-tenant write is rejected (`TenantStampingInterceptorTests`), so reads *and* writes are
   tenant-isolated.
 - **Refresh-token reuse detection** — replaying an already-rotated refresh token revokes all the
-  user's sessions (`RefreshTokenServiceTests`). Manually observable only by capturing and replaying a
+  user's sessions (`RefreshTokenServiceTests`, `RefreshReplayTests`) — unless it arrives within 60 s of
+  its rotation while its successor is still live (two tabs refreshing at once, a lost response): that
+  race gets a fresh session and revokes nothing (ADR-002 addendum, 2026-09-18). Manually observable only by capturing and replaying a
   refresh cookie/token; out of scope for routine QA.
 - **Unverified-email takeover guard** fails closed (`ClaimsExtractorTests` / `UserServiceTests`).
 - **Legacy refresh-cookie self-heal** — a stale `Path=/` refresh cookie left by an older build can
@@ -1951,16 +1953,22 @@ Then exactly one sign-in succeeds and the second attempt is rejected
 **Gherkin**
 ```gherkin
 Given I captured a refresh token, then refreshed once (rotating it)
-When I replay the OLD (now-rotated) refresh token
+When I replay the OLD (now-rotated) refresh token more than 60 seconds after that rotation
 Then it is rejected AND all of the user's sessions are revoked
+But a replay WITHIN 60 seconds, while the new token is still live, is a race and gets a fresh session
 ```
 **Walkthrough**
 1. Sign in; capture the refresh cookie/token. `POST /api/auth/refresh` once → a **new** token (the old
    one is now rotated out).
-2. Replay the **old** token to `POST /api/auth/refresh`.
-3. **Expected:** **401** — reuse detected — **and** the whole token family is revoked: a legitimate
+2. **Grace window (ADR-002 addendum, 2026-09-18):** replay the **old** token within 60 s → **200** with a
+   fresh token, and nothing is revoked (the new token from step 1 still refreshes). This is the two-tab /
+   lost-response race, deliberately not treated as theft (`RefreshToken:ReuseGraceSeconds`, default 60).
+3. Wait **more than 60 s** after step 1, then replay the **old** token to `POST /api/auth/refresh`.
+4. **Expected:** **401** — reuse detected — **and** the whole token family is revoked: a legitimate
    silent refresh from another live session now **fails** too (forces re-auth). Promotes QA-SEC-05's
    automated `RefreshTokenServiceTests` note to a manual probe. Should **Pass**.
+5. **Logout stays final:** sign in again, refresh once (rotating A → B), `POST /api/auth/logout` with B,
+   then replay A **within** 60 s → **401**, no new session (`RefreshReplayTests`). Should **Pass**.
 
 ### QA-ADV-18 — Spanish account on an English device accepts an invite 🔴 (Web — two contexts) ⚙️ Automated in CI
 **✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
@@ -2347,7 +2355,7 @@ Then the sign-in succeeds
 | Comp/revert a churned sub (**⚠️ v3** ADM-5) | ADV-14 | `PUT\|DELETE /api/admin/tenants/{id}/subscription` (canceled sub should be comp-able, not stuck 409) |
 | Concurrent last-seat accept (TB-BILL-19/BILLING-9) | ADV-15 | `POST /api/household/invitations/accept` (one 200, one 402 `seat_limit_reached`) |
 | Magic-link/OTP double-redemption (LB-AUTH-3) | ADV-16 | `GET /api/auth/magic-link/verify`, `POST /api/auth/otp/verify` (exactly one session) |
-| Rotated refresh-token replay revokes family (SEC-05 promoted) | ADV-17 | `POST /api/auth/refresh` (reuse → 401 + all sessions revoked) |
+| Rotated refresh-token replay revokes family (SEC-05 promoted) | ADV-17 | `POST /api/auth/refresh` (reuse past the 60 s grace window → 401 + all sessions revoked; within it, successor live → 200, nothing revoked) |
 | Locale-reload preserves deep-link (**⚠️ v3** UX-1/LB-UI-1/2) | ADV-18 (⚙️ E2E `LocaleMismatchJoinTests`) | `/join?token=…` under a PREFS-1 locale-mismatch reload |
 | No pref revert after soft sign-in (UX-3/4) | ADV-19 | OTP soft-nav sign-in reconcile (`theme`/`locale` claims) |
 | "Clear read" spares unread (LB-UI-10) | ADV-20 | `DELETE /api/notifications?read=true` vs `?read=false`; omitted scope → 400 `scope_required` |
