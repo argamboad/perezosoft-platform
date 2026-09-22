@@ -103,7 +103,13 @@ async function bootToLogin(device, attempt) {
   // without restarting the host. The goto stays as a fallback, once, if the link isn't reachable.
   const household = page.getByTestId('household-rename-input');
   try {
-    await page.getByTestId('nav-household').click({ timeout: 60_000 });
+    // On the emulator's phone-width window the header links collapse behind the hamburger, so the link is never
+    // visible until the toggler opens the sheet — the click then waits its full 60 s and the goto fallback runs
+    // into the very reload race this step exists to avoid (downstream: y-el-vuelto Forgejo run 6, and its green
+    // GitHub run 35260142884 only passed through the fallback). On a wide window the link is already showing.
+    const householdLink = page.getByTestId('nav-household');
+    if (!(await householdLink.isVisible())) await page.locator('button.navbar-toggler').click({ timeout: 60_000 });
+    await householdLink.click({ timeout: 60_000 });
     await household.waitFor({ state: 'visible', timeout: 60_000 });
   } catch (e) {
     console.error(`in-app navigation to Household failed (${e.message}); falling back to a full load once`);
