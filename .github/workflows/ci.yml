@@ -930,8 +930,11 @@ jobs:
           done
           [ "$api" = "200" ] && [ "$web" = "200" ] || { echo "::error::stack did not become ready"; tail -40 api.log web.log; exit 1; }
 
-          PLAYWRIGHT_BASE_URL=http://localhost:5169 MAILPIT_BASE_URL=http://localhost:8025 \
-            E2E_API_BASE_URL=http://localhost:5238 \
+          # Exported, not prefixed onto the command: the shard step below sits between this and the run,
+          # and a `VAR=x \` continuation would land on a comment and quietly leave the suite on its dev
+          # defaults (https://localhost:7008 — every journey then fails with ERR_CONNECTION_REFUSED).
+          export PLAYWRIGHT_BASE_URL=http://localhost:5169 MAILPIT_BASE_URL=http://localhost:8025 \
+            E2E_API_BASE_URL=http://localhost:5238
             # Shard the journeys: list them, keep every third. `--list-tests` prints one method name per
             # indented line (no namespace), so the filter matches on the name, and a renamed journey simply
             # moves shard. An empty shard means the parse broke, and that must fail loudly rather than
