@@ -444,17 +444,20 @@ git push -u github my-branch        # before `gh pr create` — PRs still live o
 
 | Label | Machine | Notes |
 |---|---|---|
-| `ubuntu-latest` | WSL runner `linux-local` (6 jobs at once) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. |
+| `ubuntu-latest` | WSL runner `linux-local` (4 jobs at once) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Shared with the other migrated repos on the same Forgejo. |
 | `ubuntu-host-ports` | WSL runner `linux-ports` (1 job at a time), same image | `e2e` + `native-smoke-android`: they bind fixed ports and every WSL job shares one network, so they queue here — across runs and repos. |
 | `windows-latest` | the Windows desk, host mode (logon task) | `DOTNET_INSTALL_DIR=C:/forgejo-runner/_tool/dotnet`. **Stop the dev stack before it takes jobs** — the smoke fails fast if 5432/5238 are busy. |
-| `macos-26` | the MacBook (not registered yet) | Set repo variable **`CI_MACOS_RUNNER`** once it is Online; until then the Apple jobs skip instead of queueing forever. |
+| `macos-26` | the MacBook, runner `macos-air` | Needs **`CI_MACOS_RUNNER`** (set); asleep or away ⇒ the `mac` probe (**`CI_MACOS_PROBE`**) makes the Apple jobs skip with a warning instead of queueing forever. |
 
 **One-time setup** (nothing changes on Render or GitHub — Render keeps following GitHub's `develop`,
 GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings → Actions**:
 - Secret **`RENDER_DEPLOY_HOOK_STAGING`** = the same hook GitHub has (Render → service → Settings → Deploy
   Hook); `RENDER_DEPLOY_HOOK_PROD` when prod exists.
 - Secret **`DEPLOY_MIRROR_TOKEN`** = a GitHub **fine-grained** token, only this repository,
-  *Contents: Read and write* (it pushes `develop`/`main` and reads the compare API for the smoke).
+  *Contents: Read and write* **and *Workflows: Read and write*** (it pushes `develop`/`main` and reads the
+  compare API for the smoke). Without Workflows, GitHub refuses any deploy whose commits touch
+  `.github/workflows/` — `GH013: … refusing to allow a Personal Access Token to create or update workflow`
+  — which is how y-el-vuelto's first deploy died (2026-09-18). One token can cover every migrated repo.
 - Variables **`DEPLOY_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
   (when prod exists), **`POSTMAN_WORKSPACE_ID`**; secret **`POSTMAN_API_KEY`**.
 - Enable **Actions** for the repo (Settings → Units) if it was switched off during the migration.
