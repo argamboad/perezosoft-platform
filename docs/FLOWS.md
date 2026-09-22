@@ -261,6 +261,13 @@ signing the user out. Revoke/mark-rotated use a tracked load-then-flip (not `Exe
 inspection read stays consistent. The hourly cleanup job deletes only **expired** rows —
 revoked-but-unexpired hashes are kept because they are what makes reuse detection work.
 
+Client side (ADR-002 addendum 2026-09-22): `AuthService` calls this endpoint on four occasions — once at
+startup (retried after 2/5/10/15 s while the server is unreachable), from a timer a minute before the
+access token expires, from the bearer handler when a request finds the token inside that window or
+expired, and when the app returns to the foreground. Concurrent callers share one in-flight call. Only a
+401/400/403 clears the session (and native's stored token); a 5xx, 429, timeout or network failure keeps
+it and tries again.
+
 ## 8. Billing webhook (Stripe → subscription projection)
 
 The signature-authenticated system write — the reference for "no JWT, but a trusted tenant id".

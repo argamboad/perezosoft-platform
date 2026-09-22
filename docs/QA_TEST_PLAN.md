@@ -238,11 +238,19 @@ And navigating to /settings redirects me back to /login
 Given I am signed in to the web app
 When I reload the page (or reopen the tab)
 Then I am still signed in without re-authenticating
+And a tab left open past the access token's hour stays signed in
+And a server that is still starting up does not sign me out
 ```
 **Walkthrough**
 1. Signed in, press F5 / reload.
 2. **Expected:** brief load, then the app shell — still signed in, no trip to `/login`. (A silent
    refresh exchanges the refresh cookie for a new access token on load.)
+3. Leave the tab open and untouched for **more than 65 minutes** (the access token lives 60), then
+   navigate to another page. **Expected:** the page loads its data; no trip to `/login`, no error toast.
+   (The session renewed itself a minute before expiry — ADR-002 addendum 2026-09-22.)
+4. Stop the API, reload the tab: the loading spinner stays up for about 30 s, then `/login`. Start the
+   API again and reload. **Expected:** signed in without re-authenticating — a server that couldn't be
+   reached never cost the session. *(Native: `SessionKeepAliveTests` pin the same for the stored token.)*
 
 ### QA-SMK-05 — Desktop: OTP sign-in 🔴 (Desktop) — see QA-DSK-01
 ### QA-SMK-06 — Android: OTP sign-in 🔴 (Android) — see QA-AND-01
