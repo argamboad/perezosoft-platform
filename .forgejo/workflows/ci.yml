@@ -1076,7 +1076,35 @@ jobs:
 
           PLAYWRIGHT_BASE_URL=http://localhost:5169 MAILPIT_BASE_URL=http://localhost:8025 \
             E2E_API_BASE_URL=http://localhost:5238 \
-            dotnet test tests/E2E.Tests/Perezosoft.E2E.Tests.csproj -c Debug --no-build
+            dotnet test tests/E2E.Tests/Perezosoft.E2E.Tests.csproj -c Debug --no-build \
+              --logger "trx;LogFileName=e2e.trx" --results-directory "$PWD/e2e-results"
+
+      # Which journeys cost the time. The suite is ~85% of this job (7m11s total, 5m55s of it tests —
+      # measured 2026-09-22), so any work on its speed starts with knowing which ones are slow. Prints a
+      # table; never fails the job, and runs even when the suite is red (a slow test is often the failing one).
+      - name: Slowest journeys
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          files = glob.glob("e2e-results/*.trx")
+          if not files:
+              print("no .trx written — nothing to report"); raise SystemExit
+          ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+          rows = []
+          for r in ET.parse(files[0]).getroot().findall(".//t:UnitTestResult", ns):
+              d = r.get("duration") or "0:00:00"
+              h, m, s = d.split(":")
+              rows.append((float(h) * 3600 + float(m) * 60 + float(s), r.get("testName", "?"), r.get("outcome", "?")))
+          rows.sort(reverse=True)
+          total = sum(x[0] for x in rows)
+          print(f"{len(rows)} journeys, {total/60:.1f} min of test time (wall clock is lower only if they run in parallel)")
+          print(f"{'secs':>7}  {'outcome':<8} journey")
+          for secs, name, outcome in rows[:15]:
+              print(f"{secs:7.1f}  {outcome:<8} {name.split('.')[-1][:80]}")
+          slow = sum(x[0] for x in rows[:5])
+          print(f"\nthe 5 slowest are {slow/total*100:.0f}% of the suite's time")
+          PY
 
       - name: Server logs (on failure)
         if: failure()
