@@ -1499,6 +1499,23 @@ which makes the `deploy/*` branches pointless — Render can follow only one bra
 - The earlier rejection of "pushing `develop` to GitHub to deploy" is withdrawn: its cost (GitHub's run
   and second deploy) was re-weighed against the operational simplicity and accepted.
 
+**Addendum (2026-09-22) — a commit that is already green can be deployed without re-running its gates.**
+Three repos now share one desk. A deploy dispatch re-ran every gate on a commit whose merge run had gone
+green minutes earlier: ~10 minutes of a laptop the maintainer is also working on, for an answer already
+known. `.forgejo/workflows/deploy.yml` (dispatch only, Forgejo only) deploys such a commit directly — but it
+does not take anyone's word for it: it asks this instance's own Actions API which jobs ran for THAT commit
+and requires `changes`, `build-test`, `secret-scan`, `qa-artifacts`, `license-scan`, `docker-build`, `e2e`
+and both `native-build` legs to have a success. A missing job, a failure, a docs-only run that skipped the
+gates, or an API it cannot reach all stop the deploy and point back to `ci.yml`'s `deploy` input, which
+runs the gates itself. The job token can read that API and write nothing (probed 2026-09-22).
+Publishing is unchanged and shared: `push-to-github.sh` (fast-forward, never forced), the Render hook, then
+`deploy-smoke.sh`. Native smokes are not required, exactly as in `ci.yml`'s deploy jobs — the Monday
+schedule and the `smokes` input remain how those are proven. `ForgejoCiParityTests` pins the guard, the
+dispatch-only trigger and the shared script.
+**Rejected — a `skip_gates` input on `ci.yml`.** Same saving, but it would thread "was this skipped?"
+through every gate's `if:` and every deploy `needs:`, and one careless edit would turn the deploy's
+"everything green" rule into "nothing ran". A separate file cannot weaken the existing one.
+
 **ADR-029 — Multi-household membership (one user in several tenants) is DECIDED: DEFERRED, with the design that must survive if it is ever built. (2026-09-16)**
 The question keeps coming back, so it is answered here once. ADR-003 fixed **one tenant per user**
 (`TenantMembership` unique on `UserId`; accepting an invitation *moves* you, `ReHomeAsync` gives every
