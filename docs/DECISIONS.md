@@ -180,6 +180,28 @@ revoked/expired, grace 0, never-rotated) + `RefreshReplayTests` (same cookie twi
 revoked; replay after the window → 401 + revoke-all; pre-logout token within the window → 401, no
 session). Migration `AddRefreshTokenRotationLink` (two nullable columns). Flow: FLOWS §7.
 
+*Addendum (2026-09-22) — the client keeps an open session alive, and only the server ends it.* **Evidence:**
+downstream (`y-el-vuelto`) the owner still had to sign in every day, on web and on Android, after the reuse
+grace window above. The 30-day refresh token was never the problem: the client only spent it once, at
+startup. An app left open — a tab overnight, the phone app in the background — kept its 60-minute access
+token past expiry and nothing renewed it, so the next call 401'd and the page looked signed out. And every
+failed refresh counted as "signed out": a timeout, a proxy's 502 while a free-tier host cold-starts, or no
+signal made the native app **delete its stored refresh token**, so a sleeping server cost the session for
+good. **Decision:** `AuthService` renews ahead of expiry on three paths — a timer (one minute before `exp`,
+capped at a quarter of the token's lifetime, never sooner than 30 s so a fast device clock can't loop it),
+the bearer handlers before each request (`GetFreshAccessTokenAsync` — the net for a device that slept
+through the timer), and the layout when the app returns to the foreground (`AppResumeNotifier`). Refresh
+outcomes split three ways: **401/400/403 = rejected** (clear the session, as before); **5xx, 429,
+network, timeout or an unreadable body = unreachable** (keep everything — the server never ruled on the
+token; mid-session the timer retries in 30 s); **200 = renewed**. At startup an unreachable refresh is
+retried after 2, 5, 10 and 15 s behind the loading spinner before the layout sends the user to `/login`,
+and even then the stored token stays for the next launch. **Unchanged:** impersonation tokens are never
+renewed (a refresh would restore the staff identity — the timer is cancelled on `BeginImpersonation`), and
+anonymous pages never spend a refresh. **Why this is safe:** the server stays the sole authority — keeping a
+refresh token the client can't validate only means asking again; a revoked one still gets 401 and is
+dropped. Concurrent renewals (timer + request) coalesce into one call as before, now under a lock for
+native's thread pool. Evidence: `SessionKeepAliveTests` (Ui.Tests, on a fake clock). QA: QA-SMK-04.
+
 **ADR-003 — Tenancy is membership-based and enforced by a global query filter. (2026-06-19)**
 A user's tenant lives in a **`TenantMembership`** join entity (unique on `UserId` — one tenant at a
 time; `Role` owner/member), **not** a `tenant_id` column on `User`. Tenant-owned entities implement
