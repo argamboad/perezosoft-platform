@@ -1516,6 +1516,27 @@ dispatch-only trigger and the shared script.
 through every gate's `if:` and every deploy `needs:`, and one careless edit would turn the deploy's
 "everything green" rule into "nothing ran". A separate file cannot weaken the existing one.
 
+**Addendum (2026-09-22, evening) — the e2e boot flake was network churn on a shared Docker daemon, not CPU; the suite now survives a dead boot and no longer waits for the builds.**
+The 2026-09-17 gate (`e2e` `needs: build-test, native-build` on Forgejo) had become the longest thing in
+every run: `build-test` ≈ 4 min, then `e2e` ≈ 5 min, wall clock ≈ 9 min, when the shards could have started
+at second zero. It was also insufficient — sharding brought the flake back the same day — and it rested on a
+wrong diagnosis. The first run that recorded the browser console showed every `_framework/*.wasm` fetch
+failing with `net::ERR_NETWORK_CHANGED`: Chromium aborts in-flight requests when a network interface appears
+or vanishes in its namespace, and the first port lane shared its Docker daemon with the build slots, where
+Testcontainers' Postgres and `docker-build` start and stop containers all the time. Every dead boot ever
+seen ran on that lane; lanes 2 and 3, with their own daemons, never failed once. CPU only ever governed speed.
+Two fixes, both kept: the first lane got its own daemon (`runner-dind-1`; rule: no port lane shares a
+daemon with anything that creates containers), and `tests/E2E.Tests/BlazorBoot.cs` makes the suite survive
+the failure anyway — after every full navigation it watches the page and the browser console together (app
+up, Blazor's banner, or a failed framework fetch), reloads on a dead boot (three tries), then fails with the
+console attached; every red journey prints that console. With that, `e2e` needs only `changes` again on both
+forges; `ForgejoCiParityTests` pins the gate as gone and requires the "Blazor boot retries: N" line in the
+timing report, so a lane that starts sharing a network again shows up as a number. Measured on PR #17: with the lanes free, the three shards started at second 21 beside `build-test` (run 62, where the one shard on the still-shared lane died exactly as described); run 63 was green on all three, shards 3.9–6.4 min, the slowest again on the shared lane — the wall clock is now the slowest shard, not `build-test` plus a shard.
+**Rejected — keep the gate and shard less.** Fewer shards only lengthen the suite; the gate still costs the
+whole `build-test`; and neither would have found the cause.
+**Rejected — a Playwright-level retry of whole journeys.** It re-runs real regressions and hides them behind
+a green; the reload covers exactly the failure that is not ours, at the moment it happens, and nothing else.
+
 **ADR-029 — Multi-household membership (one user in several tenants) is DECIDED: DEFERRED, with the design that must survive if it is ever built. (2026-09-16)**
 The question keeps coming back, so it is answered here once. ADR-003 fixed **one tenant per user**
 (`TenantMembership` unique on `UserId`; accepting an invitation *moves* you, `ReHomeAsync` gives every
