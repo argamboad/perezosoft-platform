@@ -1,0 +1,19 @@
+name: probe
+on: workflow_dispatch
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Can the job token read the Actions API?
+        env:
+          T: ${{ github.token }}
+          API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
+        run: |
+          echo "server_url: ${{ github.server_url }} sha: ${{ github.sha }}"
+          code=$(curl -s -o /tmp/runs.json -w "%{http_code}" -H "Authorization: token $T" "$API/actions/runs?limit=3")
+          echo "GET /actions/runs -> $code"
+          head -c 400 /tmp/runs.json; echo
+          code2=$(curl -s -o /tmp/tasks.json -w "%{http_code}" -H "Authorization: token $T" "$API/actions/tasks?limit=3")
+          echo "GET /actions/tasks -> $code2"
+          head -c 300 /tmp/tasks.json; echo
