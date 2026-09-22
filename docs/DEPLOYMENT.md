@@ -444,8 +444,8 @@ git push -u github my-branch        # before `gh pr create` — PRs still live o
 
 | Label | Machine | Notes |
 |---|---|---|
-| `ubuntu-latest` | WSL runner `linux-local` (4 jobs at once) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Shared with the other migrated repos on the same Forgejo. |
-| `ubuntu-host-ports` | WSL runner `linux-ports` (1 job at a time), same image | `e2e` + `native-smoke-android`: they bind fixed ports and every WSL job shares one network, so they queue here — across runs and repos. |
+| `ubuntu-latest` | WSL runner `linux-local` (6 jobs at once) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Shared with the other migrated repos on the same Forgejo. |
+| `ubuntu-host-ports` | WSL runners `linux-ports` **and `linux-ports-2`** (1 job each, own dockerd each), same image | `e2e` + `native-smoke-android`: they bind fixed ports and every WSL job shares one network, so each lane takes one at a time, but the two lanes have separate networks, so two such jobs run at once (added 2026-09-22 — with three repos this was the longest queue). A third waits. |
 | `windows-latest` | the Windows desk, host mode (logon task) | `DOTNET_INSTALL_DIR=C:/forgejo-runner/_tool/dotnet`. **Stop the dev stack before it takes jobs** — the smoke fails fast if 5432/5238 are busy. |
 | `macos-26` | the MacBook, runner `macos-air` | Needs **`CI_MACOS_RUNNER`** (set); asleep or away ⇒ the `mac` probe (**`CI_MACOS_PROBE`**) makes the Apple jobs skip with a warning instead of queueing forever. |
 
