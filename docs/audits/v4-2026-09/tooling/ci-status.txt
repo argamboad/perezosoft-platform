@@ -1,0 +1,25 @@
+# Forgejo combined commit status for 8c8ed4a746c57a6df8bac5f31195f011dc0758c4 (GET /repos/argamboad/perezosoft-platform/commits/<sha>/status, 2026-09-23)
+state: success
+  CI / secret-scan (push) success
+  CI / qa-artifacts (push) success
+  CI / mac (push) success
+  CI / changes (push) success
+  CI / native-build-apple (net10.0-ios) (push) skipped          <- Apple legs skipped: vars.CI_MACOS_RUNNER unset / MacBook asleep (ADR-028 mac probe)
+  CI / native-build-apple (net10.0-maccatalyst) (push) skipped
+  CI / native-smoke-apple (push) skipped
+  CI / native-smoke-windows (push) skipped                     <- smokes run only from "Run workflow" / Monday schedule (LOCALCI-4)
+  CI / native-smoke-android (push) skipped
+  CI / license-scan (push) success
+  CI / docker-build (push) success
+  CI / build-test (push) success
+  CI / native-build (windows-latest, net10.0-windows10.0.19041.0) (push) success
+  CI / native-build (ubuntu-latest, net10.0-android) (push) success
+  CI / e2e (2) (push) success
+  CI / e2e (1) (push) success
+  CI / e2e (3) (push) success
+  CI / deploy-staging (push) skipped
+  CI / deploy-prod (push) skipped
+
+Read: the E2E journeys (34, sharded 3 ways) and the build/test job passed in CI for the audited commit; the local
+`dotnet test` E2E failure is environmental (no live host). Apple build legs did not run for this commit — a green
+develop run is NOT a green Apple build/smoke (QA §13c).

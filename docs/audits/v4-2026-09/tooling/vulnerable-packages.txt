@@ -1,0 +1,18 @@
+  Determining projects to restore...
+  Restored C:\Users\argam\source\repos\Personal\perezosoft-platform\src\Maui\Perezosoft.Maui.csproj (in 986 ms).
+  9 of 10 projects are up-to-date for restore.
+
+The following sources were used:
+   https://api.nuget.org/v3/index.json
+   C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+
+The given project `Perezosoft.Api` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Core` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Infrastructure` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Maui` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Shared.Ui` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Web` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Api.Tests` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Core.Tests` has no vulnerable packages given the current sources.
+The given project `Perezosoft.E2E.Tests` has no vulnerable packages given the current sources.
+The given project `Perezosoft.Ui.Tests` has no vulnerable packages given the current sources.
