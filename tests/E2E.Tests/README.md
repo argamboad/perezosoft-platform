@@ -35,6 +35,12 @@ smoke path that doesn't need an external OAuth provider.
 3. **Web** — `dotnet run --project src/Web --launch-profile https` (serves <https://localhost:7008>).
 4. **Browser (once)** — `pwsh tests/E2E.Tests/bin/Debug/net10.0/playwright.ps1 install chromium`.
 
+Every full navigation goes through `BlazorBoot` (page objects, magic-link opens, reloads): it waits for
+Blazor's loader to hand over to the app, reloads if the loader dies with Blazor's own "An unhandled
+error has occurred" banner (up to three times — a busy CI machine does that), and keeps the browser
+console per page, which every red journey prints. Use `BlazorBoot.GotoAsync(page, url)` rather than
+`page.GotoAsync(url)` for anything that boots the app.
+
 ## Run
 
 ```sh

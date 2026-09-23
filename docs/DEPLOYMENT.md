@@ -444,8 +444,8 @@ git push -u github my-branch        # before `gh pr create` — PRs still live o
 
 | Label | Machine | Notes |
 |---|---|---|
-| `ubuntu-latest` | WSL runner `linux-local` (6 jobs at once) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Shared with the other migrated repos on the same Forgejo. |
-| `ubuntu-host-ports` | WSL runners `linux-ports` **and `linux-ports-2`** (1 job each, own dockerd each), same image | `e2e` + `native-smoke-android`: they bind fixed ports and every WSL job shares one network, so each lane takes one at a time, but the two lanes have separate networks, so two such jobs run at once (added 2026-09-22 — with three repos this was the longest queue). A third waits. |
+| `ubuntu-latest` | WSL runner `linux-local` (3 jobs at once, 3 CPUs each) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Shared with the other migrated repos on the same Forgejo. |
+| `ubuntu-host-ports` | WSL runners `linux-ports`, **`linux-ports-2` and `linux-ports-3`** (1 job each, own dockerd each), same image | `e2e` + `native-smoke-android`: they bind fixed ports and every job on one dockerd shares its network, so each lane takes one at a time; three lanes with separate networks run three at once — one run's three `e2e` shards (2026-09-22). A second repo's `e2e` queues behind. **No lane shares a daemon with the build slots**: containers starting there made Chromium drop every boot fetch (`ERR_NETWORK_CHANGED`) — the e2e flake. The lanes also outrank the build slots for CPU (`--cpu-shares 4096` vs `256`). |
 | `windows-latest` | the Windows desk, host mode (logon task) | `DOTNET_INSTALL_DIR=C:/forgejo-runner/_tool/dotnet`. **Stop the dev stack before it takes jobs** — the smoke fails fast if 5432/5238 are busy. |
 | `macos-26` | the MacBook, runner `macos-air` | Needs **`CI_MACOS_RUNNER`** (set); asleep or away ⇒ the `mac` probe (**`CI_MACOS_PROBE`**) makes the Apple jobs skip with a warning instead of queueing forever. |
 
@@ -467,7 +467,7 @@ GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings →
 | Event | Runs | Wall clock |
 |---|---|---|
 | Push / PR, docs only | `changes`, `secret-scan`, `qa-artifacts` | ≈ 1 min |
-| Push / PR with code | + `build-test`, `license-scan`, `docker-build`, `e2e`, Android + Windows **builds** | ≈ 10 min |
+| Push / PR with code | + `build-test`, `license-scan`, `docker-build`, `e2e` (3 shards), Android + Windows **builds** | ≈ 5–6 min (everything in parallel; the longest of `build-test` and the slowest shard decides) |
 | **Run workflow**, `smokes=…` | the above + the selected native **smokes** (windows / android / apple / all) | + 3–10 min |
 | **Run workflow**, `deploy=staging` (on `develop`) | the above, then `deploy-staging` — only if every gate and every selected smoke is green | + 5–8 min |
 | **Run workflow**, `deploy=prod` (on `main`) | same, `deploy-prod` | |
