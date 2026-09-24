@@ -163,14 +163,16 @@
 - `tests/Api.Tests/Integration/AuthProvidersEndpointTests.cs`
 - `tests/Api.Tests/ProviderEmailTrustTests.cs`
 
-## 2.6 — Tenancy I — the global query filter (reads) (8 files)
+## 2.6 — Tenancy I — the global query filter (reads) (10 files)
 
 - `src/Api/Services/HttpCurrentTenant.cs` — tenant_id claim -> request scope
 - `src/Core/Abstractions/ICurrentTenant.cs`
 - `src/Core/Entities/ITenantScoped.cs` — the marker the filter keys off
+- `tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs` — an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)
 - `tests/Api.Tests/Architecture/TenantHatchGuard.cs` — polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)
 - `tests/Api.Tests/Architecture/TenantHatchGuardTests.cs`
 - `tests/Api.Tests/HttpCurrentTenantTests.cs`
+- `tests/Api.Tests/Infrastructure/TwoTenants.cs` — the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)
 - `tests/Api.Tests/TenantInvariantTests.cs` — every ITenantScoped entity filtered or allowlisted (R2)
 - `tests/Api.Tests/TenantScopeFilterTests.cs` — the leak-then-fix test
 
@@ -193,7 +195,7 @@
 - `src/Infrastructure/Persistence/Configurations/TenantMembershipConfiguration.cs`
 - `src/Infrastructure/Repositories/TenantRepository.cs`
 
-## 2.9 — Invitations, dissolve & the contributor seam (14 files)
+## 2.9 — Invitations, dissolve & the contributor seam (15 files)
 
 - `src/Api/Configuration/SignupSettings.cs` — GATES-2 green list; empty = open
 - `src/Api/Controllers/HouseholdInvitationsController.cs`
@@ -207,6 +209,7 @@
 - `src/Infrastructure/Repositories/TenantInvitationRepository.cs`
 - `tests/Api.Tests/Auth/SignupGateTests.cs` — GATES-2
 - `tests/Api.Tests/Auth/SignupRefusalSurfacingTests.cs` — GATES-2: the refusal on every sign-in path
+- `tests/Api.Tests/Tenancy/AcceptDissolveTests.cs` — the join retires an empty tenant-of-one through the dissolution sequence, never a raw delete (v4 H5, R123)
 - `tests/Api.Tests/WipeDataTests.cs`
 - `tests/Core.Tests/TenantInvitationTests.cs`
 
@@ -364,9 +367,10 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (12 files)
+## 3.6 — The E2E harness (Playwright) (13 files)
 
 - `tests/E2E.Tests/AuthFlowTests.cs`
+- `tests/E2E.Tests/BlazorBoot.cs` — reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)
 - `tests/E2E.Tests/E2ETestBase.cs`
 - `tests/E2E.Tests/MagicLinkJourneyTests.cs` — happy + single-use
 - `tests/E2E.Tests/Mailpit.cs` — read OTPs from the fake inbox
@@ -659,10 +663,11 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (9 files)
+## 8.3 — The deploy pipeline & CI gates (10 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
+- `.forgejo/workflows/deploy.yml` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/postman-sync.yml` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -1068,4 +1073,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 901 tracked files · 600 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 906 tracked files · 605 built in lessons · 301 bucketed · 0 unmapped
