@@ -63,7 +63,7 @@ The seams that matter (all in `src/Core/Abstractions/` unless noted):
 | `IEntitlementService` / `IQuotaService` | `EntitlementService` / `QuotaService` | plan gates (402) and atomic countable limits — ADR-006 |
 | `IPermissionService` | `PermissionService` over the `RolePermissions` matrix | capability checks, not role checks — ADR-009 |
 | `IFileStorage` / `IFileDownloadTokenizer` | `LocalDiskFileStorage` / `S3FileStorage` | tenant-scoped blobs, signed URLs — ADR-010 |
-| `ITenantDataContributor` (×6) / `IUserDataContributor` (×2) | per-slice contributors | export + erasure without central code — ADR-011 |
+| `ITenantDataContributor` (×7) / `IUserDataContributor` (×2) | per-slice contributors | export + erasure without central code — ADR-011 |
 | `IAuditLog` | `AuditLog` (append-only via interceptor) | ADR-008 |
 | `IOutboundUrlGuard` | `OutboundUrlGuard` | SSRF guard for tenant-supplied URLs — ADR-016 |
 | `IRepository<T>` / `IUnitOfWork` | `EfRepository<T>` / `EfUnitOfWork` | generic data access; `Query()` auto-scoped, `QueryAllTenants()` greppable |
@@ -76,7 +76,7 @@ Adding a feature never means editing central code — you register another imple
 flowchart TB
     subgraph contributors ["ITenantDataContributor - export + dissolve participation (ADR-011)"]
         TDC["ITenantDataContributor"]
-        TDC --- C1["Audit"] & C2["Billing"] & C3["UsageCounter"] & C4["ApiKey"] & C5["Webhook"] & C6["Notes (sample)"]
+        TDC --- C1["Audit"] & C2["Billing"] & C3["UsageCounter"] & C4["ApiKey"] & C5["Webhook"] & C6["Notes (sample)"] & C7["Outbox"]
     end
     subgraph handlers ["IOutboxHandler - routed by message Type (ADR-007)"]
         OH["IOutboxHandler"]
@@ -199,7 +199,7 @@ classDiagram
     }
     class IOutboxHandler {
         <<interface>>
-        Type + HandleAsync (must be idempotent)
+        Type + DissolvesWithItsTenant + HandleAsync (must be idempotent)
     }
     class EfOutbox {
         EnqueueAsync - stages, never saves

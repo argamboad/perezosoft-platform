@@ -297,6 +297,8 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Core/Abstractions/IOutboxHandler.cs", "4.1", ""),
     ("src/Core/Entities/OutboxMessage.cs", "4.1", ""),
     ("src/Infrastructure/Persistence/Configurations/OutboxMessageConfiguration.cs", "4.1", ""),
+    ("tests/Api.Tests/Outbox/OutboxTenancyTests.cs", "4.1", "a dissolved tenant's mail and webhook rows leave with it; billing.cancel stays (v4 H6)"),
+    ("src/Infrastructure/Outbox/OutboxDataContributor.cs", "4.1", "dissolve removes the types whose handler declares DissolvesWithItsTenant (v4 H6)"),
     ("src/Infrastructure/Outbox/*", "4.1", "dispatcher + SKIP LOCKED claiming"),
     ("tests/Api.Tests/Outbox/OutboxProcessorTests.cs", "4.1", ""),
     ("src/Infrastructure/Email/OutboxEmailSender.cs", "4.2", "decorator: same seam, now crash-safe"),

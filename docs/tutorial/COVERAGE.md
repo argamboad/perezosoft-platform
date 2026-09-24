@@ -387,17 +387,19 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 4.1 — The transactional outbox (9 files)
+## 4.1 — The transactional outbox (11 files)
 
 - `src/Core/Abstractions/IOutbox.cs`
 - `src/Core/Abstractions/IOutboxHandler.cs`
 - `src/Core/Entities/OutboxMessage.cs`
 - `src/Infrastructure/Outbox/EfOutbox.cs` — dispatcher + SKIP LOCKED claiming
+- `src/Infrastructure/Outbox/OutboxDataContributor.cs` — dissolve removes the types whose handler declares DissolvesWithItsTenant (v4 H6)
 - `src/Infrastructure/Outbox/OutboxDispatcher.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxOptions.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxProcessor.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Persistence/Configurations/OutboxMessageConfiguration.cs`
 - `tests/Api.Tests/Outbox/OutboxProcessorTests.cs`
+- `tests/Api.Tests/Outbox/OutboxTenancyTests.cs` — a dissolved tenant's mail and webhook rows leave with it; billing.cancel stays (v4 H6)
 
 ## 4.2 — Email II — the outbox decorator (3 files)
 
@@ -1073,4 +1075,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 906 tracked files · 605 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 908 tracked files · 607 built in lessons · 301 bucketed · 0 unmapped
