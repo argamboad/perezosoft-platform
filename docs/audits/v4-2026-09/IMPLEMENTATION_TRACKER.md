@@ -126,7 +126,7 @@
 | T63 | TR-20/21/24/25/26/27, OBS-4, NAT-21, DEP-25, AUTH-10 | Med/Low | FLOWS/ARCHITECTURE; Postman descriptions + code parity; limits block; doc-map rows + gate; story statuses | R121, R83, R119, R120, R118 | no | ⬜ |
 | T64 | C6/C12/C13/C26, UX-18, AUTH-8, C1/C2 | Med | ADR amendments (002/004/014/022/027/028); WAYS_OF_WORKING checklist + gate; v3 tracker errata | R85, R158 | no | ⬜ (decision 3) |
 | T65 | TOOL-5/6 | Low | xunit.v3 migration story; adapter bump | R66-adj | no | ⬜ |
-| T66 | Phase 6 | — | QA plan v4 cases + PDFs + counts | R75 | no | 🟡 (Phase 6 in this run) |
+| T66 | Phase 6 | — | QA plan v4 cases + PDFs + counts | R75 | no | ✅ Phase 6 (§14d, 156→173 cases) |
 
 ## B10 — Enforcement close-out
 | # | Finding(s) | Sev | Task | Rule | Core? | Status |

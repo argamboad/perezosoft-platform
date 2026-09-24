@@ -873,7 +873,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (231 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (236 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -931,10 +931,15 @@
 - `docs/audits/v3-2026-07/tooling/test-run-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v3-2026-07/tooling/vulnerable-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v3-2026-07/tooling/web-locked-restore.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/ADVERSARIAL_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/AUDIT_RECONCILIATION.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/AUDIT_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_TASKS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/FOUNDATION_RULES.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/IMPLEMENTATION_TRACKER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/LOGIC_AND_TEST_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/PHASE5_GATE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/RULE_CONFLICTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/phase1-raw/auth.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/phase1-raw/billing.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1107,4 +1112,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 940 tracked files · 602 built in lessons · 338 bucketed · 0 unmapped
+**Totals:** 945 tracked files · 602 built in lessons · 343 bucketed · 0 unmapped
