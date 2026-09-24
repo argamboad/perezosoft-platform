@@ -23,16 +23,16 @@
 | H3 | T1 | LB-DEP-2 | A non-ASCII file name makes the change classifier skip every gate | W1 forge | — | ✅ merged 2026-09-24 (platform #19, y-el-vuelto #10, jigger-jot #7) |
 | H4 | T10 | vacuous "OtherTenant" tests | Two cross-tenant tests never seed a second tenant; no shared two-tenant helper | W2 tenancy | — | ✅ merged 2026-09-24 (platform #20, y-el-vuelto #11, jigger-jot #8) |
 | H5 | T21 | LB-AUTH-5 ≡ LB-BILL-19 | Accepting an invitation deletes the old household without its contributors | W2 tenancy | — | ✅ merged 2026-09-24 (platform #20, y-el-vuelto #11, jigger-jot #8) |
-| H6 | T22 | JOBS-2, ADV-P4-7 | Email outbox rows carry no tenant id and no dissolve path removes them | W2 tenancy | #6 (retention/storage) | ⏸️ |
-| H7 | T23 | JOBS-2, C14 | Sent/dead outbox rows keep attachments and addresses forever | W2 tenancy | #6 | ⏸️ |
-| H8 | T37 | LB-JOBS-1, LB-JOBS-2, LB-JOBS-3, JOBS-9, ADV-P4-9 | Webhook client follows redirects and records the redirect target's 200 as delivered | W3 webhooks | #7 (`AllowAutoRedirect=false`) | ⏸️ |
+| H6 | T22 | JOBS-2, ADV-P4-7 | Email outbox rows carry no tenant id and no dissolve path removes them | W2 tenancy | #6 ✅ approved 2026-09-24 | 🟡 `fix/v4-high-h6-h7-h8` (platform `dd9dc6f`; downstream ports in progress) |
+| H7 | T23 | JOBS-2, C14 | Sent/dead outbox rows keep attachments and addresses forever | W2 tenancy | #6 ✅ | 🟡 `fix/v4-high-h6-h7-h8` (platform `e7f0ec1`) |
+| H8 | T37 | LB-JOBS-1, LB-JOBS-2, LB-JOBS-3, JOBS-9, ADV-P4-9 | Webhook client follows redirects and records the redirect target's 200 as delivered | W3 webhooks | #7 ✅ approved 2026-09-24 | 🟡 `fix/v4-high-h6-h7-h8` (platform `d38d39e`) |
 | H9 | T60 | TR-14 | Postman README documents the sync secrets as GitHub-only | W4 docs | — | ✅ merged 2026-09-24 (platform #20, y-el-vuelto #11, jigger-jot #8) |
 | — | T60 | TR-13 | QA §1 said a develop merge auto-deploys | — | — | ✅ Phase 6 (`a9b4026`) |
 | — | T61 | TR-12 | Course taught the GitHub-only pipeline; coverage map stale | — | — | ✅ Phase 7 (`aa5e990`…`9d84a1a`); the CI gate for it (R114) is Medium, stays in the main tracker |
 
 **Decisions that unblock this wave** (full text in `PHASE5_GATE.md` §4; recommended default in brackets):
-- **#6** outbox retention and attachment storage [scrub payload on Sent/Dead, purge after 30 days, keep attachments inline] — blocks H6, H7.
-- **#7** webhook redirects [`AllowAutoRedirect=false`; any 3xx is a failed delivery] — blocks H8.
+- **#6** outbox retention and attachment storage [scrub payload on Sent/Dead, purge after 30 days, keep attachments inline] — blocks H6, H7. **✅ Approved 2026-09-24 as recommended.** Implementation note: the broadcast's attribution is kept by exempting `admin.broadcast` from clearing and purging (`IOutboxHandler.KeepsPayloadWhenDone`) instead of a system-scope audit row, which would need a tenant-less `AuditEvent` (schema + RLS change).
+- **#7** webhook redirects [`AllowAutoRedirect=false`; any 3xx is a failed delivery] — blocks H8. **✅ Redirect half approved 2026-09-24 as recommended** (3xx and guard refusals carry coded reasons). Still open in PHASE5_GATE #7: the OBS-1 data-class note for DEPLOYMENT §observability.
 - **#8** forge trust [treat the token as write; protect `develop`/`main` on Forgejo now, GitHub when Pro or public] — blocks H1, H2.
 
 ## Waves (one branch each, in this order)
@@ -124,7 +124,7 @@
 - **Verify.** `dotnet test tests/Api.Tests --filter "AcceptDissolve|DeleteTenantAsync"`.
 - **QA flips.** QA-ADV-25. **Rules:** R123 (amends R43, conflict C11). **Course:** lesson on dissolve/invitations if it quotes line 250.
 
-### H6 · T22 · JOBS-2 (stamping + dissolve) · ⏸️ decision #6
+### H6 · T22 · JOBS-2 (stamping + dissolve) · 🟡
 - **Problem.** `OutboxEmailSender.cs:29` enqueues with no tenant id; no contributor touches `OutboxMessages`; the
   tenant-axis canary cannot see a nullable-`TenantId` table. Phase 4 showed a dissolved tenant's document and recipient
   surviving in the outbox.
@@ -136,7 +136,7 @@
 - **Verify.** `dotnet test tests/Api.Tests --filter "Outbox|Dissolve_Wipes|EveryTenantOwnedEntity"`.
 - **QA flips.** QA-ADV-26 (with H7). **Rules:** R91, R145.
 
-### H7 · T23 · JOBS-2 (retention + scrub) + C14 · ⏸️ decision #6
+### H7 · T23 · JOBS-2 (retention + scrub) + C14 · 🟡
 - **Problem.** `OutboxProcessor` flips rows to `Sent` and keeps `Payload` (up to ~13 MiB of base64 per attachment
   mail); nothing purges `Sent`/`Dead`; `ProcessedAt` is not set on dead-letter; account erasure leaves emails addressed
   to the user. The `admin.broadcast` payload is today's only attribution record for announce-all, so a scrub would erase it.
@@ -151,7 +151,7 @@
 
 ## W3 — Webhooks
 
-### H8 · T37 · LB-JOBS-1/2/3, JOBS-9, ADV-P4-9 — no redirects, pinned connect, permanent refusals · ⏸️ decision #7
+### H8 · T37 · LB-JOBS-1/2/3, JOBS-9, ADV-P4-9 — no redirects, pinned connect, permanent refusals · 🟡
 - **Problem.** `Infrastructure/ServiceCollectionExtensions.cs:87` registers the webhook client with only a timeout, so
   it follows redirects: a 301/302/303 becomes a body-less GET to a host the SSRF guard never checked, and that host's 200
   is recorded as a successful delivery (the event is never delivered, nothing retries); a 307 sends the signed body on.
