@@ -10,13 +10,14 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 0.2 — A reproducible machine (5 files)
+## 0.2 — A reproducible machine (6 files)
 
 - `.env.example` — documented env contract (ADR-001); grows every config lesson
 - `.gitattributes`
 - `.gitignore`
 - `.gitleaks.toml` — secret-scanning gate — part of 'secrets never in the repo'
 - `docker-compose.yml` — Postgres 17 + Mailpit; grows in 2.3/8.2
+- `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 
 ## 1.1 — Solution, projects & supply chain (17 files)
 
@@ -367,7 +368,7 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (13 files)
+## 3.6 — The E2E harness (Playwright) (14 files)
 
 - `tests/E2E.Tests/AuthFlowTests.cs`
 - `tests/E2E.Tests/BlazorBoot.cs` — reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)
@@ -382,6 +383,7 @@
 - `tests/E2E.Tests/Pages/LoginPage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/SettingsPage.cs` — Page Object Model
 - `tests/E2E.Tests/playwright.runsettings`
+- `tools/e2e.ps1` — runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)
 
 ## 3.7 — Build your own slice (capstone)
 
@@ -428,7 +430,7 @@
 - `tests/Api.Tests/Scheduling/ExpiredTokenCleanupJobTests.cs`
 - `tests/Api.Tests/Scheduling/ScheduledJobsHostTests.cs`
 
-## 4.5 — Observability: logs, traces, health (9 files)
+## 4.5 — Observability: logs, traces, health (10 files)
 
 - `src/Api/Observability/DatabaseHealthCheck.cs`
 - `src/Api/Observability/OtlpEndpoints.cs`
@@ -439,6 +441,7 @@
 - `tests/Api.Tests/Observability/RequestLoggingScopeMiddlewareTests.cs`
 - `tests/Api.Tests/Observability/TelemetryEnrichmentTests.cs`
 - `tests/Api.Tests/Observability/TelemetryLogsExportTests.cs`
+- `tests/Api.Tests/TelemetryLoggingTests.cs` — HttpClient logs stay at Warning, or every OTLP export logs itself into the next (Local Dev Alignment L3)
 
 ## 4.6 — The append-only audit log (7 files)
 
@@ -884,7 +887,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (194 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (195 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1080,5 +1083,6 @@
 - `tests/E2E.Tests/README.md` — docs
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
+- `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 914 tracked files · 613 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 918 tracked files · 616 built in lessons · 302 bucketed · 0 unmapped

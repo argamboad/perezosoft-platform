@@ -99,6 +99,8 @@ RULES: list[tuple[str, str, str]] = [
     (".claude/*", "META", "assistant config"),
     (".vscode/*", "META", "editor run/debug config — not part of the rebuilt app"),
     ("tools/publish-native.ps1", "META", "maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed"),
+    ("tools/e2e.ps1", "3.6", "runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)"),
+    ("tools/telemetry.ps1", "META", "maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)"),
     ("tools/protect-branches.ps1", "META", "maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app"),
 
     # ---- Part 0 ----
@@ -115,6 +117,7 @@ RULES: list[tuple[str, str, str]] = [
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
     ("tests/Api.Tests/ForgejoCiParityTests.cs", "1.4", "the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)"),
+    ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),
     ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)"),
     ("*/Perezosoft.*.csproj", "1.1", "created here; PackageReferences added as lessons need them"),
     ("src/Api/Properties/launchSettings.json", "1.1", ""),
@@ -317,6 +320,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Scheduling/*", "4.4", ""),
     ("src/Api/Observability/*", "4.5", ""),
     ("tests/Api.Tests/Observability/*", "4.5", ""),
+    ("tests/Api.Tests/TelemetryLoggingTests.cs", "4.5", "HttpClient logs stay at Warning, or every OTLP export logs itself into the next (Local Dev Alignment L3)"),
     ("src/Core/Abstractions/IAuditLog.cs", "4.6", ""),
     ("src/Core/Entities/AuditEvent.cs", "4.6", ""),
     ("src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs", "4.6", ""),
