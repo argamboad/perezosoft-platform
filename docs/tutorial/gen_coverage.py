@@ -151,6 +151,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Configuration/SignupSettings.cs", "2.9", "GATES-2 green list; empty = open"),
     ("src/Api/Services/SignupGate.cs", "2.9", "GATES-2: who may FOUND a household, enforced at 2.8's account-creation choke point"),
     ("tests/Api.Tests/Auth/SignupGateTests.cs", "2.9", "GATES-2"),
+    ("tests/Api.Tests/Tenancy/AcceptDissolveTests.cs", "2.9", "the join retires an empty tenant-of-one through the dissolution sequence, never a raw delete (v4 H5, R123)"),
     ("tests/Api.Tests/Auth/SignupRefusalSurfacingTests.cs", "2.9", "GATES-2: the refusal on every sign-in path"),
     ("src/Api/Services/JwtTokenService.cs", "2.1", ""),
     ("src/Api/Services/JwtClaims.cs", "2.1", ""),

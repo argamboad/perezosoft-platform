@@ -67,11 +67,29 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
     public QuotaService QuotaService() =>
         new(Subscriptions, Tenants, Invitations, UsageCounters, CurrentTenant, Clock);
 
-    public TenantInvitationService InvitationService(IInvitationSettings? invitation = null) =>
-        new(Invitations, Tenants, TokenGen, Hasher, UnitOfWork, new NoopEmailSender(),
+    /// <param name="contributors">The tenant-data contributors the accept consults (would the old tenant be
+    /// abandoned?) and dissolves through. Defaults to none; <see cref="PlatformContributors"/> is the shipped set.</param>
+    public TenantInvitationService InvitationService(IInvitationSettings? invitation = null,
+        IReadOnlyList<ITenantDataContributor>? contributors = null)
+    {
+        var tenantContext = CurrentTenant as ITenantContext ?? new TestCurrentTenant();
+        contributors ??= [];
+        return new(Invitations, Tenants, TokenGen, Hasher, UnitOfWork, new NoopEmailSender(),
             UserService(), new TestAppSettings(), invitation ?? new TestInvitationSettings(),
-            [], QuotaService(), CurrentTenant as ITenantContext ?? new TestCurrentTenant(),
-            Clock, NullLogger<TenantInvitationService>.Instance);
+            contributors, new TenantDissolutionService(contributors, Tenants, tenantContext),
+            QuotaService(), tenantContext, Clock, NullLogger<TenantInvitationService>.Instance);
+    }
+
+    /// <summary>The platform's own <see cref="ITenantDataContributor"/>s, as DI registers them (feature slices
+    /// such as Notes add theirs downstream): API keys, webhooks, usage metering, billing, the audit log.</summary>
+    public IReadOnlyList<ITenantDataContributor> PlatformContributors() =>
+    [
+        new ApiKeyDataContributor(new EfRepository<ApiKey>(Db)),
+        new WebhookDataContributor(new EfRepository<WebhookSubscription>(Db), new EfRepository<WebhookDelivery>(Db)),
+        new UsageCounterDataContributor(UsageCounters),
+        new BillingDataContributor(Subscriptions, new Perezosoft.Infrastructure.Outbox.EfOutbox(Db, Clock)),
+        new Perezosoft.Infrastructure.Audit.AuditDataContributor(new EfRepository<AuditEvent>(Db)),
+    ];
 }
 
 internal sealed class TestRefreshSettings(int expiryDays = 30, int reuseGraceSeconds = 60) : IRefreshTokenSettings

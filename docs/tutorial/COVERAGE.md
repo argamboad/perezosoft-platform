@@ -195,7 +195,7 @@
 - `src/Infrastructure/Persistence/Configurations/TenantMembershipConfiguration.cs`
 - `src/Infrastructure/Repositories/TenantRepository.cs`
 
-## 2.9 — Invitations, dissolve & the contributor seam (14 files)
+## 2.9 — Invitations, dissolve & the contributor seam (15 files)
 
 - `src/Api/Configuration/SignupSettings.cs` — GATES-2 green list; empty = open
 - `src/Api/Controllers/HouseholdInvitationsController.cs`
@@ -209,6 +209,7 @@
 - `src/Infrastructure/Repositories/TenantInvitationRepository.cs`
 - `tests/Api.Tests/Auth/SignupGateTests.cs` — GATES-2
 - `tests/Api.Tests/Auth/SignupRefusalSurfacingTests.cs` — GATES-2: the refusal on every sign-in path
+- `tests/Api.Tests/Tenancy/AcceptDissolveTests.cs` — the join retires an empty tenant-of-one through the dissolution sequence, never a raw delete (v4 H5, R123)
 - `tests/Api.Tests/WipeDataTests.cs`
 - `tests/Core.Tests/TenantInvitationTests.cs`
 
@@ -1072,4 +1073,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 905 tracked files · 604 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 906 tracked files · 605 built in lessons · 301 bucketed · 0 unmapped
