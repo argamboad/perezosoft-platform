@@ -417,9 +417,10 @@ side is fixed (`NEW_APP_GUIDE.md` Phase 2 + "Phase 3 → ports", `REBRANDING.md`
    > route around it. The cost is that call sites must set `tenant_id` explicitly on an owned row,
    > which the interface's doc comment has to say plainly.
    >
-   > **③ `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` goes blind.** The canary selects entities
+   > **③ `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` goes blind.** The canary selected entities
    > whose `TenantId` is a **non-nullable** `Guid` — deliberately, so `OutboxMessage`'s optional handler
-   > context is excluded. Every `ISharedOrTenantScoped` entity has a nullable one by construction, so the
+   > context was excluded. *(2026-09-24, v4 audit H6: widened to nullable keys, with the outbox wired in —
+   > so an `ISharedOrTenantScoped` entity would now fail it until handled, which resolves this point.)* Every `ISharedOrTenantScoped` entity has a nullable one by construction, so the
    > canary cannot see them, and a missing `ITenantDataContributor` would orphan a dissolved tenant's
    > rows with nothing failing anywhere. Whichever way the platform resolves this — widening the canary
    > to "nullable `TenantId` **and** `ISharedOrTenantScoped`", or shipping a second canary beside it —

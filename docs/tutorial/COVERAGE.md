@@ -387,17 +387,23 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 4.1 — The transactional outbox (9 files)
+## 4.1 — The transactional outbox (15 files)
 
 - `src/Core/Abstractions/IOutbox.cs`
 - `src/Core/Abstractions/IOutboxHandler.cs`
+- `src/Core/Abstractions/OutboxPermanentFailureException.cs` — a failure no retry can change dead-letters at once (v4 H8)
 - `src/Core/Entities/OutboxMessage.cs`
 - `src/Infrastructure/Outbox/EfOutbox.cs` — dispatcher + SKIP LOCKED claiming
+- `src/Infrastructure/Outbox/OutboxDataContributor.cs` — dissolve removes the types whose handler declares DissolvesWithItsTenant (v4 H6)
 - `src/Infrastructure/Outbox/OutboxDispatcher.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxOptions.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxProcessor.cs` — dispatcher + SKIP LOCKED claiming
+- `src/Infrastructure/Outbox/OutboxRetentionJob.cs` — deletes finished rows after Outbox:RetentionDays (v4 H7)
+- `src/Infrastructure/Outbox/OutboxUserDataContributor.cs` — account erasure removes mail still queued for the user (v4 H7)
 - `src/Infrastructure/Persistence/Configurations/OutboxMessageConfiguration.cs`
 - `tests/Api.Tests/Outbox/OutboxProcessorTests.cs`
+- `tests/Api.Tests/Outbox/OutboxRetentionTests.cs` — a finished row is a receipt: payload cleared, deleted after RetentionDays; erasure removes queued mail (v4 H7)
+- `tests/Api.Tests/Outbox/OutboxTenancyTests.cs` — a dissolved tenant's mail and webhook rows leave with it; billing.cancel stays (v4 H6)
 
 ## 4.2 — Email II — the outbox decorator (3 files)
 
@@ -613,7 +619,7 @@
 - `tests/Api.Tests/PublicApi/ApiKeyServiceTests.cs`
 - `tests/Api.Tests/RateLimitingTests.cs`
 
-## 7.4 — Outbound webhooks (16 files)
+## 7.4 — Outbound webhooks (18 files)
 
 - `src/Api/Configuration/WebhooksSettings.cs`
 - `src/Api/Endpoints/WebhookEndpoints.cs`
@@ -624,11 +630,13 @@
 - `src/Core/Webhooks/WebhookSignature.cs` — HMAC signing
 - `src/Infrastructure/Persistence/Configurations/WebhookDeliveryConfiguration.cs`
 - `src/Infrastructure/Persistence/Configurations/WebhookSubscriptionConfiguration.cs`
+- `src/Infrastructure/Webhooks/WebhookHttp.cs` — the webhook transport: no redirects, pinned connect, no proxy (v4 H8)
 - `src/Infrastructure/Webhooks/WebhookOutboxHandler.cs`
 - `src/Infrastructure/Webhooks/WebhookSecretProtector.cs` — encrypted at rest (builds on 6.3)
 - `src/Infrastructure/Webhooks/WebhookSender.cs`
 - `tests/Api.Tests/Webhooks/WebhookDeliveryLogTests.cs`
 - `tests/Api.Tests/Webhooks/WebhookDeliveryTests.cs`
+- `tests/Api.Tests/Webhooks/WebhookRedirectAndPinningTests.cs` — no redirects, connection pinned to what the guard accepts, a refusal dead-letters at once (v4 H8)
 - `tests/Api.Tests/Webhooks/WebhookSubscriptionServiceTests.cs`
 - `tests/Core.Tests/WebhookSignatureTests.cs`
 
@@ -1073,4 +1081,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 906 tracked files · 605 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 914 tracked files · 613 built in lessons · 301 bucketed · 0 unmapped

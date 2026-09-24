@@ -81,7 +81,7 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
     }
 
     /// <summary>The platform's own <see cref="ITenantDataContributor"/>s, as DI registers them (feature slices
-    /// such as Notes add theirs downstream): API keys, webhooks, usage metering, billing, the audit log.</summary>
+    /// such as Notes add theirs downstream): API keys, webhooks, usage metering, billing, the audit log, the outbox.</summary>
     public IReadOnlyList<ITenantDataContributor> PlatformContributors() =>
     [
         new ApiKeyDataContributor(new EfRepository<ApiKey>(Db)),
@@ -89,6 +89,10 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
         new UsageCounterDataContributor(UsageCounters),
         new BillingDataContributor(Subscriptions, new Perezosoft.Infrastructure.Outbox.EfOutbox(Db, Clock)),
         new Perezosoft.Infrastructure.Audit.AuditDataContributor(new EfRepository<AuditEvent>(Db)),
+        // Only the email handler is needed to classify: a type no handler claims is kept, which is what the
+        // billing.cancel this dissolve queues must be.
+        new Perezosoft.Infrastructure.Outbox.OutboxDataContributor(new EfRepository<OutboxMessage>(Db),
+            [new Perezosoft.Infrastructure.Email.EmailOutboxHandler(new NoopEmailSender())]),
     ];
 }
 
