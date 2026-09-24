@@ -1,6 +1,6 @@
 # v4 Remediation — Task-Granular Implementation Tracker
 
-> Mirrors `AUDIT_TASKS.md` (T1–T69). **Workflow: discuss each task → implement it (test-first) → verify → next.**
+> Mirrors `AUDIT_TASKS.md` (T1–T69). **High-severity items are worked first from `HIGH_SEVERITY_TRACKER.md`** (H1–H9). **Workflow: discuss each task → implement it (test-first) → verify → next.**
 > Nothing is implemented before its discussion and before the plan is approved (`PHASE5_GATE.md` §5).
 > Conventions (repo memory): branch off `develop` (never `main`); one batch ≈ one branch/PR unless decided otherwise;
 > commit per task; **do not `git push` until confirmed**; both forges reconciled after merge; TDD — the failing test
