@@ -21,12 +21,12 @@
 | H1 | T14 | DEP-13 | No branch protection on either forge; the protection script fails silently | W1 forge | #8 ✅ approved 2026-09-24 | ✅ merged 2026-09-24 (platform #19); protection applied on all 3 Forgejo repos |
 | H2 | T15 | DEP-14 | Forgejo's write-capable job token is left in every CI workspace | W1 forge | #8 ✅ | ✅ merged 2026-09-24 (platform #19, y-el-vuelto #10, jigger-jot #7) |
 | H3 | T1 | LB-DEP-2 | A non-ASCII file name makes the change classifier skip every gate | W1 forge | — | ✅ merged 2026-09-24 (platform #19, y-el-vuelto #10, jigger-jot #7) |
-| H4 | T10 | vacuous "OtherTenant" tests | Two cross-tenant tests never seed a second tenant; no shared two-tenant helper | W2 tenancy | — | ⬜ |
-| H5 | T21 | LB-AUTH-5 ≡ LB-BILL-19 | Accepting an invitation deletes the old household without its contributors | W2 tenancy | — | ⬜ |
+| H4 | T10 | vacuous "OtherTenant" tests | Two cross-tenant tests never seed a second tenant; no shared two-tenant helper | W2 tenancy | — | ✅ merged 2026-09-24 (platform #20, y-el-vuelto #11, jigger-jot #8) |
+| H5 | T21 | LB-AUTH-5 ≡ LB-BILL-19 | Accepting an invitation deletes the old household without its contributors | W2 tenancy | — | ✅ merged 2026-09-24 (platform #20, y-el-vuelto #11, jigger-jot #8) |
 | H6 | T22 | JOBS-2, ADV-P4-7 | Email outbox rows carry no tenant id and no dissolve path removes them | W2 tenancy | #6 (retention/storage) | ⏸️ |
 | H7 | T23 | JOBS-2, C14 | Sent/dead outbox rows keep attachments and addresses forever | W2 tenancy | #6 | ⏸️ |
 | H8 | T37 | LB-JOBS-1, LB-JOBS-2, LB-JOBS-3, JOBS-9, ADV-P4-9 | Webhook client follows redirects and records the redirect target's 200 as delivered | W3 webhooks | #7 (`AllowAutoRedirect=false`) | ⏸️ |
-| H9 | T60 | TR-14 | Postman README documents the sync secrets as GitHub-only | W4 docs | — | ⬜ |
+| H9 | T60 | TR-14 | Postman README documents the sync secrets as GitHub-only | W4 docs | — | ✅ merged 2026-09-24 (platform #20, y-el-vuelto #11, jigger-jot #8) |
 | — | T60 | TR-13 | QA §1 said a develop merge auto-deploys | — | — | ✅ Phase 6 (`a9b4026`) |
 | — | T61 | TR-12 | Course taught the GitHub-only pipeline; coverage map stale | — | — | ✅ Phase 7 (`aa5e990`…`9d84a1a`); the CI gate for it (R114) is Medium, stays in the main tracker |
 
@@ -40,9 +40,9 @@
 | Wave | Branch | Items | Why this order |
 |------|--------|-------|----------------|
 | W1 | `fix/v4-high-forge` | H1, H2, H3 | Every other gate fails open on a rewritten base; protect the branches and CI before landing anything else |
-| W2 | `fix/v4-high-tenancy` | H4 → H5 → H6 → H7 | H4's two-tenant helper is what H5–H7's isolation tests use |
+| W2 | `fix/v4-high-tenancy` | H4 → H5 → H6 → H7 | H4's two-tenant helper is what H5–H7's isolation tests use. H4 + H5 (with H9) landed 2026-09-24 as `fix/v4-high-h4-h5-h9`; H6 + H7 wait on #6 |
 | W3 | `fix/v4-high-webhooks` | H8 | Independent; one registration change plus the permanent-failure path |
-| W4 | `docs/v4-high-docs` | H9 | Docs only; can ride with W1 if preferred |
+| W4 | `docs/v4-high-docs` | H9 | Docs only — rode with H4 + H5 (`fix/v4-high-h4-h5-h9`), merged 2026-09-24 |
 
 ---
 
@@ -98,7 +98,7 @@
 
 ## W2 — Tenancy and erasure completeness
 
-### H4 · T10 — a real two-tenant seed for every cross-tenant test · ⬜
+### H4 · T10 — a real two-tenant seed for every cross-tenant test · ✅
 - **Problem.** `WebhookDeliveryLogTests.Replay_UnknownOrOtherTenant_ReturnsFalse` and `SendTest_UnknownSubscription…`
   use a random id ("unknown"), never another tenant's row; every file hand-rolls its seeding.
 - **Test first.** Arch scan: a test whose name contains `OtherTenant|CrossTenant|IsTenantScoped` must call
@@ -109,7 +109,7 @@
 - **Verify.** `dotnet test tests/Api.Tests --filter "TwoTenant|WebhookDeliveryLog"`.
 - **Rules:** R146.
 
-### H5 · T21 · LB-AUTH-5 ≡ LB-BILL-19 — accept dissolves through the dissolution service · ⬜
+### H5 · T21 · LB-AUTH-5 ≡ LB-BILL-19 — accept dissolves through the dissolution service · ✅
 - **Problem.** `TenantInvitationService.cs:250` calls `tenants.DeleteTenantAsync(oldTenantId)` (a raw
   `Tenants.Remove`). No contributor runs: no `billing.cancel` (Stripe keeps charging), and `ApiKeys`,
   `WebhookSubscriptions`, `UsageCounters`, `Subscription`, `AuditEvents` are orphaned. `ApiKeyService.AuthenticateAsync`
@@ -169,7 +169,7 @@
 
 ## W4 — Docs
 
-### H9 · T60 (TR-14) — Postman sync documented for Forgejo · ⬜
+### H9 · T60 (TR-14) — Postman sync documented for Forgejo · ✅
 - **Problem.** `docs/postman/README.md` tells the operator to set `POSTMAN_API_KEY` / `POSTMAN_WORKSPACE_ID` on
   GitHub only; `.forgejo/workflows/postman-sync.yml` reads them on Forgejo, where `develop` changes now land. CLAUDE.md's
   Postman block says "on every develop change" without naming the forge.
@@ -179,5 +179,5 @@
 - **Done when.** Gate green. **Verify.** `dotnet test tests/Api.Tests --filter DeployTriggerWording`. **Rules:** R117.
 
 ---
-**6 open Highs (H1–H3 closed 2026-09-24; 2 more closed in Phases 6–7). Decisions #6 and #7 unblock 3 of them (H6, H7, H8); H4, H5 and H9 can
-start now.**
+**3 open Highs — H6, H7, H8 (H1–H5 and H9 closed 2026-09-24; 2 more closed in Phases 6–7). All three wait on a decision:
+#6 unblocks H6 and H7, #7 unblocks H8.**

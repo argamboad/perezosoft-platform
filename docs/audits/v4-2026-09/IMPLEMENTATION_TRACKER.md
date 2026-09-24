@@ -29,7 +29,7 @@
 ## B1 — Keystone gates
 | # | Finding(s) | Sev | Task | Rule | Core? | Status |
 |---|-----------|-----|------|------|-------|--------|
-| T1 | LB-DEP-2 | High | byte-safe `git diff` in both classifiers + parity fact | R137 | no | ⬜ |
+| T1 | LB-DEP-2 | High | byte-safe `git diff` in both classifiers + parity fact | R137 | no | ✅ H3 — platform #19 + both downstream (2026-09-24) |
 | T2 | DEP-15, LB-DEP-9/10, NAT-16 | Med | classifier `code=`/`native=` widening, fail-open permissive, `-i`, reflective read-path test | R97, R106, R143 | no | ⬜ |
 | T3 | LB-DEP-4 | Med | status-field provider-probe grep ×4 | R139 | no | ⬜ |
 | T4 | LB-DEP-3, DEP-19 | Med | already-green: non-success refusal, newest task, derived counts | R138 | no | ⬜ |
@@ -38,7 +38,7 @@
 | T7 | S0-G8, AUTH-11 | Low | reflective posture gate with named exceptions | R122 | no | ⬜ |
 | T8 | LB-DEP-1/5/6/7/11, DEP-22 | Med | shell-logic harness `tests/ci-logic/` + the six script fixes | R136 | no | ⬜ |
 | T9 | ADV-P4-11 | Med | resx duplicate gate + MSB3568 as error | R152 | no | ⬜ |
-| T10 | vacuous OtherTenant tests | High | `TwoTenants.SeedAsync` + arch scan | R146 | no | ⬜ |
+| T10 | vacuous OtherTenant tests | High | `TwoTenants.SeedAsync` + arch scan | R146 | no | ✅ H4 — platform #20 + both downstream (2026-09-24) |
 | T11 | TR-15 | Med | rule-id hygiene gate + test comment fixes | R116 | no | ⬜ |
 | T12 | UX-15 | Info | `[Explicit]` excluded from shards; suite size asserted | R113 | no | ⬜ |
 | T13 | ADV-P4-13 | Low | startup route-uniqueness check | R155 | yes | ⬜ |
@@ -46,8 +46,8 @@
 ## B2 — Forge trust boundary
 | # | Finding(s) | Sev | Task | Rule | Core? | Status |
 |---|-----------|-----|------|------|-------|--------|
-| T14 | DEP-13 | High | Forgejo branch protection + script exit codes (operator run on 3 repos) | R98, R140 | no | ⬜ |
-| T15 | DEP-14, DEP-27 | High | `persist-credentials: false`; protection check in `changes`; consistent `permissions:` | R98 | no | ⬜ |
+| T14 | DEP-13 | High | Forgejo branch protection + script exit codes (operator run on 3 repos) | R98, R140 | no | ✅ H1 — platform #19; protection applied on all 3 Forgejo repos (2026-09-24) |
+| T15 | DEP-14, DEP-27 | High | `persist-credentials: false`; protection check in `changes`; consistent `permissions:` | R98 | no | 🟡 H2 — persist-credentials + protection check merged (#19, 2026-09-24); DEP-27 consistent `permissions:` still open |
 | T16 | DEP-18 | Med | image-pin gate over all four surfaces; `postgres:17.x` | R99 | no | ⬜ |
 | T17 | DEP-17, DEP-26 | Med | GitHub Apple legs behind a knob; comment truth-up; PAT bypass note | R101 | no | ⬜ |
 | T18 | DEP-20 | Med | per-host MAUI lockfiles + `--locked-mode` on the desk; ADR-028 residual risk | R61-adj | no | ⬜ |
@@ -57,7 +57,7 @@
 ## B3 — Tenancy / erasure completeness
 | # | Finding(s) | Sev | Task | Rule | Core? | Status |
 |---|-----------|-----|------|------|-------|--------|
-| T21 | LB-AUTH-5 ≡ LB-BILL-19 | High | accept dissolves via the service; delete `DeleteTenantAsync`; harness overload | R123 | yes | ⬜ |
+| T21 | LB-AUTH-5 ≡ LB-BILL-19 | High | accept dissolves via the service; delete `DeleteTenantAsync`; harness overload | R123 | yes | ✅ H5 — platform #20 + both downstream (2026-09-24) |
 | T22 | JOBS-2 (stamping) | High | email enqueues stamp `TenantId`; `OutboxDataContributor`; canary read | R91 | yes | ⬜ |
 | T23 | JOBS-2 (retention), C14 | High | payload scrub + terminal stamp + retention job + broadcast audit row + user erasure scrub | R90 | yes | ⬜ |
 | T24 | LB-BILL-23 | Med | webhook tenant-existence check | R129 | yes | ⬜ |
@@ -120,7 +120,7 @@
 ## B9 — Docs, ADRs, runbooks, QA, course
 | # | Finding(s) | Sev | Task | Rule | Core? | Status |
 |---|-----------|-----|------|------|-------|--------|
-| T60 | TR-13/14 | High (docs) | deploy-trigger wording ×3 + grep gate | R117 | no | ⬜ |
+| T60 | TR-13/14 | High (docs) | deploy-trigger wording ×3 + grep gate | R117 | no | 🟡 TR-13 fixed in Phase 6; TR-14 (H9) merged #20 with a Postman-wording gate (2026-09-24); the broad `auto-deploys` grep gate is still open |
 | T61 | TR-19, TR-12.. | High (docs) | **course reconcile ✅ landed in Phase 7** (`aa5e990`…`9d84a1a`); coverage CI step + quote sweep pending | R114, R115 | no | 🟡 (gates pending) |
 | T62 | TR-15 (docs) | Med | v2 header erratum → v3 | R116 | no | ⬜ |
 | T63 | TR-20/21/24/25/26/27, OBS-4, NAT-21, DEP-25, AUTH-10 | Med/Low | FLOWS/ARCHITECTURE; Postman descriptions + code parity; limits block; doc-map rows + gate; story statuses | R121, R83, R119, R120, R118 | no | ⬜ |
