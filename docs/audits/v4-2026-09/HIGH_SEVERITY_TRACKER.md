@@ -18,9 +18,9 @@
 
 | # | Task | Finding(s) | One line | Wave | Decision needed | Status |
 |---|------|-----------|----------|------|-----------------|--------|
-| H1 | T14 | DEP-13 | No branch protection on either forge; the protection script fails silently | W1 forge | #8 ✅ approved 2026-09-24 | 🟡 PR platform #19 open; protection **applied** on all 3 Forgejo repos |
-| H2 | T15 | DEP-14 | Forgejo's write-capable job token is left in every CI workspace | W1 forge | #8 ✅ | 🟡 PRs platform #19, y-el-vuelto #10, jigger-jot #7 |
-| H3 | T1 | LB-DEP-2 | A non-ASCII file name makes the change classifier skip every gate | W1 forge | — | 🟡 PRs platform #19, y-el-vuelto #10, jigger-jot #7 |
+| H1 | T14 | DEP-13 | No branch protection on either forge; the protection script fails silently | W1 forge | #8 ✅ approved 2026-09-24 | ✅ merged 2026-09-24 (platform #19); protection applied on all 3 Forgejo repos |
+| H2 | T15 | DEP-14 | Forgejo's write-capable job token is left in every CI workspace | W1 forge | #8 ✅ | ✅ merged 2026-09-24 (platform #19, y-el-vuelto #10, jigger-jot #7) |
+| H3 | T1 | LB-DEP-2 | A non-ASCII file name makes the change classifier skip every gate | W1 forge | — | ✅ merged 2026-09-24 (platform #19, y-el-vuelto #10, jigger-jot #7) |
 | H4 | T10 | vacuous "OtherTenant" tests | Two cross-tenant tests never seed a second tenant; no shared two-tenant helper | W2 tenancy | — | ⬜ |
 | H5 | T21 | LB-AUTH-5 ≡ LB-BILL-19 | Accepting an invitation deletes the old household without its contributors | W2 tenancy | — | ⬜ |
 | H6 | T22 | JOBS-2, ADV-P4-7 | Email outbox rows carry no tenant id and no dissolve path removes them | W2 tenancy | #6 (retention/storage) | ⏸️ |
@@ -52,9 +52,12 @@
 > `90aec2f` H2; downstream: H3 + H2 ported, H1 is the platform script run against them). Forgejo protection applied
 > to `develop` + `main` on perezosoft-platform, y-el-vuelto and jigger-jot (push: argamboad; required checks
 > `CI / {changes,secret-scan,qa-artifacts,build-test,license-scan,docker-build,native-build,e2e} *`; admins bound).
-> Mark ✅ when the three PRs merge green. QA-DEP-04 can be re-run now (expected Pass).
+> **Merged 2026-09-24** — platform #19, y-el-vuelto #10, jigger-jot #7; every job green on the PRs except one jigger-jot
+> e2e shard. That shard, and one e2e shard in each post-merge `develop` run on platform and jigger-jot, died in
+> `playwright install --with-deps` on an Ubuntu mirror mid-sync (apt size mismatch), before any test ran — unrelated to
+> W1; fixed on `fix/e2e-apt-mirror-retry` in all three repos (retry with back-off). QA-DEP-04 can be re-run (expected Pass).
 
-### H1 · T14 · DEP-13 — protect `develop` and `main` · ⏸️ decision #8
+### H1 · T14 · DEP-13 — protect `develop` and `main` · ✅
 - **Problem.** Forgejo `GET /repos/argamboad/{platform,y-el-vuelto,jigger-jot}/branch_protections` returns `[]`
   (re-checked 2026-09-24). GitHub protection needs Pro or a public repo; `tools/protect-branches.ps1` is GitHub-only and
   prints "FAILED" but exits 0.
@@ -67,7 +70,7 @@
 - **Verify.** `curl …/branch_protections` (WSL, token file) · `dotnet test tests/Api.Tests --filter ToolsScripts`.
 - **QA flips.** QA-DEP-04 Blocked → Pass. **Rules:** R98, R140.
 
-### H2 · T15 · DEP-14 — stop leaving the write token in the workspace · ⏸️ decision #8
+### H2 · T15 · DEP-14 — stop leaving the write token in the workspace · ✅
 - **Problem.** `.forgejo/workflows/ci.yml` has 14 `actions/checkout@v5` steps and 0 `persist-credentials`; Forgejo
   ignores `permissions:` and hands same-repo runs a write token; jobs run third-party code (unlocked MAUI restore on
   the desk runner, npm, brew).
@@ -81,7 +84,7 @@
 - **Verify.** `dotnet test tests/Api.Tests --filter ForgejoCiParityTests` + one Forgejo run.
 - **Rules:** R98 (and the R63 amendment, conflict C5).
 
-### H3 · T1 · LB-DEP-2 — byte-safe change classification · ⬜
+### H3 · T1 · LB-DEP-2 — byte-safe change classification · ✅
 - **Problem.** Both classifiers run `git diff --name-only` (`.forgejo/workflows/ci.yml:409`,
   `.github/workflows/ci.yml:314`) with git's default path quoting; `src/Api/Features/Añadir.cs` prints as
   `"src/Api/Features/A\303\261adir.cs"` → `code=false native=false docs=false` → no gate runs. Probe:
@@ -176,5 +179,5 @@
 - **Done when.** Gate green. **Verify.** `dotnet test tests/Api.Tests --filter DeployTriggerWording`. **Rules:** R117.
 
 ---
-**9 open Highs (2 already closed in Phases 6–7). 3 decisions (#6, #7, #8) unblock 5 of them; H3, H4, H5 and H9 can
+**6 open Highs (H1–H3 closed 2026-09-24; 2 more closed in Phases 6–7). Decisions #6 and #7 unblock 3 of them (H6, H7, H8); H4, H5 and H9 can
 start now.**
