@@ -287,6 +287,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/E2E.Tests/LocaleMismatchJoinTests.cs", "3.5", "locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)"),
     ("tests/E2E.Tests/E2ETestBase.cs", "3.6", ""),
     ("tests/E2E.Tests/Mailpit.cs", "3.6", "read OTPs from the fake inbox"),
+    ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)"),
     ("tests/E2E.Tests/Pages/*", "3.6", "Page Object Model"),
     ("tests/E2E.Tests/AuthFlowTests.cs", "3.6", ""),
 
@@ -554,6 +555,8 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/PasswordlessConcurrencyTests.cs", "2.4", "atomic single-use consume + lockout counter (v3 LB-AUTH-2/3)"),
     ("tests/Api.Tests/Architecture/TenantHatchGuard.cs", "2.6", "polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)"),
     ("tests/Api.Tests/Architecture/TenantHatchGuardTests.cs", "2.6", ""),
+    ("tests/Api.Tests/Infrastructure/TwoTenants.cs", "2.6", "the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)"),
+    ("tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs", "2.6", "an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)"),
     ("tests/Api.Tests/Configuration/ConfigPostureTests.cs", "1.4", "pins every config-gated feature CLOSED under empty config (v3 S0-G3)"),
     ("tests/Api.Tests/Architecture/RoutePrefixInspector.cs", "3.3", "route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)"),
     ("tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs", "3.3", ""),
