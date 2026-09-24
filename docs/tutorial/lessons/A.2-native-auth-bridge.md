@@ -21,7 +21,8 @@ custom-scheme); the two-HttpClient pattern (auth vs Bearer); every-platform-regi
 
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/Auth/SecureStorageSessionStore.cs`,
 `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`, `LoopbackOAuthInitiator.cs`,
-`NativeAuthHeaderHandler.cs`, `src/Maui/MauiProgram.cs`.
+`NativeAuthHeaderHandler.cs`, `src/Maui/MauiProgram.cs` (the API base, #230),
+`src/Api/Controllers/NativeAuthController.cs` (the exchange; `signup_not_allowed`, GATES-2).
 
 **Prerequisites:** 2.7 (JWT access + refresh-cookie rotation — the model being bridged), 2.5 (OAuth
 providers), 6.5 (MFA step-up choke point — reused here), A.1 (the shell hosting this).
@@ -139,6 +140,38 @@ compile error, it's a *crash at first resolve* (how iOS/macCatalyst were dead-on
 initiator was generalized across the three custom-scheme platforms). Fail-fast DI turns a missing
 implementation into an immediate, obvious failure — but only if you actually *run* the platform,
 which is why the smoke harness (A.1 §6) matters.
+
+Two edges of the same round-trip were found later, downstream, and both are one line each. The
+first is the API base the initiators build their URL from. `MauiProgram` normalizes it:
+
+```csharp
+// src/Maui/MauiProgram.cs
+// Normalized: no trailing slash. The OAuth initiators build the browser URL by concatenating
+// "/api/auth/native/login/…" onto this, and a base passed as "https://host/" produced
+// "https://host//api/…" — which the API serves as the web client's fallback page instead of the
+// OAuth challenge, so the browser signed the user into the WEB app and the native app never got
+// its code (found downstream in y-el-vuelto, 2026-09-14, Windows + Android against staging).
+// HttpClient tolerated the slash; the concatenation did not.
+private static string ApiBaseUrl => RawApiBaseUrl.TrimEnd('/');
+```
+
+Read that failure again, because it is a single-origin (8.1) consequence: `//api/...` is not an
+API route, so the SPA fallback served the *web app*, which happily completed the OAuth flow — in the
+wrong client. Nothing errored; the user was simply signed in somewhere else (#230). The second edge
+is the sign-up green list (GATES-2, ADR-027): the native exchange goes through the same
+`UserService.CreateUserWithTenantAsync` choke point as every other sign-in, so a refused founder
+must land on the app's error page with a *policy* code, not a failure:
+
+```csharp
+// src/Api/Controllers/NativeAuthController.cs — the callback's catch ladder
+catch (SignupNotAllowedException)
+{
+    return Redirect(To("error", "signup_not_allowed")); // GATES-2 (ADR-027) — policy, not failure
+}
+```
+
+The `AuthError` page (3.4) already maps that code to the same copy the web flow shows; the native
+bridge only had to carry it across the redirect.
 
 ### Surviving process death mid-round-trip (NATIVE-12)
 

@@ -5,12 +5,16 @@
 > each file as it's created. Coverage is not asserted — it is **machine-checked**:
 > `gen_coverage.py` maps every tracked file to the lesson that builds it and fails on
 > any unmapped file. See `COVERAGE.md` for the full file→lesson manifest
-> (currently: 715 tracked files · 505 built in lessons · 210 explicitly bucketed as
-> generated/vendored/meta · **0 unmapped** — last reconciled 2026-07-09, includes the
-> QA-pass findings/features: rate-limit split + 429 copy in 2.4, typeable recovery codes
-> in 6.5, notification delete/clear in 7.2, targeted/broadcast announce + plan comp in
-> 7.5; plus the DevOps thread: CI born in lesson 1.6 and growing a job per part,
-> deploy pipeline + release readiness in 8.3, the RLS backstop in 8.4).
+> (currently: 924 tracked files · 602 built in lessons · 322 explicitly bucketed as
+> generated/vendored/meta · **0 unmapped** — last reconciled 2026-09-23 in the v4 audit's
+> Phase 7, which also reconciled the 2026-09 delta into the lessons: the refresh-reuse grace
+> window in 2.2 §4a, the session keep-alive + bfcache guard in 3.4 §3a/3b, per-signal OTLP
+> paths in 4.5, the `changes` classifier in 1.6 §4, the self-hosted forge (ADR-028) in 8.3 §5,
+> the dead-boot reload + shards in 3.6 §2a/2b; earlier: the QA-pass findings/features
+> (rate-limit split + 429 copy in 2.4, typeable recovery codes in 6.5, notification
+> delete/clear in 7.2, targeted/broadcast announce + plan comp in 7.5) and the DevOps
+> thread: CI born in lesson 1.6 and growing a job per part, deploy pipeline + release
+> readiness in 8.3, the RLS backstop in 8.4).
 
 ## Pedagogical spine
 
