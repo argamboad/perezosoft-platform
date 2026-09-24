@@ -873,7 +873,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (215 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (231 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -934,6 +934,7 @@
 - `docs/audits/v4-2026-09/AUDIT_RECONCILIATION.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/AUDIT_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/FOUNDATION_RULES.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/LOGIC_AND_TEST_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/RULE_CONFLICTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/phase1-raw/auth.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/phase1-raw/billing.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -943,6 +944,21 @@
 - `docs/audits/v4-2026-09/phase1-raw/jobs-obs.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/phase1-raw/native.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/phase1-raw/step0.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/auth-client.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/billing-jobs.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/ci-native.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_base.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_head_filled.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_head_realigned.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p1_push_diagnosis.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p2_already_green.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p2b_already_green.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p3_classifier.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p4_shards.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p5_slowest.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p7_exists.proj` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p8_stderr_stop.ps1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/test-completeness.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/tooling/build.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/tooling/ci-status.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v4-2026-09/tooling/complexity-proxy.txt` — authoring docs; the course TEACHES writing these in 0.1
@@ -1091,4 +1107,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 924 tracked files · 602 built in lessons · 322 bucketed · 0 unmapped
+**Totals:** 940 tracked files · 602 built in lessons · 338 bucketed · 0 unmapped
