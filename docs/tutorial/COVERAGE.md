@@ -58,7 +58,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (10 files)
+## 1.4 — Configuration & the options pattern (9 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -69,7 +69,6 @@
 - `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — pins every config-gated feature CLOSED under empty config (v3 S0-G3)
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
-- `tests/Api.Tests/ForgejoCiParityTests.cs` — the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)
 
 ## 1.5 — The error envelope (1 files)
 
@@ -237,7 +236,7 @@
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (110 files)
+## 3.4 — The web client & auth UI (109 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
@@ -348,7 +347,6 @@
 - `tests/Ui.Tests/SessionKeepAliveTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SignupRefusedCopyTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SwitcherStateTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/SystemBarThemeSyncTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 
 ## 3.5 — Localization (EN/ES) (11 files)
 
@@ -364,9 +362,10 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (12 files)
+## 3.6 — The E2E harness (Playwright) (13 files)
 
 - `tests/E2E.Tests/AuthFlowTests.cs`
+- `tests/E2E.Tests/BlazorBoot.cs` — reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)
 - `tests/E2E.Tests/E2ETestBase.cs`
 - `tests/E2E.Tests/MagicLinkJourneyTests.cs` — happy + single-use
 - `tests/E2E.Tests/Mailpit.cs` — read OTPs from the fake inbox
@@ -659,15 +658,17 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (9 files)
+## 8.3 — The deploy pipeline & CI gates (11 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
+- `.forgejo/workflows/deploy.yml` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/postman-sync.yml` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
 - `.github/workflows/postman-sync.yml`
 - `docs/QA_TEST_PLAN.md` — release readiness: manual QA plan beside the automated gates
+- `tests/Api.Tests/ForgejoCiParityTests.cs` — the Forgejo workflow copy cannot drift from the GitHub one; pins deploy.yml's guard + dispatch-only trigger (LOCALCI-4: R80, ADR-028)
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
 
@@ -698,7 +699,7 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 
-## A.1 — Appendix — MAUI shells & parity (38 files)
+## A.1 — Appendix — MAUI shells & parity (39 files)
 
 - `src/Maui/App.xaml`
 - `src/Maui/App.xaml.cs`
@@ -735,6 +736,7 @@
 - `src/Shared.Ui/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
 - `tests/Api.Tests/NativeChromeGateTests.cs` — Android bar colours = app.css tokens; top inset applied once
 - `tests/E2E.Tests/NativeSmokeTests.cs` — NATIVE-7 emulator/WebView2 smoke
+- `tests/Ui.Tests/SystemBarThemeSyncTests.cs` — the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)
 - `tests/native-smoke-android/package-lock.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/package.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/smoke.js` — Android playwright-core smoke harness
@@ -871,7 +873,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (194 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (215 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -929,6 +931,27 @@
 - `docs/audits/v3-2026-07/tooling/test-run-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v3-2026-07/tooling/vulnerable-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v3-2026-07/tooling/web-locked-restore.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_RECONCILIATION.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/FOUNDATION_RULES.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/RULE_CONFLICTS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/auth.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/billing.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/client.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/deploy-ci.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/docs-template.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/jobs-obs.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/native.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/step0.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/build.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/ci-status.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/complexity-proxy.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/coverage-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/deprecated-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/license-scan.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/outdated-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/test-run-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/vulnerable-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/check_qa_artifacts.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/gen_qa_guide.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/gen_qa_runlog.py` — authoring docs; the course TEACHES writing these in 0.1
@@ -1068,4 +1091,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 901 tracked files · 600 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 924 tracked files · 602 built in lessons · 322 bucketed · 0 unmapped
