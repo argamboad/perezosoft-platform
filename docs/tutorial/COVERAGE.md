@@ -387,7 +387,7 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 4.1 — The transactional outbox (11 files)
+## 4.1 — The transactional outbox (14 files)
 
 - `src/Core/Abstractions/IOutbox.cs`
 - `src/Core/Abstractions/IOutboxHandler.cs`
@@ -397,8 +397,11 @@
 - `src/Infrastructure/Outbox/OutboxDispatcher.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxOptions.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxProcessor.cs` — dispatcher + SKIP LOCKED claiming
+- `src/Infrastructure/Outbox/OutboxRetentionJob.cs` — deletes finished rows after Outbox:RetentionDays (v4 H7)
+- `src/Infrastructure/Outbox/OutboxUserDataContributor.cs` — account erasure removes mail still queued for the user (v4 H7)
 - `src/Infrastructure/Persistence/Configurations/OutboxMessageConfiguration.cs`
 - `tests/Api.Tests/Outbox/OutboxProcessorTests.cs`
+- `tests/Api.Tests/Outbox/OutboxRetentionTests.cs` — a finished row is a receipt: payload cleared, deleted after RetentionDays; erasure removes queued mail (v4 H7)
 - `tests/Api.Tests/Outbox/OutboxTenancyTests.cs` — a dissolved tenant's mail and webhook rows leave with it; billing.cancel stays (v4 H6)
 
 ## 4.2 — Email II — the outbox decorator (3 files)
@@ -1075,4 +1078,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 908 tracked files · 607 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 911 tracked files · 610 built in lessons · 301 bucketed · 0 unmapped
