@@ -318,6 +318,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Scheduling/*", "4.4", ""),
     ("src/Api/Observability/*", "4.5", ""),
     ("tests/Api.Tests/Observability/*", "4.5", ""),
+    ("tests/Api.Tests/TelemetryLoggingTests.cs", "4.5", "HttpClient logs stay at Warning, or every OTLP export logs itself into the next (Local Dev Alignment L3)"),
     ("src/Core/Abstractions/IAuditLog.cs", "4.6", ""),
     ("src/Core/Entities/AuditEvent.cs", "4.6", ""),
     ("src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs", "4.6", ""),

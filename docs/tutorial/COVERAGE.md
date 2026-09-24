@@ -429,7 +429,7 @@
 - `tests/Api.Tests/Scheduling/ExpiredTokenCleanupJobTests.cs`
 - `tests/Api.Tests/Scheduling/ScheduledJobsHostTests.cs`
 
-## 4.5 — Observability: logs, traces, health (9 files)
+## 4.5 — Observability: logs, traces, health (10 files)
 
 - `src/Api/Observability/DatabaseHealthCheck.cs`
 - `src/Api/Observability/OtlpEndpoints.cs`
@@ -440,6 +440,7 @@
 - `tests/Api.Tests/Observability/RequestLoggingScopeMiddlewareTests.cs`
 - `tests/Api.Tests/Observability/TelemetryEnrichmentTests.cs`
 - `tests/Api.Tests/Observability/TelemetryLogsExportTests.cs`
+- `tests/Api.Tests/TelemetryLoggingTests.cs` — HttpClient logs stay at Warning, or every OTLP export logs itself into the next (Local Dev Alignment L3)
 
 ## 4.6 — The append-only audit log (7 files)
 
@@ -1082,4 +1083,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 915 tracked files · 614 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 916 tracked files · 615 built in lessons · 301 bucketed · 0 unmapped
