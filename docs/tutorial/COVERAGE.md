@@ -10,13 +10,14 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 0.2 — A reproducible machine (5 files)
+## 0.2 — A reproducible machine (6 files)
 
 - `.env.example` — documented env contract (ADR-001); grows every config lesson
 - `.gitattributes`
 - `.gitignore`
 - `.gitleaks.toml` — secret-scanning gate — part of 'secrets never in the repo'
 - `docker-compose.yml` — Postgres 17 + Mailpit; grows in 2.3/8.2
+- `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 
 ## 1.1 — Solution, projects & supply chain (17 files)
 
@@ -1081,4 +1082,4 @@
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 
-**Totals:** 914 tracked files · 613 built in lessons · 301 bucketed · 0 unmapped
+**Totals:** 915 tracked files · 614 built in lessons · 301 bucketed · 0 unmapped
