@@ -75,19 +75,21 @@ Two traps the first downstream app fell into, so the conceptualization avoids th
 5. Push. **CI runs immediately and should be green** (build, ~500 tests, secret/license/QA-doc
    gates, native builds, browser E2E). The deploy jobs stay skipped until Phase 7's secrets exist.
 6. **Protect both branches — every new repo, before the first slice.** Once the first CI run has
-   reported (a required check GitHub has never seen still blocks), run:
+   reported, run from PowerShell 7 with a Forgejo token that has admin rights on the repo:
 
    ```powershell
-   ./tools/protect-branches.ps1 -Repo <owner>/<app> -Checks build-test,e2e,secret-scan
+   $env:FORGEJO_TOKEN = Get-Content ~/.config/forgejo/token
+   pwsh ./tools/protect-branches.ps1 -Repo <owner>/<app>
    ```
 
-   `develop` then needs those checks green on an up-to-date branch, resolved conversations, and no
-   force pushes or deletion; `main` needs the same plus a pull request (0 approvals — a solo
-   maintainer). Admins are not bound, so the owner can still bypass in an emergency. **A personal
-   GitHub account has no account-wide ruleset**, so nothing protects a new repo automatically — this
-   step is the rule. A **private** repo needs GitHub Pro for branch protection; the script reports
-   the 403 rather than failing silently. Only list checks the repo's CI actually runs on pull
-   requests: a required check that never reports blocks every merge.
+   On **Forgejo** (the primary forge, ADR-028) `develop` and `main` then refuse force pushes and deletion,
+   accept pushes only from the owner — so the CI job token, which Forgejo gives write access, cannot push to
+   them — and merge a pull request only when every gate job is green (a skipped job counts as passed, so a
+   docs-only PR still merges). The rules bind admins too. **CI checks this on every run**: the `changes` job
+   fails while either branch is unprotected (v4 audit DEP-13/DEP-14). `-Forge github` (or `both`) also
+   protects the GitHub mirror — a **private** GitHub repo needs Pro for that, and the script exits 1 on the
+   403 rather than failing silently. On GitHub list only checks the repo's CI actually reports on pull
+   requests, matrix legs by their reported name: a required check that never reports blocks every merge.
 
 ## Phase 3 — Rebrand + fill the placeholders (first Claude Code session)
 

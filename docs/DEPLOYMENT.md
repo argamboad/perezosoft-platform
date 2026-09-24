@@ -461,6 +461,13 @@ GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings →
 - Variables **`DEPLOY_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
   (when prod exists), **`POSTMAN_WORKSPACE_ID`**; secret **`POSTMAN_API_KEY`**.
 - Enable **Actions** for the repo (Settings → Units) if it was switched off during the migration.
+- **Protect `develop` and `main`** with `pwsh ./tools/protect-branches.ps1 -Repo argamboad/<repo>`
+  (`FORGEJO_TOKEN` set to an admin token). Forgejo gives every job a token that can write and ignores the
+  `permissions:` key GitHub uses to narrow it, so the branch rules are what stop CI (or a poisoned build
+  dependency) from pushing: pushes only from the owner, no force push or deletion, merges only with the
+  gate jobs green. The `changes` job fails every run while either branch is unprotected, and no checkout
+  leaves the token in the workspace (`persist-credentials: false`, v4 audit DEP-13/DEP-14). The GitHub
+  mirror is private on the free plan, where GitHub offers no branch protection.
 
 **What runs when.**
 
