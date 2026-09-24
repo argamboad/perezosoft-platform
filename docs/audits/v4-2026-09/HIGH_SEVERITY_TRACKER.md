@@ -18,9 +18,9 @@
 
 | # | Task | Finding(s) | One line | Wave | Decision needed | Status |
 |---|------|-----------|----------|------|-----------------|--------|
-| H1 | T14 | DEP-13 | No branch protection on either forge; the protection script fails silently | W1 forge | #8 (where protection lives) | ⏸️ |
-| H2 | T15 | DEP-14 | Forgejo's write-capable job token is left in every CI workspace | W1 forge | #8 (treat token as write) | ⏸️ |
-| H3 | T1 | LB-DEP-2 | A non-ASCII file name makes the change classifier skip every gate | W1 forge | — | ⬜ |
+| H1 | T14 | DEP-13 | No branch protection on either forge; the protection script fails silently | W1 forge | #8 ✅ approved 2026-09-24 | 🟡 PR platform #19 open; protection **applied** on all 3 Forgejo repos |
+| H2 | T15 | DEP-14 | Forgejo's write-capable job token is left in every CI workspace | W1 forge | #8 ✅ | 🟡 PRs platform #19, y-el-vuelto #10, jigger-jot #7 |
+| H3 | T1 | LB-DEP-2 | A non-ASCII file name makes the change classifier skip every gate | W1 forge | — | 🟡 PRs platform #19, y-el-vuelto #10, jigger-jot #7 |
 | H4 | T10 | vacuous "OtherTenant" tests | Two cross-tenant tests never seed a second tenant; no shared two-tenant helper | W2 tenancy | — | ⬜ |
 | H5 | T21 | LB-AUTH-5 ≡ LB-BILL-19 | Accepting an invitation deletes the old household without its contributors | W2 tenancy | — | ⬜ |
 | H6 | T22 | JOBS-2, ADV-P4-7 | Email outbox rows carry no tenant id and no dissolve path removes them | W2 tenancy | #6 (retention/storage) | ⏸️ |
@@ -47,6 +47,12 @@
 ---
 
 ## W1 — Forge trust boundary
+
+> **2026-09-24:** implemented on `fix/v4-high-forge` in all three repos (platform: `b787fab` H3, `50ca4e9` H1,
+> `90aec2f` H2; downstream: H3 + H2 ported, H1 is the platform script run against them). Forgejo protection applied
+> to `develop` + `main` on perezosoft-platform, y-el-vuelto and jigger-jot (push: argamboad; required checks
+> `CI / {changes,secret-scan,qa-artifacts,build-test,license-scan,docker-build,native-build,e2e} *`; admins bound).
+> Mark ✅ when the three PRs merge green. QA-DEP-04 can be re-run now (expected Pass).
 
 ### H1 · T14 · DEP-13 — protect `develop` and `main` · ⏸️ decision #8
 - **Problem.** Forgejo `GET /repos/argamboad/{platform,y-el-vuelto,jigger-jot}/branch_protections` returns `[]`
