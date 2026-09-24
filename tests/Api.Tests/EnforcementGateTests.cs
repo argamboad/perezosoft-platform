@@ -285,6 +285,28 @@ public class EnforcementGateTests
             + "(the figure drifted twice before this gate existed: v3 TR-2, T54).");
     }
 
+    [Fact]
+    public void ProtectBranchesScript_ProtectsTheForgejoBranches_AndFailsLoud() // v4 audit DEP-13 (H1), R98/R140
+    {
+        // Forgejo is the primary forge (ADR-028) and its develop/main were unprotected: the script only knew
+        // GitHub, where a private repo on the free plan cannot be protected at all, and it printed FAILED and
+        // still exited 0 — so running it looked like success.
+        var script = File.ReadAllText(Path.Combine(RepoRoot(), "tools", "protect-branches.ps1")).ReplaceLineEndings("\n");
+
+        Assert.StartsWith("#Requires -Version 7", script, StringComparison.Ordinal); // Windows PowerShell 5.1 misparses it
+        Assert.Contains("/branch_protections", script, StringComparison.Ordinal);    // the Forgejo API
+        Assert.Contains("push_whitelist_usernames", script, StringComparison.Ordinal); // the CI job token is not on it
+        Assert.Contains("apply_to_admins", script, StringComparison.Ordinal);
+        Assert.Contains("exit 1", script, StringComparison.Ordinal);
+        // A failure may not just print and return (the old script's exit-0 bug): every FAILED line goes through
+        // the one helper that records it, and the script ends by exiting 1 when anything was recorded.
+        Assert.Contains("$script:failed = $true", script, StringComparison.Ordinal);
+        Assert.All(script.Split('\n').Where(l => l.Contains("FAILED", StringComparison.Ordinal)),
+            line => Assert.Contains("Fail ", line, StringComparison.Ordinal));
+        Assert.Contains("if ($script:failed) { exit 1 }", script, StringComparison.Ordinal);
+        Assert.True(script.All(c => c < 128), "keep the script ASCII — Windows PowerShell reads a BOM-less file as cp1252");
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
