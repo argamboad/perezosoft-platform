@@ -474,7 +474,7 @@ jobs:
           # reads: lockfiles, both forges' workflows and scripts, the license list, .dockerignore, the
           # config catalog, tools/, the Postman collection and the markdown in testdocs. Identical in both
           # workflow copies. A path counts as code if in doubt; skipping a gate is the expensive mistake.
-          code=$(match "$codefiles" '^(src/|tests/|tools/|Directory\.Packages\.props|Directory\.Build\.props|global\.json|Dockerfile|\.dockerignore|docker-compose\.yml|\.env\.example|\.config/dotnet-tools\.json|\.github/(workflows/|scripts/|forbidden-licenses\.json)|\.forgejo/(workflows/|scripts/)|.*packages\.lock\.json|docs/postman/|README\.md$|CLAUDE\.md$|docs/(DEPLOYMENT|DATA_MODEL|QA_TEST_PLAN|REBRANDING)\.md$|docs/stories/e2e\.md$)')
+          code=$(match "$codefiles" '^(src/|tests/|tools/|[^/]+\.slnx?$|Directory\.Packages\.props|Directory\.Build\.props|global\.json|Dockerfile|\.dockerignore|docker-compose\.yml|\.env\.example|\.config/dotnet-tools\.json|\.github/(workflows/|scripts/|forbidden-licenses\.json)|\.forgejo/(workflows/|scripts/)|.*packages\.lock\.json|docs/postman/|README\.md$|CLAUDE\.md$|docs/(DEPLOYMENT|DATA_MODEL|QA_TEST_PLAN|REBRANDING)\.md$|docs/stories/e2e\.md$)')
 
           # Narrower: what the expensive native legs can actually be broken by, incl. the solution-wide
           # build props and the native publish script (v4 NAT-16).

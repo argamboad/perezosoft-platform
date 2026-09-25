@@ -184,7 +184,7 @@ public class EnforcementGateTests
                  {
                      ".forgejo/scripts/push-to-github.sh", ".forgejo/workflows/deploy.yml", ".forgejo/workflows/postman-sync.yml",
                      ".github/workflows/postman-sync.yml", ".github/forbidden-licenses.json", ".dockerignore", "docs/DEPLOYMENT.md",
-                     ".env.example", "tools/protect-branches.ps1", "tools/e2e.ps1", "docs/postman/Perezosoft.postman_collection.json",
+                     ".env.example", "tools/protect-branches.ps1", "Perezosoft.slnx", "tools/e2e.ps1", "docs/postman/Perezosoft.postman_collection.json",
                  })
             Assert.True(Code(path), $"{workflow}: {path} is read by a gate, so a change to it must run the gates");
     }
