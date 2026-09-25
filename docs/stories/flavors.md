@@ -223,7 +223,7 @@ lists S-rule → test (the first `BINDINGS`-style map every flavor must ship).
 **As a** flavor CI **I want** `docker run spec-kit:<v> --base-url <api> --web-url <web> --mailpit
 <url> --db <conn>` **So that** conformance is one command with no toolchain of its own.
 
-**Decisions:** keep the journey suite in C#/NUnit (35 journeys, unchanged — rewriting it in TS buys
+**Decisions:** keep the journey suite in C#/NUnit (34 journeys, unchanged — rewriting it in TS buys
 nothing until a second frontend exists; the image hides the SDK); Newman runs the collection with the
 `local` environment (it already chains OTP via Mailpit, token rotation, admin, PUBAPI/HOOKS);
 adversarial tests are **TypeScript on Vitest + undici** (small, no framework, readable by every
@@ -324,7 +324,7 @@ Scenario: A journey cannot depend on markup
 Scenario: A second frontend needs no journey changes
   Given FRONT-REACT implements every id
   When the kit's journey stage runs against React
-  Then the 35 journeys pass without a code change in kit/journeys
+  Then the 34 journeys pass without a code change in kit/journeys
 ```
 **Definition of done:** contract seeded; both lints in CI (spec + platform-dotnet); the journeys
 stage passes against Blazor via test ids only.
@@ -406,7 +406,7 @@ tenancy sequences), and in this repo `docs/stories/theme.md`, `prefs.md`, `mfa.m
 | **FR-7** conformance | `testids-lint` green (95/95), kit journeys green against React + the .NET API, component tests for every screen (R70), `BINDINGS.md` + `RULES_MAP.md`, `SPEC_VERSION` claimed | — |
 | **FR-8** hybrid shells | **Capacitor** Android + iOS and **Tauri** Windows + macOS: OAuth via system browser + app-scheme deep link (port G7's initiator generalisation + NATIVE-12 process-death resilience: persist the OAuth state before leaving the app, resume from a cold start), refresh-on-resume (G2), Android back handling (G3), downloads via OS share sheet (G1 → `IFileDownloadLauncher` analogue), culture bootstrap (G6), Release build fails on a localhost API base (R67), boot-to-login smoke per platform in CI mirroring `native-smoke-*` | `stories/native.md`, `docs/NATIVE_PARITY.md`, `docs/MOBILE_TESTING.md`, `ci.yml` smoke jobs |
 
-**Acceptance criteria (epic level — slice Gherkin = the 35 journeys + the screen behaviours in
+**Acceptance criteria (epic level — slice Gherkin = the 34 journeys + the screen behaviours in
 `screens.md`, so they are not duplicated here)**
 ```gherkin
 Scenario: The React frontend is conformant without touching the kit
@@ -586,7 +586,7 @@ client-ts` package — the first shared package between two pieces; publish to G
 state in `expo-secure-store` before leaving), `expo-secure-store` for the refresh token, `expo-local-
 authentication` optional, i18n from `spec/strings`, theme from the OS appearance + the account
 preference (same reconcile rules). **Own journey suite** (S-002): **Maestro** flows mirroring the
-Gherkin of the 35 journeys that make sense on mobile (no admin console; billing via portal link).
+Gherkin of the 34 journeys that make sense on mobile (no admin console; billing via portal link).
 Slices: RN-1 auth + shell · RN-2 household/join · RN-3 settings/MFA/notifications · RN-4 Maestro suite
 + EAS CI + release checklist (port QA §13c). Desktop stays Tauri (no RN-Windows/macOS).
 

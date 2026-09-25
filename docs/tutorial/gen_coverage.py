@@ -112,7 +112,7 @@ RULES: list[tuple[str, str, str]] = [
 
     # ---- Part 1 ----
     ("Perezosoft.slnx", "1.1", ""),
-    ("Directory.Build.props", "1.1", "warnings-as-errors etc."),
+    ("Directory.Build.props", "1.1", "warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)"),
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
@@ -142,6 +142,8 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Configuration/ServiceRegistrationExtensions.cs", "1.4", "grows as services appear"),
     ("src/Infrastructure/ServiceCollectionExtensions.cs", "1.4", "grows as infra appears"),
     ("tests/Api.Tests/DocAndConfigSyncTests.cs", "1.4", "config keys must exist in .env.example + appsettings (R20)"),
+    ("src/Api/LocalDotEnv.cs", "1.4", "the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)"),
+    ("tests/Api.Tests/LocalDotEnvTests.cs", "1.4", "opt-out set, single load site, skip + walk-up behaviour"),
     ("src/Api/Services/ErrorResponse.cs", "1.5", "shared envelope; never ex.Message (R16/R18)"),
 
     # ---- Part 2 ----
@@ -287,9 +289,10 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/Resources/AppStrings.es.resx", "3.5", ""),
     ("src/Shared.Ui/Components/LanguageSwitcher.razor", "3.5", ""),
     ("tests/E2E.Tests/I18nTests.cs", "3.5", ""),
-    ("tests/Api.Tests/ResourceParityTests.cs", "3.5", "EN/ES resx key parity — no untranslated or orphan keys (2026-07 truth-up)"),
+    ("tests/Api.Tests/ResourceParityTests.cs", "3.5", "EN/ES resx key parity, no duplicate or unprefixed keys (2026-07 truth-up; v4 T9)"),
     ("tests/E2E.Tests/LocaleMismatchJoinTests.cs", "3.5", "locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)"),
     ("tests/E2E.Tests/E2ETestBase.cs", "3.6", ""),
+    ("tests/Api.Tests/E2eShardsTests.cs", "3.6", "the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)"),
     ("tests/E2E.Tests/Mailpit.cs", "3.6", "read OTPs from the fake inbox"),
     ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)"),
     ("tests/E2E.Tests/Pages/*", "3.6", "Page Object Model"),
@@ -486,6 +489,7 @@ RULES: list[tuple[str, str, str]] = [
     (".github/forbidden-licenses.json", "1.6", "copyleft ban (R26)"),
     (".github/*", "8.3", ""),
     (".forgejo/workflows/ci.yml", "8.3", "the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)"),
+    ("tests/ci-logic/*", "8.3", "CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)"),
     (".forgejo/*", "8.3", "Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)"),
 
     ("render.yaml", "8.2", "Render blueprint (ADR-017)"),
@@ -570,9 +574,14 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Architecture/TenantHatchGuardTests.cs", "2.6", ""),
     ("tests/Api.Tests/Infrastructure/TwoTenants.cs", "2.6", "the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)"),
     ("tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs", "2.6", "an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)"),
-    ("tests/Api.Tests/Configuration/ConfigPostureTests.cs", "1.4", "pins every config-gated feature CLOSED under empty config (v3 S0-G3)"),
+    ("tests/Api.Tests/Configuration/ConfigPostureTests.cs", "1.4", "every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)"),
+    ("tests/Api.Tests/Configuration/SettingsCatalog.cs", "1.4", "the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)"),
     ("tests/Api.Tests/Architecture/RoutePrefixInspector.cs", "3.3", "route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)"),
     ("tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs", "3.3", ""),
+    ("tests/Api.Tests/Architecture/SliceReferenceInspector.cs", "3.3", "slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)"),
+    ("tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs", "3.3", ""),
+    ("src/Api/Endpoints/RouteTableGuard.cs", "3.3", "boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)"),
+    ("tests/Api.Tests/Hosting/RouteTableGuardTests.cs", "3.3", ""),
     ("src/Api/Services/UsageCounterDataContributor.cs", "5.3", "quota rows join dissolve/export (v3 LB-TEN-1)"),
     ("src/Api/Services/RecoveryCodeHasher.cs", "6.5", "HKDF-peppered recovery-code hashing (v3 ADM-4)"),
     ("src/Api/Services/ApiKeyDataContributor.cs", "7.3", "hashed keys join dissolve/export (v3 LB-TEN-1)"),

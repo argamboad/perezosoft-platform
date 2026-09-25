@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Extensions;
 using Microsoft.OpenApi.Models;
+using Perezosoft.Api;
 using Perezosoft.Api.Authentication;
 using Perezosoft.Api.Configuration;
 using Perezosoft.Api.Endpoints;
@@ -14,9 +15,9 @@ using Perezosoft.Infrastructure;
 using Perezosoft.Infrastructure.Persistence;
 
 // Local dev: load secrets/config from the repo-root .env (the single local source of truth —
-// see docs/DECISIONS.md). TraversePath walks up to find it regardless of the working dir; the
-// try/catch makes it a no-op when there's no .env (e.g. production, which uses real env vars).
-try { DotNetEnv.Env.TraversePath().Load(); } catch { /* no .env present */ }
+// see docs/DECISIONS.md), walking up from the working dir; a no-op without one (production uses real env vars)
+// and skipped under SKIP_DOTENV=1, which the test assembly sets so test hosts never read a developer's .env.
+LocalDotEnv.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,7 +89,7 @@ builder.Services.AddSwaggerGen(o =>
 
 // Infrastructure: DbContext, Data Protection, email, repositories, and the
 // External cookie + OAuth provider schemes.
-builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment, billingSettings.Enabled);
 
 // OpenTelemetry traces + metrics (OBS-2). Exporter is config-gated (OTLP when configured); see
 // TelemetryExtensions. Spans are tagged with tenant_id/user_id.
@@ -366,4 +367,7 @@ if (serveWebClient)
     app.MapFallbackToFile("index.html");
 }
 
+// Refuse to boot on two endpoints with the same method and pattern (v4 T13): they would start fine and then
+// answer every request to that route with a 500. Last before Run, so every mapping above is in the table.
+RouteTableGuard.EnsureUnique(((IEndpointRouteBuilder)app).DataSources.SelectMany(d => d.Endpoints));
 app.Run();
