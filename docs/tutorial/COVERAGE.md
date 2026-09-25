@@ -59,7 +59,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (12 files)
+## 1.4 — Configuration & the options pattern (13 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -68,7 +68,8 @@
 - `src/Api/appsettings.Development.json` — non-secret config; grows every config lesson
 - `src/Api/appsettings.json` — non-secret config; grows every config lesson
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
-- `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — pins every config-gated feature CLOSED under empty config (v3 S0-G3)
+- `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)
+- `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
 - `tests/Api.Tests/ForgejoCiParityTests.cs` — the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)
@@ -1091,4 +1092,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 924 tracked files · 622 built in lessons · 302 bucketed · 0 unmapped
+**Totals:** 925 tracked files · 623 built in lessons · 302 bucketed · 0 unmapped
