@@ -22,7 +22,7 @@
 ## 1.1 — Solution, projects & supply chain (17 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
-- `Directory.Build.props` — warnings-as-errors etc.
+- `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
 - `Directory.Packages.props` — Central Package Management (R25/R27)
 - `Perezosoft.slnx`
 - `global.json` — single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles
@@ -369,7 +369,7 @@
 - `src/Shared.Ui/Resources/AppStrings.es.resx`
 - `src/Shared.Ui/Resources/AppStrings.resx`
 - `tests/Api.Tests/AccountControllerTests.cs` — PREFS-1/ADR-022: theme+locale preference-endpoint storage rules
-- `tests/Api.Tests/ResourceParityTests.cs` — EN/ES resx key parity — no untranslated or orphan keys (2026-07 truth-up)
+- `tests/Api.Tests/ResourceParityTests.cs` — EN/ES resx key parity, no duplicate or unprefixed keys (2026-07 truth-up; v4 T9)
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 

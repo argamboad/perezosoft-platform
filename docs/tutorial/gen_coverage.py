@@ -112,7 +112,7 @@ RULES: list[tuple[str, str, str]] = [
 
     # ---- Part 1 ----
     ("Perezosoft.slnx", "1.1", ""),
-    ("Directory.Build.props", "1.1", "warnings-as-errors etc."),
+    ("Directory.Build.props", "1.1", "warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)"),
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
@@ -289,7 +289,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/Resources/AppStrings.es.resx", "3.5", ""),
     ("src/Shared.Ui/Components/LanguageSwitcher.razor", "3.5", ""),
     ("tests/E2E.Tests/I18nTests.cs", "3.5", ""),
-    ("tests/Api.Tests/ResourceParityTests.cs", "3.5", "EN/ES resx key parity — no untranslated or orphan keys (2026-07 truth-up)"),
+    ("tests/Api.Tests/ResourceParityTests.cs", "3.5", "EN/ES resx key parity, no duplicate or unprefixed keys (2026-07 truth-up; v4 T9)"),
     ("tests/E2E.Tests/LocaleMismatchJoinTests.cs", "3.5", "locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)"),
     ("tests/E2E.Tests/E2ETestBase.cs", "3.6", ""),
     ("tests/E2E.Tests/Mailpit.cs", "3.6", "read OTPs from the fake inbox"),
