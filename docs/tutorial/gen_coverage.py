@@ -142,6 +142,8 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Configuration/ServiceRegistrationExtensions.cs", "1.4", "grows as services appear"),
     ("src/Infrastructure/ServiceCollectionExtensions.cs", "1.4", "grows as infra appears"),
     ("tests/Api.Tests/DocAndConfigSyncTests.cs", "1.4", "config keys must exist in .env.example + appsettings (R20)"),
+    ("src/Api/LocalDotEnv.cs", "1.4", "the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)"),
+    ("tests/Api.Tests/LocalDotEnvTests.cs", "1.4", "opt-out set, single load site, skip + walk-up behaviour"),
     ("src/Api/Services/ErrorResponse.cs", "1.5", "shared envelope; never ex.Message (R16/R18)"),
 
     # ---- Part 2 ----

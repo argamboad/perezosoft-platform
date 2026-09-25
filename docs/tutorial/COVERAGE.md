@@ -59,11 +59,12 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (10 files)
+## 1.4 — Configuration & the options pattern (12 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
 - `src/Api/Configuration/SettingsRegistration.cs` — the one blessed Bind+ValidateOnStart pattern (R22)
+- `src/Api/LocalDotEnv.cs` — the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)
 - `src/Api/appsettings.Development.json` — non-secret config; grows every config lesson
 - `src/Api/appsettings.json` — non-secret config; grows every config lesson
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
@@ -71,6 +72,7 @@
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
 - `tests/Api.Tests/ForgejoCiParityTests.cs` — the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)
+- `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
 
 ## 1.5 — The error envelope (1 files)
 
@@ -1085,4 +1087,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 918 tracked files · 616 built in lessons · 302 bucketed · 0 unmapped
+**Totals:** 920 tracked files · 618 built in lessons · 302 bucketed · 0 unmapped
