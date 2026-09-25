@@ -682,7 +682,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (101 files)
+## 8.3 — The deploy pipeline & CI gates (138 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
@@ -694,6 +694,42 @@
 - `docs/QA_TEST_PLAN.md` — release readiness: manual QA plan beside the automated gates
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
+- `tests/ci-logic/cases/already-green/A-all-green/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/A-all-green/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/A-all-green/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/B-a-red-shard/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/B-a-red-shard/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/B-a-red-shard/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/C-a-red-native-leg/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/C-a-red-native-leg/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/C-a-red-native-leg/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/D-rerun-gone-red/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/D-rerun-gone-red/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/D-rerun-gone-red/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/E-a-red-smoke/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/E-a-red-smoke/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/E-a-red-smoke/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/J-rerun-in-progress/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/J-rerun-in-progress/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/J-rerun-in-progress/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/K-skipped-smoke/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/K-skipped-smoke/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/K-skipped-smoke/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/a-docs-only-run/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/a-docs-only-run/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/a-docs-only-run/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/a-leg-missing/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/a-leg-missing/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/a-leg-missing/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/another-commit-is-green/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/another-commit-is-green/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/another-commit-is-green/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/another-workflow-is-green/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/another-workflow-is-green/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/another-workflow-is-green/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/api-unreachable/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/api-unreachable/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/already-green/api-unreachable/files/api/page-1.json` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/files/diff.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -782,6 +818,7 @@
 - `tests/ci-logic/cases/slowest-journeys/trx-without-results/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/slowest-journeys/trx-without-results/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/run.sh` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/stubs/curl` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/stubs/dotnet` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/stubs/git` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/targets` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -1199,4 +1236,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1032 tracked files · 715 built in lessons · 317 bucketed · 0 unmapped
+**Totals:** 1069 tracked files · 752 built in lessons · 317 bucketed · 0 unmapped
