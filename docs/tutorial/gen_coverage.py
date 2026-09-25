@@ -577,6 +577,8 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs", "3.3", ""),
     ("tests/Api.Tests/Architecture/SliceReferenceInspector.cs", "3.3", "slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)"),
     ("tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs", "3.3", ""),
+    ("src/Api/Endpoints/RouteTableGuard.cs", "3.3", "boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)"),
+    ("tests/Api.Tests/Hosting/RouteTableGuardTests.cs", "3.3", ""),
     ("src/Api/Services/UsageCounterDataContributor.cs", "5.3", "quota rows join dissolve/export (v3 LB-TEN-1)"),
     ("src/Api/Services/RecoveryCodeHasher.cs", "6.5", "HKDF-peppered recovery-code hashing (v3 ADM-4)"),
     ("src/Api/Services/ApiKeyDataContributor.cs", "7.3", "hashed keys join dissolve/export (v3 LB-TEN-1)"),
