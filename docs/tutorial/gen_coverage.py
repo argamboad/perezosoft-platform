@@ -489,6 +489,7 @@ RULES: list[tuple[str, str, str]] = [
     (".github/forbidden-licenses.json", "1.6", "copyleft ban (R26)"),
     (".github/*", "8.3", ""),
     (".forgejo/workflows/ci.yml", "8.3", "the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)"),
+    ("tests/ci-logic/*", "8.3", "CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)"),
     (".forgejo/*", "8.3", "Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)"),
 
     ("render.yaml", "8.2", "Render blueprint (ADR-017)"),
