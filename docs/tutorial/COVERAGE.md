@@ -237,10 +237,12 @@
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
-## 3.3 — Injected clocks & the architecture tests (3 files)
+## 3.3 — Injected clocks & the architecture tests (5 files)
 
 - `tests/Api.Tests/Architecture/RoutePrefixInspector.cs` — route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
+- `tests/Api.Tests/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
+- `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
 ## 3.4 — The web client & auth UI (110 files)
@@ -1087,4 +1089,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 920 tracked files · 618 built in lessons · 302 bucketed · 0 unmapped
+**Totals:** 922 tracked files · 620 built in lessons · 302 bucketed · 0 unmapped
