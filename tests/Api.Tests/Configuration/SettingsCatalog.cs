@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace Perezosoft.Api.Tests.Configuration;
 
@@ -19,6 +20,31 @@ public static class SettingsCatalog
             .Where(t => t is { IsClass: true, IsAbstract: false, IsPublic: true } && t.Name.EndsWith("Settings", StringComparison.Ordinal));
 
     public static IEnumerable<Type> SectionBound() => All().Where(t => SectionNameOf(t) is not null);
+
+    /// <summary>
+    /// The settings classes bound from configuration: those that declare a SectionName, plus any the source uses as
+    /// options (<c>Configure&lt;T&gt;</c>, <c>AddOptions&lt;T&gt;</c>, <c>IOptions*&lt;T&gt;</c>, <c>.Get&lt;T&gt;()</c>).
+    /// The name alone is not enough: an app's entities and EF migrations end in "Settings" too (BudgetSettings,
+    /// AddBudgetSettings), and they are not config.
+    /// </summary>
+    public static IEnumerable<Type> ConfigBound()
+    {
+        var used = OptionsTypeNames();
+        return All().Where(t => SectionNameOf(t) is not null || used.Contains(t.Name));
+    }
+
+    private static HashSet<string> OptionsTypeNames()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src", "Api")))
+            dir = dir.Parent;
+        var src = Path.Combine(dir?.FullName ?? throw new InvalidOperationException("repo root not found"), "src");
+        var use = new Regex(@"(?:Configure|AddOptions|IOptions|IOptionsMonitor|IOptionsSnapshot|\.Get)<(\w+)>");
+        return Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .SelectMany(f => use.Matches(File.ReadAllText(f)).Select(m => m.Groups[1].Value))
+            .ToHashSet(StringComparer.Ordinal);
+    }
 
     public static string? SectionNameOf(Type t) =>
         t.GetField("SectionName", BindingFlags.Public | BindingFlags.Static) is { IsLiteral: true } f

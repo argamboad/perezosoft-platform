@@ -80,7 +80,7 @@ public class DocAndConfigSyncTests
     [Fact]
     public void EverySectionBoundSettingsClass_DeclaresItsSectionName()
     {
-        var unnamed = SettingsCatalog.All().Where(t => !SettingsCatalog.IsBuiltKeyByKey(t) && SettingsCatalog.SectionNameOf(t) is null).Select(t => t.FullName).ToList();
+        var unnamed = SettingsCatalog.ConfigBound().Where(t => !SettingsCatalog.IsBuiltKeyByKey(t) && SettingsCatalog.SectionNameOf(t) is null).Select(t => t.FullName).ToList();
         Assert.True(unnamed.Count == 0,
             $"Settings classes bound from config must declare `public const string SectionName`: {string.Join(", ", unnamed)}");
     }
