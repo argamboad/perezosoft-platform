@@ -682,7 +682,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (138 files)
+## 8.3 — The deploy pipeline & CI gates (141 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
@@ -752,6 +752,9 @@
 - `tests/ci-logic/cases/changes-classifier/readme-any-case/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/readme-any-case/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/readme-any-case/files/diff.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/solution-file/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/solution-file/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/solution-file/files/diff.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/files/list.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -1236,4 +1239,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1069 tracked files · 752 built in lessons · 317 bucketed · 0 unmapped
+**Totals:** 1072 tracked files · 755 built in lessons · 317 bucketed · 0 unmapped
