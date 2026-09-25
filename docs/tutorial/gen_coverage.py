@@ -292,6 +292,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/ResourceParityTests.cs", "3.5", "EN/ES resx key parity, no duplicate or unprefixed keys (2026-07 truth-up; v4 T9)"),
     ("tests/E2E.Tests/LocaleMismatchJoinTests.cs", "3.5", "locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)"),
     ("tests/E2E.Tests/E2ETestBase.cs", "3.6", ""),
+    ("tests/Api.Tests/E2eShardsTests.cs", "3.6", "the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)"),
     ("tests/E2E.Tests/Mailpit.cs", "3.6", "read OTPs from the fake inbox"),
     ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)"),
     ("tests/E2E.Tests/Pages/*", "3.6", "Page Object Model"),

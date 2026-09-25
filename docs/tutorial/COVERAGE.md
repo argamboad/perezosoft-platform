@@ -374,8 +374,9 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (14 files)
+## 3.6 — The E2E harness (Playwright) (15 files)
 
+- `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
 - `tests/E2E.Tests/AuthFlowTests.cs`
 - `tests/E2E.Tests/BlazorBoot.cs` — reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)
 - `tests/E2E.Tests/E2ETestBase.cs`
@@ -1092,4 +1093,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 925 tracked files · 623 built in lessons · 302 bucketed · 0 unmapped
+**Totals:** 926 tracked files · 624 built in lessons · 302 bucketed · 0 unmapped
