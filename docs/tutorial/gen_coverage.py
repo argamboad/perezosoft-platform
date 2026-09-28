@@ -462,6 +462,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Core.Tests/WebhookSignatureTests.cs", "7.4", ""),
     ("src/Infrastructure/Webhooks/WebhookFailure.cs", "7.4", "the delivery log carries a reason code, never exception text (v4 T39, R89)"),
     ("tests/Api.Tests/Architecture/WebhookErrorCodeGateTests.cs", "7.4", "scan gate: a tenant-visible Error is never assigned from .Message (v4 T39)"),
+    ("tests/Api.Tests/Integration/DbContextFactoryScopeTests.cs", "7.4", "the handler's failure-row context comes from a scoped IDbContextFactory that resolves inside a scope and is not the scoped context (v4 T42)"),
     ("src/Api/Services/WebhookService.cs", "7.4", ""),
     ("src/Api/Endpoints/WebhookEndpoints.cs", "7.4", ""),
     ("src/Infrastructure/Webhooks/WebhookOutboxHandler.cs", "7.4", ""),

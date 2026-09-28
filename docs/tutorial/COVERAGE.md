@@ -443,14 +443,16 @@
 - `tests/Api.Tests/Scheduling/ExpiredTokenCleanupJobTests.cs`
 - `tests/Api.Tests/Scheduling/ScheduledJobsHostTests.cs`
 
-## 4.5 — Observability: logs, traces, health (10 files)
+## 4.5 — Observability: logs, traces, health (12 files)
 
 - `src/Api/Observability/DatabaseHealthCheck.cs`
+- `src/Api/Observability/OtlpCollectorProbe.cs`
 - `src/Api/Observability/OtlpEndpoints.cs`
 - `src/Api/Observability/RequestLoggingScopeMiddleware.cs`
 - `src/Api/Observability/TelemetryExtensions.cs`
 - `tests/Api.Tests/Observability/DatabaseHealthCheckTests.cs`
 - `tests/Api.Tests/Observability/OtlpEndpointsTests.cs`
+- `tests/Api.Tests/Observability/OtlpProtocolAndProbeTests.cs`
 - `tests/Api.Tests/Observability/RequestLoggingScopeMiddlewareTests.cs`
 - `tests/Api.Tests/Observability/TelemetryEnrichmentTests.cs`
 - `tests/Api.Tests/Observability/TelemetryLogsExportTests.cs`
@@ -635,7 +637,7 @@
 - `tests/Api.Tests/PublicApi/ApiKeyServiceTests.cs`
 - `tests/Api.Tests/RateLimitingTests.cs`
 
-## 7.4 — Outbound webhooks (20 files)
+## 7.4 — Outbound webhooks (21 files)
 
 - `src/Api/Configuration/WebhooksSettings.cs`
 - `src/Api/Endpoints/WebhookEndpoints.cs`
@@ -652,6 +654,7 @@
 - `src/Infrastructure/Webhooks/WebhookSecretProtector.cs` — encrypted at rest (builds on 6.3)
 - `src/Infrastructure/Webhooks/WebhookSender.cs`
 - `tests/Api.Tests/Architecture/WebhookErrorCodeGateTests.cs` — scan gate: a tenant-visible Error is never assigned from .Message (v4 T39)
+- `tests/Api.Tests/Integration/DbContextFactoryScopeTests.cs` — the handler's failure-row context comes from a scoped IDbContextFactory that resolves inside a scope and is not the scoped context (v4 T42)
 - `tests/Api.Tests/Webhooks/WebhookDeliveryLogTests.cs`
 - `tests/Api.Tests/Webhooks/WebhookDeliveryTests.cs`
 - `tests/Api.Tests/Webhooks/WebhookRedirectAndPinningTests.cs` — no redirects, connection pinned to what the guard accepts, a refusal dead-letters at once (v4 H8)
@@ -1255,4 +1258,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1088 tracked files · 767 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1091 tracked files · 770 built in lessons · 321 bucketed · 0 unmapped
