@@ -271,6 +271,33 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void ServerCode_FormatsYearsWithTheInvariantCulture() // R134 (v4 T44)
+    {
+        // A "yyyy" format follows the CURRENT culture's calendar: th-TH renders 2026 as 2569, ar-SA as 1448.
+        // A storage key, a period bucket or a file name built that way changes meaning with the request's
+        // culture — the quota's monthly counter split per calendar (LB-BILL-26). Every yyyy format in server
+        // code names CultureInfo.InvariantCulture on the same line; comments and migrations are outside the scan.
+        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure"), Path.Combine(RepoRoot(), "src", "Core") };
+        var offenders = new List<string>();
+        foreach (var f in dirs.SelectMany(d => SourceFiles(d)).Where(f => !f.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}")))
+        {
+            var lines = File.ReadAllLines(f);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var code = lines[i].TrimStart();
+                if (code.StartsWith("//")) continue;
+                var comment = code.IndexOf(" //", StringComparison.Ordinal);
+                if (comment >= 0) code = code[..comment];
+                if (code.Contains("yyyy") && !code.Contains("InvariantCulture"))
+                    offenders.Add($"{Path.GetFileName(f)}:{i + 1}");
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            $"Format years with CultureInfo.InvariantCulture (a yyyy format follows the request culture's calendar): {string.Join(", ", offenders)}");
+    }
+
+    [Fact]
     public void PlatformTests_DoNotDependOnTheDeleteMeNotesSample()
     {
         // R9/TR-1: the tenancy/GDPR/outbox tests use the harness TestWidget fixture, not the DELETE-ME
