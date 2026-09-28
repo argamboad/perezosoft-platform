@@ -581,7 +581,8 @@ Then I get a link to a JSON export of the household's data
    (owner-only). No secrets (invitation token hashes) appear in the file.
 
 ### QA-HH-14 — Seat quota blocks inviting past the plan limit 🟠 (Web) ⚙️ Automated in CI
-**Precondition:** the platform ships example seat caps (Free = 5 seats, counting members + pending invites;
+**Precondition:** the platform ships example seat caps (Free = 5 seats, counting members + pending
+**unexpired** invites — a lapsed invite reserves nothing, v4 T34;
 `PlanCatalog`). A Free household at its cap (e.g. 5 members, or 4 members + 1 pending invite).
 **Gherkin**
 ```gherkin
