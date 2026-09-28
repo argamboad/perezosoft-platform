@@ -870,7 +870,7 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 
-## A.1 — Appendix — MAUI shells & parity (38 files)
+## A.1 — Appendix — MAUI shells & parity (39 files)
 
 - `src/Maui/App.xaml`
 - `src/Maui/App.xaml.cs`
@@ -900,6 +900,7 @@
 - `src/Maui/Platforms/iOS/Resources/PrivacyInfo.xcprivacy`
 - `src/Maui/PreferencesCulturePersistence.cs`
 - `src/Maui/Properties/launchSettings.json`
+- `src/Maui/ReleaseGuards.targets`
 - `src/Maui/ShareFileDownloadLauncher.cs`
 - `src/Maui/wwwroot/index.html`
 - `src/Shared.Ui/AppResumeNotifier.cs` — refresh-on-resume seam (NATIVE-4 G2)
@@ -1259,4 +1260,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1092 tracked files · 771 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1093 tracked files · 772 built in lessons · 321 bucketed · 0 unmapped
