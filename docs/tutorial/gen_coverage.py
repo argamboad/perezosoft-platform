@@ -483,6 +483,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/AdminBroadcastOutboxHandler.cs", "7.5", "announce-all -> outbox fan-out to every user"),
     ("src/Api/Models/AdminModels.cs", "7.5", ""),
     ("src/Shared.Ui/Pages/AdminConsole.razor", "7.5", ""),
+    ("tests/Ui.Tests/AdminConsoleGateUiTests.cs", "7.5", "the Comp/Revert block follows /api/features: absent while billing is off (v4 T45)"),
     ("tests/Api.Tests/Admin/*", "7.5", ""),
     ("tests/Core.Tests/Auth/ImpersonationIdentityTests.cs", "7.5", "client identity swap raises AuthService.IdentityChanged so the header re-sources on impersonate"),
     ("src/Shared.Ui/Auth/BearerRetry.cs", "3.4", "both hosts' bearer handlers: attach the token, renew once and resend on a 401 (v4 T32, R126)"),

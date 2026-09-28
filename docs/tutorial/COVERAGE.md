@@ -249,7 +249,7 @@
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (112 files)
+## 3.4 — The web client & auth UI (113 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
@@ -345,6 +345,7 @@
 - `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both handler sources delegate to BearerRetry (v4 T32)
 - `tests/Api.Tests/BfcacheGuardTests.cs` — pins the guard's contract + presence in BOTH hosts' index.html
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
+- `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BillingGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/HomePageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -1259,4 +1260,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1092 tracked files · 771 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1093 tracked files · 772 built in lessons · 321 bucketed · 0 unmapped
