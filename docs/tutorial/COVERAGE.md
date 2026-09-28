@@ -400,7 +400,7 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 4.1 — The transactional outbox (16 files)
+## 4.1 — The transactional outbox (17 files)
 
 - `src/Core/Abstractions/IOutbox.cs`
 - `src/Core/Abstractions/IOutboxHandler.cs`
@@ -418,6 +418,7 @@
 - `tests/Api.Tests/Outbox/OutboxProcessorTests.cs`
 - `tests/Api.Tests/Outbox/OutboxRetentionTests.cs` — a finished row is a receipt: payload cleared, deleted after RetentionDays; erasure removes queued mail (v4 H7)
 - `tests/Api.Tests/Outbox/OutboxTenancyTests.cs` — a dissolved tenant's mail and webhook rows leave with it; billing.cancel stays (v4 H6)
+- `tests/Core.Tests/SafeTruncationTests.cs` — the truncation never leaves half an emoji (v4 T38)
 
 ## 4.2 — Email II — the outbox decorator (3 files)
 
@@ -1254,8 +1255,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-## ❌ UNMAPPED (1 files) — course holes, fix the rules or add lessons
-
-- `tests/Core.Tests/SafeTruncationTests.cs`
-
-**Totals:** 1088 tracked files · 766 built in lessons · 321 bucketed · 1 unmapped
+**Totals:** 1088 tracked files · 767 built in lessons · 321 bucketed · 0 unmapped
