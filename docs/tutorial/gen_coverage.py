@@ -194,6 +194,8 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Core.Tests/EmailAttachmentTests.cs", "2.3", "attachment guard: 7 MiB raw total incl. inline images (10 MiB on the wire), ≤ 20 parts, strict type/subtype, safe base name (JOBS-4, v4 T40)"),
     ("src/Core/Text/SafeTruncation.cs", "4.1", "rune-safe column truncation — never through an emoji (v4 T38, R96)"),
     ("tests/Core.Tests/SafeTruncationTests.cs", "4.1", "the truncation never leaves half an emoji (v4 T38)"),
+    ("src/Api/Services/BillingPostureCheck.cs", "5.1", "startup Warning when Stripe-managed rows linger with the gate off — resolution is gate-blind (v4 T46)"),
+    ("tests/Api.Tests/Billing/BillingPostureCheckTests.cs", "5.1", "the posture warning: counts live Stripe-managed rows, silent with the gate on (v4 T46)"),
     ("src/Infrastructure/Email/BrandedEmail.cs", "2.3", "inline-branded templates — the rebrand trap"),
     ("src/Infrastructure/Email/EmailStrings.resx", "2.3", "localized in 3.5"),
     ("src/Infrastructure/Email/EmailStrings.es.resx", "3.5", ""),

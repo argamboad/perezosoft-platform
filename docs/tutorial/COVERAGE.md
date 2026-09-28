@@ -469,7 +469,7 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (25 files)
+## 5.1 — Billing abstraction & entitlements (27 files)
 
 - `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
 - `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
@@ -477,6 +477,7 @@
 - `src/Api/Controllers/FeaturesController.cs` — GATES-1: anonymous report of which gates are open, so the client can hide the billing link
 - `src/Api/Endpoints/EntitlementEndpointExtensions.cs` — RequireEntitlement -> 402
 - `src/Api/Models/BillingModels.cs`
+- `src/Api/Services/BillingPostureCheck.cs` — startup Warning when Stripe-managed rows linger with the gate off — resolution is gate-blind (v4 T46)
 - `src/Api/Services/BillingService.cs`
 - `src/Api/Services/EntitlementService.cs`
 - `src/Core/Abstractions/IBillingProvider.cs`
@@ -488,6 +489,7 @@
 - `src/Shared.Ui/Pages/Billing.razor` — BILLING-8 billing summary page
 - `tests/Api.Tests/Billing/BillingControllerTests.cs`
 - `tests/Api.Tests/Billing/BillingGateTests.cs` — GATES-1
+- `tests/Api.Tests/Billing/BillingPostureCheckTests.cs` — the posture warning: counts live Stripe-managed rows, silent with the gate on (v4 T46)
 - `tests/Api.Tests/Billing/BillingProviderRegistrationTests.cs`
 - `tests/Api.Tests/Billing/BillingServiceTests.cs`
 - `tests/Api.Tests/Billing/EntitlementServiceTests.cs`
@@ -1260,4 +1262,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1093 tracked files · 772 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1095 tracked files · 774 built in lessons · 321 bucketed · 0 unmapped
