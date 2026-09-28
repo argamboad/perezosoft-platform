@@ -134,7 +134,7 @@
 - `src/Infrastructure/Email/SmtpSettings.cs`
 - `tests/Api.Tests/Email/SmtpMessageBuilderTests.cs` — MIME shape: CID images + attachment parts (JOBS-4)
 - `tests/Api.Tests/SmtpSettingsTests.cs` — incl. the SMTP-revocation knob (PR #125)
-- `tests/Core.Tests/EmailAttachmentTests.cs` — attachment guard: 10 MiB total, non-blank name/type (JOBS-4)
+- `tests/Core.Tests/EmailAttachmentTests.cs` — attachment guard: 7 MiB raw total incl. inline images (10 MiB on the wire), ≤ 20 parts, strict type/subtype, safe base name (JOBS-4, v4 T40)
 
 ## 2.4 — Passwordless: magic link + OTP (12 files)
 
@@ -199,7 +199,7 @@
 - `src/Infrastructure/Persistence/Configurations/TenantMembershipConfiguration.cs`
 - `src/Infrastructure/Repositories/TenantRepository.cs`
 
-## 2.9 — Invitations, dissolve & the contributor seam (15 files)
+## 2.9 — Invitations, dissolve & the contributor seam (17 files)
 
 - `src/Api/Configuration/SignupSettings.cs` — GATES-2 green list; empty = open
 - `src/Api/Controllers/HouseholdInvitationsController.cs`
@@ -211,8 +211,10 @@
 - `src/Core/Repositories/ITenantInvitationRepository.cs`
 - `src/Infrastructure/Persistence/Configurations/TenantInvitationConfiguration.cs`
 - `src/Infrastructure/Repositories/TenantInvitationRepository.cs`
+- `tests/Api.Tests/Architecture/InvitationValidityGateTests.cs` — one invitation-validity rule on the entity; no expiry comparison outside it, status-only reads are named sites (v4 T34, R127)
 - `tests/Api.Tests/Auth/SignupGateTests.cs` — GATES-2
 - `tests/Api.Tests/Auth/SignupRefusalSurfacingTests.cs` — GATES-2: the refusal on every sign-in path
+- `tests/Api.Tests/Configuration/SignupSettingsTests.cs` — green-list entries normalized at bind: trim, lower-case, strip a leading @, drop blanks (v4 T35, R82)
 - `tests/Api.Tests/Tenancy/AcceptDissolveTests.cs` — the join retires an empty tenant-of-one through the dissolution sequence, never a raw delete (v4 H5, R123)
 - `tests/Api.Tests/WipeDataTests.cs`
 - `tests/Core.Tests/TenantInvitationTests.cs`
@@ -247,12 +249,13 @@
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (110 files)
+## 3.4 — The web client & auth UI (112 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
 - `src/Shared.Ui/Auth/AuthErrorCopy.cs` — server error code -> localized copy key; keeps 2.4's enumeration-safe collapse client-side (landed on develop post-write)
 - `src/Shared.Ui/Auth/AuthService.cs`
+- `src/Shared.Ui/Auth/BearerRetry.cs` — both hosts' bearer handlers: attach the token, renew once and resend on a 401 (v4 T32, R126)
 - `src/Shared.Ui/Auth/IOAuthInitiator.cs`
 - `src/Shared.Ui/Auth/ISessionStore.cs` — per-platform session seam
 - `src/Shared.Ui/Components/AppHeader.razor`
@@ -339,6 +342,7 @@
 - `src/Web/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js`
 - `src/Web/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map`
 - `src/Web/wwwroot/og_image_1200x630.png`
+- `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both handler sources delegate to BearerRetry (v4 T32)
 - `tests/Api.Tests/BfcacheGuardTests.cs` — pins the guard's contract + presence in BOTH hosts' index.html
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
 - `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -396,12 +400,13 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 4.1 — The transactional outbox (15 files)
+## 4.1 — The transactional outbox (16 files)
 
 - `src/Core/Abstractions/IOutbox.cs`
 - `src/Core/Abstractions/IOutboxHandler.cs`
 - `src/Core/Abstractions/OutboxPermanentFailureException.cs` — a failure no retry can change dead-letters at once (v4 H8)
 - `src/Core/Entities/OutboxMessage.cs`
+- `src/Core/Text/SafeTruncation.cs` — rune-safe column truncation — never through an emoji (v4 T38, R96)
 - `src/Infrastructure/Outbox/EfOutbox.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxDataContributor.cs` — dissolve removes the types whose handler declares DissolvesWithItsTenant (v4 H6)
 - `src/Infrastructure/Outbox/OutboxDispatcher.cs` — dispatcher + SKIP LOCKED claiming
@@ -629,7 +634,7 @@
 - `tests/Api.Tests/PublicApi/ApiKeyServiceTests.cs`
 - `tests/Api.Tests/RateLimitingTests.cs`
 
-## 7.4 — Outbound webhooks (18 files)
+## 7.4 — Outbound webhooks (20 files)
 
 - `src/Api/Configuration/WebhooksSettings.cs`
 - `src/Api/Endpoints/WebhookEndpoints.cs`
@@ -640,10 +645,12 @@
 - `src/Core/Webhooks/WebhookSignature.cs` — HMAC signing
 - `src/Infrastructure/Persistence/Configurations/WebhookDeliveryConfiguration.cs`
 - `src/Infrastructure/Persistence/Configurations/WebhookSubscriptionConfiguration.cs`
+- `src/Infrastructure/Webhooks/WebhookFailure.cs` — the delivery log carries a reason code, never exception text (v4 T39, R89)
 - `src/Infrastructure/Webhooks/WebhookHttp.cs` — the webhook transport: no redirects, pinned connect, no proxy (v4 H8)
 - `src/Infrastructure/Webhooks/WebhookOutboxHandler.cs`
 - `src/Infrastructure/Webhooks/WebhookSecretProtector.cs` — encrypted at rest (builds on 6.3)
 - `src/Infrastructure/Webhooks/WebhookSender.cs`
+- `tests/Api.Tests/Architecture/WebhookErrorCodeGateTests.cs` — scan gate: a tenant-visible Error is never assigned from .Message (v4 T39)
 - `tests/Api.Tests/Webhooks/WebhookDeliveryLogTests.cs`
 - `tests/Api.Tests/Webhooks/WebhookDeliveryTests.cs`
 - `tests/Api.Tests/Webhooks/WebhookRedirectAndPinningTests.cs` — no redirects, connection pinned to what the guard accepts, a refusal dead-letters at once (v4 H8)
@@ -1247,11 +1254,8 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-## ❌ UNMAPPED (4 files) — course holes, fix the rules or add lessons
+## ❌ UNMAPPED (1 files) — course holes, fix the rules or add lessons
 
-- `src/Shared.Ui/Auth/BearerRetry.cs`
-- `tests/Api.Tests/Architecture/InvitationValidityGateTests.cs`
-- `tests/Api.Tests/Auth/BearerHandlerParityTests.cs`
-- `tests/Api.Tests/Configuration/SignupSettingsTests.cs`
+- `tests/Core.Tests/SafeTruncationTests.cs`
 
-**Totals:** 1084 tracked files · 759 built in lessons · 321 bucketed · 4 unmapped
+**Totals:** 1088 tracked files · 766 built in lessons · 321 bucketed · 1 unmapped
