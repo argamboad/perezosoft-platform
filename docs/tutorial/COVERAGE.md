@@ -249,7 +249,7 @@
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (113 files)
+## 3.4 — The web client & auth UI (114 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
@@ -345,6 +345,7 @@
 - `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)
 - `tests/Api.Tests/BfcacheGuardTests.cs` — pins the guard's contract + presence in BOTH hosts' index.html
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
+- `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BearerScopedHandlerTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BillingGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -469,7 +470,7 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (25 files)
+## 5.1 — Billing abstraction & entitlements (27 files)
 
 - `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
 - `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
@@ -477,6 +478,7 @@
 - `src/Api/Controllers/FeaturesController.cs` — GATES-1: anonymous report of which gates are open, so the client can hide the billing link
 - `src/Api/Endpoints/EntitlementEndpointExtensions.cs` — RequireEntitlement -> 402
 - `src/Api/Models/BillingModels.cs`
+- `src/Api/Services/BillingPostureCheck.cs` — startup Warning when Stripe-managed rows linger with the gate off — resolution is gate-blind (v4 T46)
 - `src/Api/Services/BillingService.cs`
 - `src/Api/Services/EntitlementService.cs`
 - `src/Core/Abstractions/IBillingProvider.cs`
@@ -488,6 +490,7 @@
 - `src/Shared.Ui/Pages/Billing.razor` — BILLING-8 billing summary page
 - `tests/Api.Tests/Billing/BillingControllerTests.cs`
 - `tests/Api.Tests/Billing/BillingGateTests.cs` — GATES-1
+- `tests/Api.Tests/Billing/BillingPostureCheckTests.cs` — the posture warning: counts live Stripe-managed rows, silent with the gate on (v4 T46)
 - `tests/Api.Tests/Billing/BillingProviderRegistrationTests.cs`
 - `tests/Api.Tests/Billing/BillingServiceTests.cs`
 - `tests/Api.Tests/Billing/EntitlementServiceTests.cs`
@@ -1047,7 +1050,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (210 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (214 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1142,8 +1145,12 @@
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.png` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.sha1` — authoring docs; the course TEACHES writing these in 0.1
@@ -1260,4 +1267,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1093 tracked files · 772 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1100 tracked files · 775 built in lessons · 325 bucketed · 0 unmapped
