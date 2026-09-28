@@ -288,13 +288,37 @@ public class ArchitectureTests
                 if (code.StartsWith("//")) continue;
                 var comment = code.IndexOf(" //", StringComparison.Ordinal);
                 if (comment >= 0) code = code[..comment];
-                if (code.Contains("yyyy") && !code.Contains("InvariantCulture"))
+                if (IsCultureSensitiveYearFormat(code))
                     offenders.Add($"{Path.GetFileName(f)}:{i + 1}");
             }
         }
 
         Assert.True(offenders.Count == 0,
             $"Format years with CultureInfo.InvariantCulture (a yyyy format follows the request culture's calendar): {string.Join(", ", offenders)}");
+    }
+
+    /// <summary>
+    /// A format string in a <c>ToString()</c> with no culture argument, or an interpolation hole (<c>{x:yyyy-MM}</c>,
+    /// which can't take one). A message that merely NAMES the format, a parse-format list, or a <c>ToString</c> handed
+    /// an explicit culture (a localized report) is not a hit — the downstream apps have all three.
+    /// </summary>
+    private static bool IsCultureSensitiveYearFormat(string code)
+    {
+        var bareToString = Regex.IsMatch(code, @"ToString\(\s*""[^""]*yyyy[^""]*""\s*\)");
+        var interpolated = Regex.IsMatch(code, @"\{[^{}""]*:[^{}""]*yyyy[^{}""]*\}");
+        return (bareToString || interpolated) && !code.Contains("InvariantCulture");
+    }
+
+    [Fact]
+    public void YearFormatGate_SeesFormats_NotMessages() // self-test of the predicate above
+    {
+        Assert.True(IsCultureSensitiveYearFormat("""var period = now.ToString("yyyy-MM");"""));
+        Assert.True(IsCultureSensitiveYearFormat("""var renews = $" It renews on {end:yyyy-MM-dd}.";"""));
+        Assert.True(IsCultureSensitiveYearFormat("""var key = $"exports/{clock.GetUtcNow():yyyyMMddTHHmmssZ}-{id:N}.json";"""));
+        Assert.False(IsCultureSensitiveYearFormat("""var period = now.ToString("yyyy-MM", CultureInfo.InvariantCulture);"""));
+        Assert.False(IsCultureSensitiveYearFormat("""return BadRequest(new ErrorResponse("invalid_request", "date is required (yyyy-MM-dd)"));"""));
+        Assert.False(IsCultureSensitiveYearFormat("""private static readonly string[] Formats = ["d/M/yyyy", "d-M-yy"];"""));
+        Assert.False(IsCultureSensitiveYearFormat("""private string Date(DateOnly d) => d.ToString("d MMM yyyy", _c);"""));
     }
 
     [Fact]
