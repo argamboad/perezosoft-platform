@@ -249,13 +249,14 @@
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (113 files)
+## 3.4 — The web client & auth UI (114 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
 - `src/Shared.Ui/Auth/AuthErrorCopy.cs` — server error code -> localized copy key; keeps 2.4's enumeration-safe collapse client-side (landed on develop post-write)
 - `src/Shared.Ui/Auth/AuthService.cs`
-- `src/Shared.Ui/Auth/BearerRetry.cs` — both hosts' bearer handlers: attach the token, renew once and resend on a 401 (v4 T32, R126)
+- `src/Shared.Ui/Auth/BearerRetry.cs` — both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)
+- `src/Shared.Ui/Auth/BearerScopedHandler.cs` — the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)
 - `src/Shared.Ui/Auth/IOAuthInitiator.cs`
 - `src/Shared.Ui/Auth/ISessionStore.cs` — per-platform session seam
 - `src/Shared.Ui/Components/AppHeader.razor`
@@ -283,7 +284,6 @@
 - `src/Shared.Ui/wwwroot/css/app.css`
 - `src/Shared.Ui/wwwroot/js/bfcache-guard.js` — reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)
 - `src/Shared.Ui/wwwroot/js/theme.js` — THEME-1 pre-paint dark-mode bootstrap (data-bs-theme)
-- `src/Web/Http/AuthHeaderHandler.cs`
 - `src/Web/Http/CookieHandler.cs`
 - `src/Web/Http/CookieSessionStore.cs`
 - `src/Web/Program.cs`
@@ -342,11 +342,12 @@
 - `src/Web/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js`
 - `src/Web/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map`
 - `src/Web/wwwroot/og_image_1200x630.png`
-- `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both handler sources delegate to BearerRetry (v4 T32)
+- `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)
 - `tests/Api.Tests/BfcacheGuardTests.cs` — pins the guard's contract + presence in BOTH hosts' index.html
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
 - `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/BearerScopedHandlerTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BillingGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/HomePageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/Infrastructure/ComponentTestBase.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -872,7 +873,7 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 
-## A.1 — Appendix — MAUI shells & parity (38 files)
+## A.1 — Appendix — MAUI shells & parity (39 files)
 
 - `src/Maui/App.xaml`
 - `src/Maui/App.xaml.cs`
@@ -902,6 +903,7 @@
 - `src/Maui/Platforms/iOS/Resources/PrivacyInfo.xcprivacy`
 - `src/Maui/PreferencesCulturePersistence.cs`
 - `src/Maui/Properties/launchSettings.json`
+- `src/Maui/ReleaseGuards.targets`
 - `src/Maui/ShareFileDownloadLauncher.cs`
 - `src/Maui/wwwroot/index.html`
 - `src/Shared.Ui/AppResumeNotifier.cs` — refresh-on-resume seam (NATIVE-4 G2)
@@ -913,7 +915,7 @@
 - `tests/native-smoke-android/package.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/smoke.js` — Android playwright-core smoke harness
 
-## A.2 — Appendix — native auth bridge (16 files)
+## A.2 — Appendix — native auth bridge (15 files)
 
 - `src/Api/Controllers/NativeAuthController.cs`
 - `src/Api/Services/NativeAuthCodeService.cs`
@@ -921,7 +923,6 @@
 - `src/Api/Services/NativeRedirectPolicy.cs`
 - `src/Maui/Auth/DebugFileSessionStore.cs`
 - `src/Maui/Auth/LoopbackOAuthInitiator.cs`
-- `src/Maui/Auth/NativeAuthHeaderHandler.cs`
 - `src/Maui/Auth/PreferencesOAuthResumeStore.cs`
 - `src/Maui/Auth/SecureStorageSessionStore.cs`
 - `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`
@@ -1049,7 +1050,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (210 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (214 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1144,8 +1145,12 @@
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.png` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.sha1` — authoring docs; the course TEACHES writing these in 0.1
@@ -1262,4 +1267,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1095 tracked files · 774 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1100 tracked files · 775 built in lessons · 325 bucketed · 0 unmapped
