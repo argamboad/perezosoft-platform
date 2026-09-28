@@ -268,7 +268,6 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Ui.Tests/*", "3.4", "bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test"),
     ("src/Web/Program.cs", "3.4", ""),
     ("src/Web/_Imports.razor", "3.4", ""),
-    ("src/Web/Http/AuthHeaderHandler.cs", "3.4", ""),
     ("src/Web/Http/CookieHandler.cs", "3.4", ""),
     ("src/Web/Http/CookieSessionStore.cs", "3.4", ""),
     ("src/Web/appsettings*.json", "3.4", ""),
@@ -485,8 +484,10 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/Pages/AdminConsole.razor", "7.5", ""),
     ("tests/Api.Tests/Admin/*", "7.5", ""),
     ("tests/Core.Tests/Auth/ImpersonationIdentityTests.cs", "7.5", "client identity swap raises AuthService.IdentityChanged so the header re-sources on impersonate"),
-    ("src/Shared.Ui/Auth/BearerRetry.cs", "3.4", "both hosts' bearer handlers: attach the token, renew once and resend on a 401 (v4 T32, R126)"),
-    ("tests/Api.Tests/Auth/BearerHandlerParityTests.cs", "3.4", "both handler sources delegate to BearerRetry (v4 T32)"),
+    ("src/Shared.Ui/Auth/BearerRetry.cs", "3.4", "both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)"),
+    ("src/Shared.Ui/Auth/BearerScopedHandler.cs", "3.4", "the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)"),
+    ("tests/Api.Tests/Auth/BearerHandlerParityTests.cs", "3.4", "both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)"),
+    ("tests/Ui.Tests/BearerScopedHandlerTests.cs", "3.4", "API requests carry the bearer; a foreign host gets none and spends no refresh (v4 T49)"),
 
     # ---- Part 8 ----
     ("src/Api/Configuration/ProxyForwardingExtensions.cs", "8.1", "config-gated forwarded headers"),

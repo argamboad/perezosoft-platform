@@ -21,7 +21,7 @@ custom-scheme); the two-HttpClient pattern (auth vs Bearer); every-platform-regi
 
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/Auth/SecureStorageSessionStore.cs`,
 `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`, `LoopbackOAuthInitiator.cs`,
-`NativeAuthHeaderHandler.cs`, `src/Maui/MauiProgram.cs`.
+`src/Shared.Ui/Auth/BearerScopedHandler.cs`, `src/Maui/MauiProgram.cs`.
 
 **Prerequisites:** 2.7 (JWT access + refresh-cookie rotation — the model being bridged), 2.5 (OAuth
 providers), 6.5 (MFA step-up choke point — reused here), A.1 (the shell hosting this).
@@ -98,8 +98,12 @@ The native shell wires **two HttpClients** (mirroring the web host) to avoid a D
 - an **auth client** with *no* Bearer handler — refresh/logout/otp are anonymous or carry the body
   token, so they need no access token (and the Bearer handler would depend on the very service that
   owns them);
-- a **default client** whose `NativeAuthHeaderHandler` attaches the in-memory JWT as a `Bearer`
-  header, so `[Authorize]` endpoints (household, settings) work.
+- a **default client** whose `BearerScopedHandler` — the same one the web host installs (3.4) —
+  attaches the in-memory JWT as a `Bearer` header to the API's own origin only, so `[Authorize]`
+  endpoints (household, settings) work and a foreign URL never sees the token;
+- and, since v4 T49, a **plain client** for `ShareFileDownloadLauncher`: the export download is either
+  the API's anonymous tokenized `/api/files/{token}` or a presigned S3 link, which AWS refuses when an
+  Authorization header rides along.
 
 Both carry `X-Native-Client`. This two-client split is the same shape the web host uses (Api /
 ApiAuth) — parity in the plumbing, not just the UI.
