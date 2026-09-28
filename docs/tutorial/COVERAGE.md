@@ -637,7 +637,7 @@
 - `tests/Api.Tests/PublicApi/ApiKeyServiceTests.cs`
 - `tests/Api.Tests/RateLimitingTests.cs`
 
-## 7.4 — Outbound webhooks (21 files)
+## 7.4 — Outbound webhooks (22 files)
 
 - `src/Api/Configuration/WebhooksSettings.cs`
 - `src/Api/Endpoints/WebhookEndpoints.cs`
@@ -659,6 +659,7 @@
 - `tests/Api.Tests/Webhooks/WebhookDeliveryTests.cs`
 - `tests/Api.Tests/Webhooks/WebhookRedirectAndPinningTests.cs` — no redirects, connection pinned to what the guard accepts, a refusal dead-letters at once (v4 H8)
 - `tests/Api.Tests/Webhooks/WebhookSubscriptionServiceTests.cs`
+- `tests/Api.Tests/Webhooks/WebhookWritePolicyTests.cs` — test-send + replay carry the per-tenant webhook-write throttle on the real route table (v4 T44)
 - `tests/Core.Tests/WebhookSignatureTests.cs`
 
 ## 7.5 — Admin back-office & impersonation (14 files)
@@ -1258,4 +1259,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1091 tracked files · 770 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1092 tracked files · 771 built in lessons · 321 bucketed · 0 unmapped

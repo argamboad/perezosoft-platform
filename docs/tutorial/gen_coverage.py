@@ -466,6 +466,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/WebhookService.cs", "7.4", ""),
     ("src/Api/Endpoints/WebhookEndpoints.cs", "7.4", ""),
     ("src/Infrastructure/Webhooks/WebhookOutboxHandler.cs", "7.4", ""),
+    ("tests/Api.Tests/Webhooks/WebhookWritePolicyTests.cs", "7.4", "test-send + replay carry the per-tenant webhook-write throttle on the real route table (v4 T44)"),
     ("src/Infrastructure/Webhooks/WebhookSender.cs", "7.4", ""),
     ("src/Infrastructure/Webhooks/WebhookSecretProtector.cs", "7.4", "encrypted at rest (builds on 6.3)"),
     ("src/Api/Configuration/WebhooksSettings.cs", "7.4", ""),
