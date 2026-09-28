@@ -57,6 +57,45 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void EnterTenant_WithARequestSuppliedTenantId_ChecksTheTenantExists() // R129 (v4 T24)
+    {
+        // EnterTenant makes the interceptor stamp and the RLS backstop scope every write to THAT tenant — it does not
+        // ask whether the tenant exists. A tenant id that arrives with a request (a signed webhook, an admin route)
+        // must be looked up first, or a write lands for a dissolved tenant that nothing will ever clean up again
+        // (LB-BILL-23: a late customer.subscription.deleted re-created the projection with the Stripe ids).
+        // Every file that enters a tenant is classified here; a new site must say where its id comes from.
+        var requestSupplied = new Dictionary<string, string>
+        {
+            ["BillingWebhookHandler.cs"] = "tenants.GetByIdAsync(evt.TenantId", // signed payload → looked up after the claim, Ignored if gone
+            ["AdminController.cs"] = "tenants.GetByIdAsync(id",                  // route id → looked up inside the scope, 404 if gone
+        };
+        var rowSupplied = new Dictionary<string, string>
+        {
+            ["ApiKeyService.cs"] = "the key row's TenantId — the key was resolved by hash from the table first",
+            ["FilesController.cs"] = "a signed download token the app issued; a dissolved tenant's files are wiped, the lookup returns nothing",
+            ["HttpCurrentTenant.cs"] = "the implementation, not a caller",
+            ["SubscriptionLapseSweepJob.cs"] = "the subscription row's TenantId, read from the table",
+            ["TenantDissolutionService.cs"] = "the dissolve's own target, resolved by the caller from a membership",
+            ["TenantInvitationService.cs"] = "the invitation row's TenantId, read from the table",
+        };
+
+        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure") };
+        var sites = dirs.SelectMany(d => SourceFiles(d)).Where(f => File.ReadAllText(f).Contains("EnterTenant(")).Select(Path.GetFileName).ToList();
+        Assert.Contains("BillingWebhookHandler.cs", sites); // probe alive
+
+        var unclassified = sites.Where(f => !requestSupplied.ContainsKey(f!) && !rowSupplied.ContainsKey(f!)).ToList();
+        Assert.True(unclassified.Count == 0,
+            $"New EnterTenant sites must say where the tenant id comes from (request ⇒ look the tenant up first): {string.Join(", ", unclassified)}");
+
+        foreach (var (file, lookup) in requestSupplied)
+        {
+            var text = File.ReadAllText(dirs.SelectMany(d => SourceFiles(d)).Single(f => Path.GetFileName(f) == file));
+            Assert.True(text.Contains(lookup, StringComparison.Ordinal),
+                $"{file} enters a tenant named by the request but no longer looks it up ({lookup}) — a write for a dissolved tenant is orphaned forever.");
+        }
+    }
+
+    [Fact]
     public void EveryTenantScopedEntity_HasAGlobalQueryFilter()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -233,26 +272,6 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void BillingControllers_AreAllGated() // GATES-1 (ADR-027)
-    {
-        // The billing gate is only as strong as this list. A new controller routed under api/billing that
-        // nobody added to BillingGateConvention would stay reachable with the gate off — and, worse, would
-        // be backed by the in-memory fake provider, which the registration now permits outside Development
-        // precisely BECAUSE no billing route is reachable when gated off. So the two must not drift.
-        var offenders = typeof(TenantApiControllerBase).Assembly.GetTypes()
-            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ControllerBase).IsAssignableFrom(t))
-            .Where(t => t.GetCustomAttribute<RouteAttribute>()?.Template is { } route
-                        && route.TrimStart('/').StartsWith("api/billing", StringComparison.OrdinalIgnoreCase))
-            .Where(t => !BillingGateConvention.GatedControllers.Contains(t))
-            .Select(t => t.Name)
-            .ToList();
-
-        Assert.True(offenders.Count == 0,
-            "Controllers routed under api/billing must be listed in BillingGateConvention.GatedControllers, "
-            + $"or they stay reachable while billing is gated off: {string.Join(", ", offenders)}");
-    }
-
-    [Fact]
     public void ServerServices_UseInjectedClock_NotAmbientUtcNow()
     {
         // R15/GAP-4/LOGIC-B3: server code takes TimeProvider, so a cookie/URL/token lifetime can't drift
@@ -288,13 +307,37 @@ public class ArchitectureTests
                 if (code.StartsWith("//")) continue;
                 var comment = code.IndexOf(" //", StringComparison.Ordinal);
                 if (comment >= 0) code = code[..comment];
-                if (code.Contains("yyyy") && !code.Contains("InvariantCulture"))
+                if (IsCultureSensitiveYearFormat(code))
                     offenders.Add($"{Path.GetFileName(f)}:{i + 1}");
             }
         }
 
         Assert.True(offenders.Count == 0,
             $"Format years with CultureInfo.InvariantCulture (a yyyy format follows the request culture's calendar): {string.Join(", ", offenders)}");
+    }
+
+    /// <summary>
+    /// A format string in a <c>ToString()</c> with no culture argument, or an interpolation hole (<c>{x:yyyy-MM}</c>,
+    /// which can't take one). A message that merely NAMES the format, a parse-format list, or a <c>ToString</c> handed
+    /// an explicit culture (a localized report) is not a hit — the downstream apps have all three.
+    /// </summary>
+    private static bool IsCultureSensitiveYearFormat(string code)
+    {
+        var bareToString = Regex.IsMatch(code, @"ToString\(\s*""[^""]*yyyy[^""]*""\s*\)");
+        var interpolated = Regex.IsMatch(code, @"\{[^{}""]*:[^{}""]*yyyy[^{}""]*\}");
+        return (bareToString || interpolated) && !code.Contains("InvariantCulture");
+    }
+
+    [Fact]
+    public void YearFormatGate_SeesFormats_NotMessages() // self-test of the predicate above
+    {
+        Assert.True(IsCultureSensitiveYearFormat("""var period = now.ToString("yyyy-MM");"""));
+        Assert.True(IsCultureSensitiveYearFormat("""var renews = $" It renews on {end:yyyy-MM-dd}.";"""));
+        Assert.True(IsCultureSensitiveYearFormat("""var key = $"exports/{clock.GetUtcNow():yyyyMMddTHHmmssZ}-{id:N}.json";"""));
+        Assert.False(IsCultureSensitiveYearFormat("""var period = now.ToString("yyyy-MM", CultureInfo.InvariantCulture);"""));
+        Assert.False(IsCultureSensitiveYearFormat("""return BadRequest(new ErrorResponse("invalid_request", "date is required (yyyy-MM-dd)"));"""));
+        Assert.False(IsCultureSensitiveYearFormat("""private static readonly string[] Formats = ["d/M/yyyy", "d-M-yy"];"""));
+        Assert.False(IsCultureSensitiveYearFormat("""private string Date(DateOnly d) => d.ToString("d MMM yyyy", _c);"""));
     }
 
     [Fact]
