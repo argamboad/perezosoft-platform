@@ -5,6 +5,7 @@ using Stripe;
 using Microsoft.Extensions.Logging;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Infrastructure.Billing;
+using Perezosoft.Api.Tests.Infrastructure;
 
 namespace Perezosoft.Api.Tests.Billing;
 
