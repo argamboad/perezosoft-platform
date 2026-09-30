@@ -383,11 +383,13 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (15 files)
+## 3.6 — The E2E harness (Playwright) (17 files)
 
+- `tests/Api.Tests/E2E/BlazorBootTests.cs` — the boot decision driven by a scripted page — the audit's six cases (v4 T55)
 - `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
 - `tests/E2E.Tests/AuthFlowTests.cs`
-- `tests/E2E.Tests/BlazorBoot.cs` — reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)
+- `tests/E2E.Tests/BlazorBoot.cs` — the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)
+- `tests/E2E.Tests/BlazorBootCore.cs` — the boot helper's decision, Playwright-free (v4 T55, R109)
 - `tests/E2E.Tests/E2ETestBase.cs`
 - `tests/E2E.Tests/MagicLinkJourneyTests.cs` — happy + single-use
 - `tests/E2E.Tests/Mailpit.cs` — read OTPs from the fake inbox
@@ -701,7 +703,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (145 files)
+## 8.3 — The deploy pipeline & CI gates (149 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
@@ -838,6 +840,10 @@
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-intact/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-at-budget/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-at-budget/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-over-budget/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-over-budget/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/slowest-journeys/boot-retry-counted-once/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/slowest-journeys/boot-retry-counted-once/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/slowest-journeys/no-trx/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -1266,4 +1272,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1099 tracked files · 778 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1105 tracked files · 784 built in lessons · 321 bucketed · 0 unmapped
