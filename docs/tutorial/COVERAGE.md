@@ -48,11 +48,14 @@
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 
-## 1.3 — Database & the test container (8 files)
+## 1.3 — Database & the test container (11 files)
 
 - `src/Api/AppDbContextFactory.cs` — design-time factory for dotnet ef
 - `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
 - `tests/Api.Tests/AppDbContextFactoryTests.cs`
+- `tests/Api.Tests/Infrastructure/CapturingLogger.cs` — the one log double the suite shares
+- `tests/Api.Tests/Infrastructure/Concurrently.cs` — the shared concurrency runner (v4 T54, R7)
+- `tests/Api.Tests/Infrastructure/DbFaultInjector.cs` — the database-fault + interleaving seam (v4 T54, R7)
 - `tests/Api.Tests/Infrastructure/PostgresFixture.cs`
 - `tests/Api.Tests/Infrastructure/PostgresTestBase.cs` — model-derived TRUNCATE (R11)
 - `tests/Api.Tests/Infrastructure/ServiceHarness.cs`
@@ -380,11 +383,13 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (15 files)
+## 3.6 — The E2E harness (Playwright) (17 files)
 
+- `tests/Api.Tests/E2E/BlazorBootTests.cs` — the boot decision driven by a scripted page — the audit's six cases (v4 T55)
 - `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
 - `tests/E2E.Tests/AuthFlowTests.cs`
-- `tests/E2E.Tests/BlazorBoot.cs` — reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)
+- `tests/E2E.Tests/BlazorBoot.cs` — the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)
+- `tests/E2E.Tests/BlazorBootCore.cs` — the boot helper's decision, Playwright-free (v4 T55, R109)
 - `tests/E2E.Tests/E2ETestBase.cs`
 - `tests/E2E.Tests/MagicLinkJourneyTests.cs` — happy + single-use
 - `tests/E2E.Tests/Mailpit.cs` — read OTPs from the fake inbox
@@ -698,7 +703,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (145 files)
+## 8.3 — The deploy pipeline & CI gates (149 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
@@ -835,6 +840,10 @@
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-intact/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-at-budget/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-at-budget/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-over-budget/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-over-budget/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/slowest-journeys/boot-retry-counted-once/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/slowest-journeys/boot-retry-counted-once/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/slowest-journeys/no-trx/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -1050,7 +1059,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (214 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (210 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1145,12 +1154,8 @@
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.png` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.sha1` — authoring docs; the course TEACHES writing these in 0.1
@@ -1267,4 +1272,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1100 tracked files · 775 built in lessons · 325 bucketed · 0 unmapped
+**Totals:** 1105 tracked files · 784 built in lessons · 321 bucketed · 0 unmapped
