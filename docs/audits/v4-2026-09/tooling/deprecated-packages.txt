@@ -1,0 +1,51 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+
+The following sources were used:
+   https://api.nuget.org/v3/index.json
+   C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+
+The given project `Perezosoft.Api` has no deprecated packages given the current sources.
+The given project `Perezosoft.Core` has no deprecated packages given the current sources.
+The given project `Perezosoft.Infrastructure` has no deprecated packages given the current sources.
+The given project `Perezosoft.Maui` has no deprecated packages given the current sources.
+The given project `Perezosoft.Shared.Ui` has no deprecated packages given the current sources.
+The given project `Perezosoft.Web` has no deprecated packages given the current sources.
+Project `Perezosoft.Api.Tests` has the following deprecated packages
+   [net10.0]: 
+   Top-level Package      Requested   Resolved   Reason(s)   Alternative      
+   > xunit                2.9.3       2.9.3      Legacy      xunit.v3 >= 0.0.0
+
+   Transitive Package                   Resolved   Reason(s)   Alternative                         
+   > xunit.assert                       2.9.3      Legacy      xunit.v3.assert >= 0.0.0            
+   > xunit.core                         2.9.3      Legacy      xunit.v3.core >= 0.0.0              
+   > xunit.extensibility.core           2.9.3      Legacy      xunit.v3.extensibility.core >= 0.0.0
+   > xunit.extensibility.execution      2.9.3      Legacy      xunit.v3.extensibility.core >= 0.0.0
+
+Project `Perezosoft.Core.Tests` has the following deprecated packages
+   [net10.0]: 
+   Top-level Package      Requested   Resolved   Reason(s)   Alternative      
+   > xunit                2.9.3       2.9.3      Legacy      xunit.v3 >= 0.0.0
+
+   Transitive Package                   Resolved   Reason(s)   Alternative                         
+   > xunit.assert                       2.9.3      Legacy      xunit.v3.assert >= 0.0.0            
+   > xunit.core                         2.9.3      Legacy      xunit.v3.core >= 0.0.0              
+   > xunit.extensibility.core           2.9.3      Legacy      xunit.v3.extensibility.core >= 0.0.0
+   > xunit.extensibility.execution      2.9.3      Legacy      xunit.v3.extensibility.core >= 0.0.0
+
+Project `Perezosoft.E2E.Tests` has the following deprecated packages
+   [net10.0]: 
+   Transitive Package                   Resolved   Reason(s)   Alternative
+   > Microsoft.ApplicationInsights      2.22.0     Other                  
+
+Project `Perezosoft.Ui.Tests` has the following deprecated packages
+   [net10.0]: 
+   Top-level Package      Requested   Resolved   Reason(s)   Alternative      
+   > xunit                2.9.3       2.9.3      Legacy      xunit.v3 >= 0.0.0
+
+   Transitive Package                   Resolved   Reason(s)   Alternative                         
+   > xunit.assert                       2.9.3      Legacy      xunit.v3.assert >= 0.0.0            
+   > xunit.core                         2.9.3      Legacy      xunit.v3.core >= 0.0.0              
+   > xunit.extensibility.core           2.9.3      Legacy      xunit.v3.extensibility.core >= 0.0.0
+   > xunit.extensibility.execution      2.9.3      Legacy      xunit.v3.extensibility.core >= 0.0.0
+
