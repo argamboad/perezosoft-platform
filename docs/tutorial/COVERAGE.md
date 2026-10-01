@@ -1059,7 +1059,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (269 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (253 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1080,10 +1080,6 @@
 - `docs/PLATFORM_BACKLOG.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/PROJECT_BRIEF.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/QA_RUN_LOG.pdf` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/QA_RUN_LOG.pdf` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/QA_RUN_LOG.pdf` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/QA_TEST_GUIDE.pdf` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/QA_TEST_GUIDE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/QA_TEST_GUIDE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/REBRANDING.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/ROADMAP.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1201,12 +1197,8 @@
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.png` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.sha1` — authoring docs; the course TEACHES writing these in 0.1
@@ -1251,13 +1243,9 @@
 - `docs/tutorial/diagrams/mermaid-c5f96cf12c49.png` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/mermaid-c5f96cf12c49.sha1` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_coverage.py` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/gen_coverage.py` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/gen_coverage.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_diagrams.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_tutorial_pdf.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/0.1-mental-model-and-the-decision-record.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/lessons/0.2-a-reproducible-machine.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/lessons/0.2-a-reproducible-machine.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/0.2-a-reproducible-machine.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/1.1-solution-projects-and-supply-chain.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/1.2-first-endpoint-first-test.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1277,8 +1265,6 @@
 - `docs/tutorial/lessons/3.1-the-repository-seam.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.2-anatomy-of-a-vertical-slice.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.3-injected-clocks-and-architecture-tests.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/lessons/3.4-the-web-client-and-auth-ui.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/lessons/3.4-the-web-client-and-auth-ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.4-the-web-client-and-auth-ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.5-localization.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.6-the-e2e-harness.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1309,8 +1295,6 @@
 - `docs/tutorial/lessons/9.1-rebrand-and-de-sample.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.1-maui-shells-and-parity.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
-- `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `tests/E2E.Tests/README.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/base.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/head.md` — docs
@@ -1331,4 +1315,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1164 tracked files · 784 built in lessons · 380 bucketed · 0 unmapped
+**Totals:** 1148 tracked files · 784 built in lessons · 364 bucketed · 0 unmapped

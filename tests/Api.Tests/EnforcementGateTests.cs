@@ -576,6 +576,25 @@ public class EnforcementGateTests
         Assert.True(script.All(c => c < 128), "keep the script ASCII — Windows PowerShell reads a BOM-less file as cp1252");
     }
 
+    [Theory]
+    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".forgejo/workflows/ci.yml")]
+    public void CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts(string workflow) // v4 audit TR-19/TR-12 (T61), R114/R115
+    {
+        // gen_coverage.py only ran when someone remembered to; the map claimed 901 files and 0 unmapped while the
+        // generator found 903 and 1, and lessons quoted code the repo no longer had. The qa-artifacts job — which
+        // never gates on the changes classifier, so a docs-only push runs it — checks both on every push.
+        var ci = File.ReadAllText(Path.Combine(RepoRoot(), workflow)).ReplaceLineEndings("\n");
+        var job = ci[ci.IndexOf("\n  qa-artifacts:", StringComparison.Ordinal)..];
+        job = job[..job.IndexOf("\n  license-scan:", StringComparison.Ordinal)];
+        Assert.Contains("python docs/tutorial/gen_coverage.py --check\n", job);
+        Assert.Contains("python docs/tutorial/gen_coverage.py --check-quotes\n", job);
+        // ...and the generator honours those flags (a renamed flag would silently check nothing).
+        var generator = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "tutorial", "gen_coverage.py"));
+        Assert.Contains("\"--check\" in sys.argv", generator);
+        Assert.Contains("\"--check-quotes\" in sys.argv", generator);
+    }
+
     [Fact]
     public void DeployTriggerWording_AutoDeploysNamesTheForge() // v4 audit TR-13 (T60), R117
     {

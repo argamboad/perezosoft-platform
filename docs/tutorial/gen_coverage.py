@@ -7,9 +7,18 @@ unmapped — the course's own arch test: an unmapped file is a hole in the
 tutorial, not an oversight to shrug at.
 
 Run from the repo root:  python docs/tutorial/gen_coverage.py
+  --check         regenerate in memory and exit 1 if COVERAGE.md differs or a file is unmapped
+                  (CI's "Course coverage" step; nothing is written)
+  --check-quotes  the quote-currency sweep (v4 T61, R114/R115): every code block headed by a
+                  repo path (`// path` or `# path`) must name a file that exists, and every
+                  member the block declares must still be declared in that file. Exit 1 on a
+                  stale quote. A block the reader writes and the repo does not keep is headed
+                  `// path (yours)`.
+  --orphans       files the map assigns to a lesson whose text never names them (informational)
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from fnmatch import fnmatch
@@ -625,8 +634,83 @@ def classify(path: str) -> tuple[str, str] | None:
     return None
 
 
+LESSONS_DIR = "docs/tutorial/lessons"
+
+# A fenced block's first line names the file it quotes: `// src/Api/Program.cs`, `# docker-compose.yml`,
+# optionally followed by a note. `(yours)` marks a block the reader writes that the repo does not keep.
+QUOTE_HEAD = re.compile(r"^(?://|#|<!--)\s*([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:cs|razor|yml|yaml|json|env|sh|ps1|md|js|html|css|props|targets|csproj|txt|toml|xml))"
+                        r"(?:\s+(.*?))?\s*(?:-->)?\s*$")
+# What a C# block declares: a type, or a member with an access modifier. Names only — bodies are trimmed on purpose.
+CS_DECL = re.compile(
+    r"^\s*(?:\[[^\]]*\]\s*)*(?:public|internal|protected|private)\b[^=;{(]*?\b([A-Z][A-Za-z0-9_]*)\s*(?:\(|\{|=>|;|<[^>]*>\s*\()"
+    r"|^\s*(?:public|internal|private|protected|sealed|static|abstract|partial|\s)*\b(?:class|record|interface|enum|struct)\s+([A-Z][A-Za-z0-9_]*)",
+    re.M)
+CS_KEYWORDS = {"Task", "ValueTask", "IActionResult", "ActionResult", "IResult", "Guid", "String", "Boolean", "Int32", "List", "Dictionary",
+               "IEnumerable", "IReadOnlyList", "IDisposable", "IAsyncDisposable", "HttpResponseMessage", "DateTimeOffset", "TimeSpan"}
+
+
+def quoted_blocks(text: str):
+    """(path, note, body) for every fenced block whose first line is a repo-path header."""
+    for m in re.finditer(r"^```[^\n]*\n(.*?)^```", text, re.S | re.M):
+        body = m.group(1)
+        head, _, rest = body.partition("\n")
+        q = QUOTE_HEAD.match(head.strip())
+        if q:
+            yield q.group(1), (q.group(2) or ""), rest
+
+
+def check_quotes(root: Path) -> int:
+    stale: list[str] = []
+    blocks = 0
+    for lesson in sorted((root / LESSONS_DIR).glob("*.md")):
+        text = lesson.read_text(encoding="utf-8")
+        for path, note, body in quoted_blocks(text):
+            blocks += 1
+            where = f"{lesson.relative_to(root).as_posix()} -> {path}"
+            if note.startswith("(yours"):
+                continue
+            target = root / path
+            if not target.exists():
+                stale.append(f"{where}: the file does not exist (renamed? mark the block `(yours)` if the reader writes it)")
+                continue
+            if not path.endswith((".cs", ".razor")):
+                continue
+            source = target.read_text(encoding="utf-8", errors="replace")
+            words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", source))
+            declared = {a or b for a, b in CS_DECL.findall(body)} - CS_KEYWORDS
+            missing = sorted(n for n in declared if n not in words)
+            if missing:
+                stale.append(f"{where}: declares {', '.join(missing)}, which the file no longer has")
+    print(f"{blocks} quoted blocks checked, {len(stale)} stale")
+    for line in stale:
+        print("  " + line)
+    return 1 if stale else 0
+
+
+def orphans(root: Path, by_lesson: dict[str, list[tuple[str, str]]]) -> int:
+    """Files a lesson is credited with but never names — not a failure, a reading list for the next reconcile."""
+    count = 0
+    for lesson_id in LESSONS:
+        entries = by_lesson.get(lesson_id, [])
+        if not entries:
+            continue
+        texts = [f.read_text(encoding="utf-8") for f in (root / LESSONS_DIR).glob(f"{lesson_id}-*.md")]
+        text = "\n".join(texts)
+        unnamed = [f for f, _ in entries if Path(f).name not in text and f not in text]
+        if unnamed:
+            count += len(unnamed)
+            print(f"{lesson_id}: {len(unnamed)} of {len(entries)} files never named")
+            for f in sorted(unnamed):
+                print(f"  {f}")
+    print(f"{count} orphans")
+    return 0
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[2]
+    if "--check-quotes" in sys.argv:
+        return check_quotes(root)
+    check = "--check" in sys.argv
     files = subprocess.run(
         ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=True
     ).stdout.splitlines()
@@ -677,7 +761,12 @@ def main() -> int:
                f"{sum(len(by_lesson.get(b, [])) for b in BUCKETS)} bucketed · "
                f"{len(unmapped)} unmapped")
 
-    (root / "docs/tutorial/COVERAGE.md").write_text("\n".join(out) + "\n", encoding="utf-8")
+    rendered = "\n".join(out) + "\n"
+    manifest = root / "docs/tutorial/COVERAGE.md"
+    if "--orphans" in sys.argv:
+        return orphans(root, by_lesson)
+    if not check:
+        manifest.write_text(rendered, encoding="utf-8")
 
     print(f"{len(files)} files: {total_lesson_files} in lessons, "
           f"{sum(len(by_lesson.get(b, [])) for b in BUCKETS)} bucketed, {len(unmapped)} unmapped")
@@ -685,6 +774,9 @@ def main() -> int:
         print("\nUNMAPPED:")
         for f in sorted(unmapped):
             print(f"  {f}")
+        return 1
+    if check and manifest.read_text(encoding="utf-8").replace("\r\n", "\n") != rendered:
+        print("\nCOVERAGE.md is stale: run `python docs/tutorial/gen_coverage.py` and commit the result")
         return 1
     return 0
 
