@@ -702,7 +702,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (150 files)
+## 8.3 — The deploy pipeline & CI gates (156 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
@@ -763,6 +763,12 @@
 - `tests/ci-logic/cases/changes-classifier/e2e-readme-is-code-not-native/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/e2e-readme-is-code-not-native/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/e2e-readme-is-code-not-native/files/diff.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling-with-code/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling-with-code/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling-with-code/files/diff.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling/files/diff.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/fail-open-base-gone/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/fail-open-base-gone/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/fail-open-no-base/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -1316,4 +1322,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1149 tracked files · 785 built in lessons · 364 bucketed · 0 unmapped
+**Totals:** 1155 tracked files · 791 built in lessons · 364 bucketed · 0 unmapped
