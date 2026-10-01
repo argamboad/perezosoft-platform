@@ -702,11 +702,12 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (185 files)
+## 8.3 — The deploy pipeline & CI gates (186 files)
 
 - `.forgejo/scripts/gates-green.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/scripts/tested-on-pr.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
+- `.forgejo/scripts/workloads.ps1` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
 - `.forgejo/workflows/deploy.yml` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/postman-sync.yml` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
@@ -1352,4 +1353,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1185 tracked files · 820 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1186 tracked files · 821 built in lessons · 365 bucketed · 0 unmapped
