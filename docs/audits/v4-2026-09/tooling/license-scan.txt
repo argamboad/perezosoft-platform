@@ -1,0 +1,6 @@
+# dotnet-project-licenses (CI's license-scan step reproduced locally) — SHA 8c8ed4a
+=== src/Api/Perezosoft.Api.csproj
+exit=0
+=== src/Web/Perezosoft.Web.csproj
+exit=0
+Verdict: exit 0 for both graphs (Api server, Web client incl. Shared.Ui) — no forbidden (GPL/AGPL/LGPL/SSPL) license present.

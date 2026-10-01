@@ -116,7 +116,7 @@ RULES: list[tuple[str, str, str]] = [
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
-    ("tests/Api.Tests/ForgejoCiParityTests.cs", "1.4", "the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)"),
+    ("tests/Api.Tests/ForgejoCiParityTests.cs", "8.3", "the Forgejo workflow copy cannot drift from the GitHub one; pins deploy.yml's guard + dispatch-only trigger (LOCALCI-4: R80, ADR-028)"),
     ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),
     ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)"),
     ("*/Perezosoft.*.csproj", "1.1", "created here; PackageReferences added as lessons need them"),
@@ -270,6 +270,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/NotesSliceTests.cs", "3.2", ""),
     ("tests/Api.Tests/FeatureAuthorizationTests.cs", "3.2", ""),
     ("tests/Api.Tests/ArchitectureTests.cs", "3.3", "born here; gains a rule per part (R5/R6/R15…)"),
+    ("tests/Ui.Tests/SystemBarThemeSyncTests.cs", "A.1", "the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)"),
     ("tests/Ui.Tests/*", "3.4", "bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test"),
     ("src/Web/Program.cs", "3.4", ""),
     ("src/Web/_Imports.razor", "3.4", ""),
@@ -307,6 +308,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/E2E/BlazorBootTests.cs", "3.6", "the boot decision driven by a scripted page — the audit's six cases (v4 T55)"),
     ("tests/E2E.Tests/Pages/*", "3.6", "Page Object Model"),
     ("tests/E2E.Tests/AuthFlowTests.cs", "3.6", ""),
+    ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)"),
 
     # ---- Part 4 ----
     ("src/Core/Abstractions/IOutbox.cs", "4.1", ""),

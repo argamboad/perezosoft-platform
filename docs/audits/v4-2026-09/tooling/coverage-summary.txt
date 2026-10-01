@@ -1,0 +1,17 @@
+# Coverage (XPlat Code Coverage, cobertura) — SHA 8c8ed4a. Rows are per test-project run; Api.Tests run = first block.
+
+Perezosoft.Api                   line  79.7%  branch  67.7%  lines   6738  run 0d7ebd08
+Perezosoft.Core                  line  94.1%  branch  73.9%  lines    508  run 0d7ebd08
+Perezosoft.Infrastructure        line  98.9%  branch  75.8%  lines  32406  run 0d7ebd08
+Perezosoft.Shared.Ui             line   8.4%  branch   6.3%  lines   3550  run 0d7ebd08
+Perezosoft.Core                  line  20.9%  branch  47.8%  lines    508  run a88b02bf
+Perezosoft.Shared.Ui             line   2.7%  branch   1.7%  lines   3550  run a88b02bf
+Perezosoft.Core                  line  20.9%  branch  47.8%  lines    508  run argam_AL
+Perezosoft.Shared.Ui             line   2.7%  branch   1.7%  lines   3550  run argam_AL
+Perezosoft.Api                   line  79.7%  branch  67.7%  lines   6738  run argam_AL
+Perezosoft.Core                  line  94.1%  branch  73.9%  lines    508  run argam_AL
+Perezosoft.Infrastructure        line  98.9%  branch  75.8%  lines  32406  run argam_AL
+Perezosoft.Shared.Ui             line   8.4%  branch   6.3%  lines   3550  run argam_AL
+Perezosoft.Shared.Ui             line  37.0%  branch  38.6%  lines   3550  run ff55cd92
+
+Read: Api 79.7% line / 67.7% branch (v3: 75.6%); Core 94.1%; Infrastructure 98.9% (inflated by migrations); Shared.Ui RCL 37.0% line from Ui.Tests (v3: 1.2%, E2E-only — the R70 chassis now exists) and 8.4% from Api.Tests.

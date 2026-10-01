@@ -62,7 +62,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (13 files)
+## 1.4 — Configuration & the options pattern (12 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -75,7 +75,6 @@
 - `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
-- `tests/Api.Tests/ForgejoCiParityTests.cs` — the Forgejo workflow copy cannot drift from the GitHub one (LOCALCI-4: R80)
 - `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
 
 ## 1.5 — The error envelope (1 files)
@@ -252,7 +251,7 @@
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (114 files)
+## 3.4 — The web client & auth UI (113 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
@@ -367,7 +366,6 @@
 - `tests/Ui.Tests/SessionKeepAliveTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SignupRefusedCopyTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SwitcherStateTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/SystemBarThemeSyncTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 
 ## 3.5 — Localization (EN/ES) (11 files)
 
@@ -703,7 +701,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (149 files)
+## 8.3 — The deploy pipeline & CI gates (150 files)
 
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/workflows/ci.yml` — the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)
@@ -713,6 +711,7 @@
 - `.github/scripts/qa-runlog-append-only.sh`
 - `.github/workflows/postman-sync.yml`
 - `docs/QA_TEST_PLAN.md` — release readiness: manual QA plan beside the automated gates
+- `tests/Api.Tests/ForgejoCiParityTests.cs` — the Forgejo workflow copy cannot drift from the GitHub one; pins deploy.yml's guard + dispatch-only trigger (LOCALCI-4: R80, ADR-028)
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
 - `tests/ci-logic/cases/already-green/A-all-green/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -882,7 +881,7 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 
-## A.1 — Appendix — MAUI shells & parity (39 files)
+## A.1 — Appendix — MAUI shells & parity (40 files)
 
 - `src/Maui/App.xaml`
 - `src/Maui/App.xaml.cs`
@@ -920,6 +919,7 @@
 - `src/Shared.Ui/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
 - `tests/Api.Tests/NativeChromeGateTests.cs` — Android bar colours = app.css tokens; top inset applied once
 - `tests/E2E.Tests/NativeSmokeTests.cs` — NATIVE-7 emulator/WebView2 smoke
+- `tests/Ui.Tests/SystemBarThemeSyncTests.cs` — the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)
 - `tests/native-smoke-android/package-lock.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/package.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/smoke.js` — Android playwright-core smoke harness
@@ -1059,7 +1059,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (210 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (269 files)
 
 - `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1080,6 +1080,10 @@
 - `docs/PLATFORM_BACKLOG.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/PROJECT_BRIEF.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/QA_RUN_LOG.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/QA_RUN_LOG.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/QA_RUN_LOG.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/QA_TEST_GUIDE.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/QA_TEST_GUIDE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/QA_TEST_GUIDE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/REBRANDING.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/ROADMAP.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1117,6 +1121,49 @@
 - `docs/audits/v3-2026-07/tooling/test-run-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v3-2026-07/tooling/vulnerable-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v3-2026-07/tooling/web-locked-restore.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/ADVERSARIAL_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_RECONCILIATION.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_TASKS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/FOUNDATION_RULES.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/HIGH_SEVERITY_TRACKER.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/IMPLEMENTATION_TRACKER.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/LOGIC_AND_TEST_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/PHASE5_GATE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/RULE_CONFLICTS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/auth.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/billing.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/client.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/deploy-ci.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/docs-template.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/jobs-obs.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/native.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/step0.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/auth-client.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/billing-jobs.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/ci-native.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_base.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_head_filled.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_head_realigned.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p1_push_diagnosis.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p2_already_green.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p2b_already_green.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p3_classifier.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p4_shards.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p5_slowest.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p7_exists.proj` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p8_stderr_stop.ps1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/test-completeness.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/build.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/ci-status.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/complexity-proxy.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/coverage-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/deprecated-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/license-scan.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/outdated-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/test-run-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/vulnerable-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/check_qa_artifacts.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/gen_qa_guide.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/gen_qa_runlog.py` — authoring docs; the course TEACHES writing these in 0.1
@@ -1154,8 +1201,12 @@
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.png` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/arch-auth-server.sha1` — authoring docs; the course TEACHES writing these in 0.1
@@ -1200,9 +1251,13 @@
 - `docs/tutorial/diagrams/mermaid-c5f96cf12c49.png` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/diagrams/mermaid-c5f96cf12c49.sha1` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_coverage.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/gen_coverage.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/gen_coverage.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_diagrams.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_tutorial_pdf.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/0.1-mental-model-and-the-decision-record.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/lessons/0.2-a-reproducible-machine.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/lessons/0.2-a-reproducible-machine.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/0.2-a-reproducible-machine.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/1.1-solution-projects-and-supply-chain.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/1.2-first-endpoint-first-test.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1222,6 +1277,8 @@
 - `docs/tutorial/lessons/3.1-the-repository-seam.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.2-anatomy-of-a-vertical-slice.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.3-injected-clocks-and-architecture-tests.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/lessons/3.4-the-web-client-and-auth-ui.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/lessons/3.4-the-web-client-and-auth-ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.4-the-web-client-and-auth-ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.5-localization.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/3.6-the-e2e-harness.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1252,6 +1309,8 @@
 - `docs/tutorial/lessons/9.1-rebrand-and-de-sample.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.1-maui-shells-and-parity.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `tests/E2E.Tests/README.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/base.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/head.md` — docs
@@ -1272,4 +1331,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1105 tracked files · 784 built in lessons · 321 bucketed · 0 unmapped
+**Totals:** 1164 tracked files · 784 built in lessons · 380 bucketed · 0 unmapped
