@@ -702,7 +702,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (186 files)
+## 8.3 — The deploy pipeline & CI gates (196 files)
 
 - `.forgejo/scripts/gates-green.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
 - `.forgejo/scripts/push-to-github.sh` — Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)
@@ -799,6 +799,16 @@
 - `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/files/list.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/files/tests/E2E.Tests/NativeSmokeTests.cs` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/files/list.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/files/tests/E2E.Tests/Placeholder.cs` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/files/tests/E2E.Tests/journey-seconds.tsv` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/files/list.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/files/tests/E2E.Tests/Placeholder.cs` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/files/tests/E2E.Tests/journey-seconds.tsv` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/nothing-listed-says-so/env` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/nothing-listed-says-so/expect` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/e2e-shard/nothing-listed-says-so/files/list.txt` — CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)
@@ -1096,7 +1106,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (254 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (255 files)
 
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
@@ -1332,6 +1342,7 @@
 - `docs/tutorial/lessons/A.1-maui-shells-and-parity.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `tests/E2E.Tests/README.md` — docs
+- `tests/E2E.Tests/journey-seconds.tsv` — CI tuning data: measured seconds per journey so the e2e shards are dealt evenly (Env L28)
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/base.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/head.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/executed-row-rewritten/files/base.md` — docs
@@ -1353,4 +1364,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1186 tracked files · 821 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1197 tracked files · 831 built in lessons · 366 bucketed · 0 unmapped
