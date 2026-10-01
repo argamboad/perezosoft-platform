@@ -12,7 +12,10 @@
 > overturns a v1/v2 invariant; every v4 rule is additive or completes a previously review-only rule.
 
 Each rule: **[machine]** (arch test / analyzer / CI gate) or **[review]** · text · enforcement mechanism ·
-the findings it subsumes. The full candidate text with evidence is in `FOUNDATION_RULES.md` (Phases 1–4).
+the findings it subsumes. **Enforcement manifest (T67, 2026-10-01):** `tests/Api.Tests/RulesEnforcement.cs` names,
+per `[machine]` rule, the test or CI step that holds it — or the tracker issue that still owes it — and
+`EnforcementGateTests.EveryMachineRule_NamesAStandingCheck` fails when a machine rule is missing from it or a named
+check does not exist; the mechanism text below is the intent, the manifest is the fact. The full candidate text with evidence is in `FOUNDATION_RULES.md` (Phases 1–4).
 
 ## 1. Amendments to carried rules (from `PHASE5_GATE.md` §2)
 | Rule | Amendment |
