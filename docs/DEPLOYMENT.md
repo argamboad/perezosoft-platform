@@ -505,7 +505,8 @@ GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings →
 | Event | Runs | Wall clock |
 |---|---|---|
 | Push / PR, docs only | `changes`, `secret-scan`, `qa-artifacts` | ≈ 1 min |
-| Push / PR with code | + `build-test`, `license-scan`, `docker-build`, `e2e` (3 shards), Android + Windows **builds** | ≈ 5–6 min (everything in parallel; the longest of `build-test` and the slowest shard decides) |
+| Push / PR with code | + `build-test`, `license-scan`, `docker-build`, `e2e` (3 shards), Android + Windows **builds** | ≈ 10–13 min alone (everything in parallel; the slowest `e2e` shard or the Windows build decides — measured 2026-10-01); longer while another repo's run holds the desk runners |
+| Push to `develop`/`main` merging an **up-to-date** PR whose run went green | `changes`, `secret-scan`, `qa-artifacts` (+ the Apple build, which never runs on a PR) — the code gates already passed on the PR, on this exact tree (Env L23) | ≈ 1 min |
 | **Run workflow**, `smokes=…` | the above + the selected native **smokes** (windows / android / apple / all) | + 3–10 min |
 | **Run workflow**, `deploy=staging` (on `develop`) | the above, then `deploy-staging` — only if every gate and every selected smoke is green | + 5–8 min |
 | **Run workflow**, `deploy=prod` (on `main`) | same, `deploy-prod` | |
@@ -514,8 +515,9 @@ GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings →
 "Docs only" means no file a test or gate reads. Markdown is free wherever it sits (README.MD included),
 except the few files the tests read (the root README and CLAUDE.md, this runbook, DATA_MODEL, QA_TEST_PLAN,
 REBRANDING, the Postman README, the E2E story and README): those count as code, like both forges' workflows
-and scripts, `tools/`, `.env.example`, `.dockerignore` and the Postman collection. The lists are the
-`changes` step's `code=` and `testdocs=`, identical in both workflows; `EveryRepoFileTheTestsRead_ClassifiesAsCode`
+and scripts, `tools/` (less the editor tooling in `devtools=` — the start-profile generator, its emulator helper,
+the telemetry dashboard: Env L22), `.env.example`, `.dockerignore` and the Postman collection. The lists are the
+`changes` step's `code=`, `testdocs=` and `devtools=`, identical in both workflows; `EveryRepoFileTheTestsRead_ClassifiesAsCode`
 fails when a test starts reading a file they miss (v4 T2).
 
 CI's own pass/fail logic (that classifier, the QA run-log guard, the e2e sharding, the slowest-journeys report,
@@ -523,6 +525,14 @@ the push to GitHub) is shell, awk and Python, and `tests/ci-logic/` runs it for 
 `bash tests/ci-logic/run.sh` on any Linux box, and inside `Api.Tests` on the Linux leg
 (`EnforcementGateTests.CiShellLogic_PassesItsFixtures`). Each block is marked `# ci-logic begin/end: <name>` in the
 workflow; change one and its fixtures tell you what else changed (v4 T8).
+
+**The merge skip (Env L23).** A PR's run tests its head, not the merge, so the push its merge makes used to re-run
+everything. Now `changes` first asks `.forgejo/scripts/tested-on-pr.sh`: is this push a two-parent merge whose tree
+is byte-identical to its PR head's (the PR was up to date with its base), and did that head pass every gate on its
+pull request (the same verdict **Deploy (already green)** uses)? Only a yes skips the code gates. A PR merged while
+behind its base is a tree nothing tested, so it runs everything; so does any doubt (API down, a red or re-running
+gate). Keep PRs up to date before merging (Forgejo's *Update branch*) to get the skip. Not while
+`CI_DEPLOY_ON_PUSH` is set: that deploy waits for the push run's own gates.
 
 By default the native smokes and the deploys never run on a push. Pick both inputs in one dispatch to
 smoke and deploy in a single run.
@@ -547,7 +557,8 @@ Any value not listed reads as the default (an unknown `CI_SMOKES_ON_PUSH` matche
 workflow** → `target=staging` deploys a commit whose gates already passed (~2 min) — it verifies that
 against this Forgejo's own API first, looking only at the newest attempt of each job, and refuses if any gate
 or matrix leg is missing, red, skipped or still running, or if a native smoke that ran went red, so the shortcut
-cannot become "deploy something untested" (the verdict is fixture-tested in `tests/ci-logic/`, v4 T4). Both publish the same way, and both refuse a branch/target
+cannot become "deploy something untested" (a merge that skipped its code gates under Env L23 counts as green
+exactly when `tested-on-pr.sh` says yes) (the verdict is fixture-tested in `tests/ci-logic/`, v4 T4). Both publish the same way, and both refuse a branch/target
 mismatch (staging deploys from `develop`, prod from `main`).
 
 **How a deploy runs.** `deploy-staging` pushes the commit to `develop` **on GitHub**
