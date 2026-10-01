@@ -62,7 +62,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (12 files)
+## 1.4 — Configuration & the options pattern (13 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -76,6 +76,7 @@
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
 - `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
+- `tests/Api.Tests/RulesEnforcement.cs` — the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)
 
 ## 1.5 — The error envelope (1 files)
 
@@ -1316,4 +1317,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1149 tracked files · 784 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1150 tracked files · 785 built in lessons · 365 bucketed · 0 unmapped

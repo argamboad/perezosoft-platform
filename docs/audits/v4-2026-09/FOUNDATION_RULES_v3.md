@@ -1,7 +1,8 @@
 # FOUNDATION_RULES — v3.0 (final, post-v4-consolidation)
 
-> **Status: FINAL (Phase 5 consolidation) — binding once the v4 enforcement batch (B10) is green; until then
-> `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md` remains the Definition of Solid.**
+> **Status: FINAL and BINDING since 2026-10-01** (the v4 enforcement close-out — T11/T62/T67/T68/T69 — landed on
+> develop; `CONTRIBUTING.md` and `CLAUDE.md` point here). `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md` is the
+> v2.0 historical layer.
 > **Range.** R1–R35 (v1.0, `docs/audits/v2-2026-07/FOUNDATION_RULES.md`) and R36–R76 + R80 (v2.0,
 > `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md`) carry forward **unchanged except for the amendments in §1**.
 > This file adds **R81–R158** as finals, with **R77, R78, R79, R94 and R156 retired** (R77–R79: the LOCALCI-1/2
@@ -12,7 +13,10 @@
 > overturns a v1/v2 invariant; every v4 rule is additive or completes a previously review-only rule.
 
 Each rule: **[machine]** (arch test / analyzer / CI gate) or **[review]** · text · enforcement mechanism ·
-the findings it subsumes. The full candidate text with evidence is in `FOUNDATION_RULES.md` (Phases 1–4).
+the findings it subsumes. **Enforcement manifest (T67, 2026-10-01):** `tests/Api.Tests/RulesEnforcement.cs` names,
+per `[machine]` rule, the test or CI step that holds it — or the tracker issue that still owes it — and
+`EnforcementGateTests.EveryMachineRule_NamesAStandingCheck` fails when a machine rule is missing from it or a named
+check does not exist; the mechanism text below is the intent, the manifest is the fact. The full candidate text with evidence is in `FOUNDATION_RULES.md` (Phases 1–4).
 
 ## 1. Amendments to carried rules (from `PHASE5_GATE.md` §2)
 | Rule | Amendment |

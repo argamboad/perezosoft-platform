@@ -130,6 +130,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/ForgejoCiParityTests.cs", "8.3", "the Forgejo workflow copy cannot drift from the GitHub one; pins deploy.yml's guard + dispatch-only trigger (LOCALCI-4: R80, ADR-028)"),
     ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),
     ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)"),
+    ("tests/Api.Tests/RulesEnforcement.cs", "1.4", "the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)"),
     ("*/Perezosoft.*.csproj", "1.1", "created here; PackageReferences added as lessons need them"),
     ("src/Api/Properties/launchSettings.json", "1.1", ""),
     ("src/Maui/Properties/launchSettings.json", "A.1", ""),
