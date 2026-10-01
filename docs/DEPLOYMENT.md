@@ -177,6 +177,24 @@ Per provider:
    platform):
    - Google: `https://<host>/signin-google`
    - Microsoft: `https://<host>/signin-microsoft`
+
+   **The full list each registration must carry** — one Google client and one Microsoft registration per
+   app, and a missing URI is a silent OAuth failure on that host (the provider refuses the redirect, the
+   app never learns why). Local first, then this app's staging. The `http://localhost:5238` rows are the
+   Android emulator's (`adb reverse`, `MOBILE_TESTING.md` §5); `https://localhost:7160` is the API's own
+   HTTPS profile, which the web and desktop flows use.
+
+   | Host | Google (Credentials → OAuth client → Authorized redirect URIs) | Microsoft (App registrations → Authentication → Web → Redirect URIs) |
+   |---|---|---|
+   | local (web/desktop) | `https://localhost:7160/signin-google` | `https://localhost:7160/signin-microsoft` |
+   | local (Android emulator) | `http://localhost:5238/signin-google` | `http://localhost:5238/signin-microsoft` |
+   | staging | `https://template-staging.onrender.com/signin-google` | `https://template-staging.onrender.com/signin-microsoft` |
+
+   A downstream app has its own ports (README → Local ports) and its own staging host — the same three
+   rows with those values; an app that connects provider mailboxes adds its callback
+   (`/api/email/connections/callback`) on each host too. If staging uses a different client id than
+   local, the staging row goes on that client instead. Confirm the list in the console whenever a host
+   or a port changes; nothing in the repo can check it.
 3. Copy the client id + secret into Render: `Authentication__Google__ClientId` / `__ClientSecret` (and/or
    `Authentication__Microsoft__ClientId` / `__ClientSecret`).
 4. Microsoft only: the tenant authority defaults to **`consumers`** (personal accounts). For work/school
