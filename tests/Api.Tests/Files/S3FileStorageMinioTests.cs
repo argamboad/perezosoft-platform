@@ -15,13 +15,16 @@ namespace Perezosoft.Api.Tests.Files;
 public sealed class MinioFixture : IAsyncLifetime
 {
     public const string Bucket = "perezosoft-test";
-    // quay.io, not Docker Hub, and PINNED (never :latest — v3 DEP-9). MinIO's `minio/minio` Docker Hub
-    // repository became unpullable ("pull access denied ... repository does not exist") on 2026-09-11,
-    // which broke this fixture on every branch at once; quay.io is MinIO's other first-party registry and
-    // still serves the same releases. A floating tag is what turned an upstream distribution change into
-    // a CI outage with no pinned known-good to fall back to.
+    // OUR OWN copy of the pinned release (never :latest — v3 DEP-9), because upstream has now vanished twice:
+    // MinIO's `minio/minio` on Docker Hub became unpullable on 2026-09-11, and on 2026-10-01 quay.io/minio
+    // started answering 401 to anonymous pulls — the desk runners kept passing only on their local image
+    // cache while GitHub's hosted runner failed every build. ghcr.io/argamboad/minio is that same image
+    // (RELEASE.2025-09-07T16-13-09Z, image id 69b2ec208575, manifest sha256:52dfd5c0bbd3…), pushed from the
+    // cache and public, so a fresh runner can always pull it. A floating tag is what turned an upstream
+    // distribution change into a CI outage with no pinned known-good to fall back to; a registry we do not
+    // control turned out to be the same risk one level up.
     private readonly MinioContainer _minio =
-        new MinioBuilder("quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z").Build();
+        new MinioBuilder("ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z").Build();
 
     public S3StorageSettings Settings { get; private set; } = default!;
 
