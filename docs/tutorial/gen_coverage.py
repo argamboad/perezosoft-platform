@@ -107,6 +107,8 @@ RULES: list[tuple[str, str, str]] = [
     ("*.pdf", "META", "generated QA guides"),
     (".claude/*", "META", "assistant config"),
     (".vscode/*", "META", "editor run/debug config — not part of the rebuilt app"),
+    ("tools/dev-profiles.ps1", "META", "editor tooling: writes the gitignored VS/VS Code start profiles for this clone, not part of the rebuilt app"),
+    ("tools/android-emulator.ps1", "META", "editor tooling: boots an AVD on a fixed port for the VS Code Android profiles"),
     ("tools/publish-native.ps1", "META", "maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed"),
     ("tools/e2e.ps1", "3.6", "runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)"),
     ("tools/telemetry.ps1", "META", "maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)"),
