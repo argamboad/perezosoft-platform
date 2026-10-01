@@ -1095,9 +1095,8 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (253 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (254 files)
 
-- `.vscode/launch.json` — editor run/debug config — not part of the rebuilt app
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
 - `CONTRIBUTING.md` — docs
@@ -1347,8 +1346,10 @@
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/files/base.md` — docs
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/files/docs/QA_TEST_PLAN.md` — docs
 - `tests/ci-logic/run.py` — authoring tooling
+- `tools/android-emulator.ps1` — editor tooling: boots an AVD on a fixed port for the VS Code Android profiles
+- `tools/dev-profiles.ps1` — editor tooling: writes the gitignored VS/VS Code start profiles for this clone, not part of the rebuilt app
 - `tools/protect-branches.ps1` — maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1184 tracked files · 820 built in lessons · 364 bucketed · 0 unmapped
+**Totals:** 1185 tracked files · 820 built in lessons · 365 bucketed · 0 unmapped
