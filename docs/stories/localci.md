@@ -1,5 +1,9 @@
 # Stories — Local + self-hosted CI (`LOCALCI`)
 
+> **SUPERSEDED 2026-10-02 by ADR-030: GitHub is the forge again.** Forgejo is archived read-only and its
+> runners are stopped; LOCALCI-4 below is history. GitHub CI is disabled until a CI rebuild (PRs: backend +
+> web UI only; device legs and Render deploys: manual *Run workflow* only).
+
 > One file per epic. Makes the finished platform **cheaper to keep green**: the CI gates run on the
 > maintainer's own machines, with GitHub-hosted runners as an always-available fallback you switch back
 > to from repo settings — never with a commit. Design sketch in `docs/PLATFORM_BACKLOG.md` §13; sequenced

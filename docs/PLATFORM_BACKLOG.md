@@ -248,6 +248,9 @@ silently seeing 0 rows (the RLS-2/RLS-8 bug shape).
 
 ## 13. Local + self-hosted CI — `LOCALCI` → **PLANNED (ROADMAP post-terminal wave, 2026-09-08; stories written: `docs/stories/localci.md`)**
 
+> **2026-10-02 — ADR-030: GitHub is the forge again.** Forgejo is archived and its runners stopped; the
+> notes below are history.
+>
 > **2026-09-16 — LOCALCI-4 (ADR-028) changed the shape:** the repo now lives on a self-hosted Forgejo that
 > runs the whole pipeline itself (`.forgejo/workflows/`, R80), so piece (a) below is superseded for this
 > repo. Piece (b) and LOCALCI-3 stand.
