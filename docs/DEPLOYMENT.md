@@ -206,8 +206,9 @@ generated redirect URIs match what you register. Render redeploys on the env cha
 
 ## 6. Continuous deployment (DEPLOY-3, optional)
 
-> **This repo deploys from Forgejo, not from here (ADR-028) — see §10.** The steps below describe the
-> GitHub pipeline, which still works for any clone that lives on GitHub alone.
+> **GitHub is the forge again (ADR-030, 2026-10-02).** Until the CI rebuild, this repo's GitHub `CI`
+> workflow is disabled, so nothing deploys. The rebuild makes staging and prod deploy only from a manual
+> GitHub *Run workflow*; the push-triggered GitHub pipeline below is what it replaces.
 
 By default you deploy by pushing to the branch Render tracks. To instead gate deploys on **green CI** and
 run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.yml`:
@@ -242,9 +243,8 @@ run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.y
    `.github/scripts/deploy-smoke.sh`, so the two cannot drift), behind your approval.
 5. **Postman workspace mirror** (optional, same graceful-skip pattern): secret **`POSTMAN_API_KEY`**
    (Postman → Settings → API keys) + variable **`POSTMAN_WORKSPACE_ID`** let the `postman-sync`
-   workflow push `docs/postman/**` to the Postman workspace whenever GitHub's `develop` moves — which,
-   with Forgejo as the primary forge, is at each deploy. The per-merge sync is the Forgejo copy, with the
-   same secret and variable set in Forgejo (§10) — see `docs/postman/README.md`.
+   workflow push `docs/postman/**` to the Postman workspace whenever GitHub's `develop` moves, i.e. on
+   every merge (ADR-030) — see `docs/postman/README.md`.
 
 ---
 
@@ -456,7 +456,11 @@ Desktop uses a localhost loopback instead and needs nothing.
 
 **iOS / macCatalyst** need a Mac, an Apple developer identity and provisioning — out of scope for this guide.
 
-## 10. Forgejo as the primary forge — CI/CD from the desk (LOCALCI-4, ADR-028)
+## 10. Forgejo as the primary forge — CI/CD from the desk (LOCALCI-4, ADR-028) — RETIRED
+
+> **Retired 2026-10-02 by ADR-030: GitHub is the forge again.** Forgejo's repos are archived read-only
+> and its runners are stopped, so nothing in this section runs. It stays until the CI rebuild deletes
+> `.forgejo/` (R80 holds the two workflow copies together until then). Kept as history.
 
 Day-to-day git lives on a private Forgejo (`origin`); GitHub (`github`) is a mirror you push to on
 purpose. `.forgejo/workflows/ci.yml` runs the same pipeline as GitHub's, on the maintainer's machines.

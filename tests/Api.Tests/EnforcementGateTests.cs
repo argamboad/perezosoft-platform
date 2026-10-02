@@ -813,24 +813,24 @@ public class EnforcementGateTests
     }
 
     [Fact]
-    public void DeployTriggerWording_PostmanSyncNamesTheForge() // v4 audit TR-14 (H9), R117
+    public void DeployTriggerWording_PostmanSyncNamesTheForge() // v4 audit TR-14 (H9), R117; ADR-030
     {
-        // Forgejo is the primary forge (ADR-028): develop moves there on every merge, and GitHub's develop moves
-        // only when a deploy pushes it. So the postman-sync that runs per merge is the .forgejo copy, reading a
-        // secret and a variable set in Forgejo. The README told operators to set them on GitHub only, which leaves
-        // the per-merge sync skipping with a notice forever while the docs say it is set up.
+        // The per-merge postman-sync runs on the forge where develop moves on every merge. Under ADR-028 that
+        // was Forgejo, and the README sent operators to GitHub only, which left the sync skipping forever.
+        // Since ADR-030 GitHub is the forge again: the one-time setup leads with GitHub (the secret and the
+        // variable live there), and the operating manual names GitHub's develop as what drives the sync.
         var root = RepoRoot();
         var readme = File.ReadAllText(Path.Combine(root, "docs", "postman", "README.md")).ReplaceLineEndings("\n");
         var start = readme.IndexOf("**One-time setup**", StringComparison.Ordinal);
         Assert.True(start >= 0, "docs/postman/README.md lost its One-time setup section");
         var setup = readme[start..readme.IndexOf("**Direction is one-way.**", start, StringComparison.Ordinal)];
-        var forgejo = setup.IndexOf("Forgejo", StringComparison.Ordinal);
-        Assert.True(forgejo >= 0, "the Postman one-time setup must say where the Forgejo secret and variable go");
         var github = setup.IndexOf("GitHub", StringComparison.Ordinal);
-        Assert.True(github < 0 || forgejo < github, "the Postman one-time setup must lead with Forgejo, the primary forge");
+        Assert.True(github >= 0, "the Postman one-time setup must say where the GitHub secret and variable go");
+        var forgejo = setup.IndexOf("Forgejo", StringComparison.Ordinal);
+        Assert.True(forgejo < 0 || github < forgejo, "the Postman one-time setup must lead with GitHub, the forge (ADR-030)");
 
         // The operating manual names the forge whose develop changes drive the sync.
-        Assert.Contains("on every Forgejo `develop` change", File.ReadAllText(Path.Combine(root, "CLAUDE.md")).ReplaceLineEndings(" "),
+        Assert.Contains("on every GitHub `develop` change", File.ReadAllText(Path.Combine(root, "CLAUDE.md")).ReplaceLineEndings(" "),
             StringComparison.Ordinal);
 
         // Both workflow copies hardcode the collection path, so a rebrand that renames the files edits both.
