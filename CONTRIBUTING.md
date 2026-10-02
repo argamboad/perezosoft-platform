@@ -65,7 +65,7 @@ When you add a feature, copy `src/Api/Features/Notes` (the DELETE-ME reference s
 The v3 delta audit (post-DEPLOY/NATIVE/RLS/THEME/PREFS epics) consolidated the bar into
 **[`docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md`](docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md)**:
 **R1–R35 carried unchanged from v1.0 + R36–R76** (each tagged `[machine]`/`[review]` with its
-enforcement mechanism) — plus **R80** (Forgejo CI parity), appended 2026-09-16; R77–R79 were never
+enforcement mechanism) — plus **R80** (Forgejo CI parity), appended 2026-09-16 and retired 2026-10-02 (ADR-031); R77–R79 were never
 assigned and are retired. **That file was the Definition of Solid from 2026-07-27 until v3.0 below** (the
 v4 close-out, 2026-10-01); the v2 section above remains as the historical layer it extends. Headline v3
 additions, all machine-enforced on develop: the honest RLS migration-parity gate (R37) + the RLS
@@ -84,8 +84,8 @@ doc-map/QA-count sync (R75) — see `tests/Api.Tests/EnforcementGateTests.cs` fo
 
 The v4 delta audit (post-Forgejo/GATES/JOBS-4 — `docs/audits/v4-2026-09/`) consolidated the bar into
 **[`docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md`](docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md)**:
-**R1–R35 (v1.0) + R36–R76 and R80 (v2.0) carried, amended only as its §1 states, + R81–R158** with
-**R77–R79, R94 and R156 retired** (a retired number is never reused). **That file is the Definition of
+**R1–R35 (v1.0) + R36–R76 (v2.0) carried, amended only as its §1 states, + R81–R158** with
+**R77–R80, R94, R138 and R156 retired** (a retired number is never reused). **That file is the Definition of
 Solid** — read it before writing or modifying code; the two sections above are the historical layers it
 extends. Every `[machine]` rule names its standing check in
 [`tests/Api.Tests/RulesEnforcement.cs`](tests/Api.Tests/RulesEnforcement.cs) — or the tracker issue that
@@ -93,8 +93,8 @@ still owes it — and `EnforcementGateTests.EveryMachineRule_NamesAStandingCheck
 Headline v4 additions, all enforced on develop: the refresh-grace is one-shot and the rotation is one
 transaction serialized against revoke-all (R81, ADR-002 addenda), outbox attempt accounting is durable at
 the claim and payloads are scrubbed when a row leaves `Pending` (R90/R91/R131), outbound webhooks never
-follow a redirect and pin their connection (R130), the Forgejo pipeline is a held copy of GitHub's with
-its deploy a dispatch (R80/R98), every CI verdict block runs against fixtures (R136), Release builds are
+follow a redirect and pin their connection (R130), deploys are a manual dispatch behind every gate and no
+checkout keeps the job token (R98, ADR-031), every CI verdict block runs against fixtures (R136), Release builds are
 guarded in one `.targets` and CI verifies the APK signature (R103/R141), E2E boots retry only network
 deaths with a per-shard allowance (R109), the course's coverage map and quoted code are checked on every
 push (R114/R115), cited rule ids are final (R116), and the add-a-slice checklist is held to the gates

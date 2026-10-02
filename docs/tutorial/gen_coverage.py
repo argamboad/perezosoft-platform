@@ -113,7 +113,6 @@ RULES: list[tuple[str, str, str]] = [
     ("tools/publish-native.ps1", "META", "maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed"),
     ("tools/e2e.ps1", "3.6", "runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)"),
     ("tools/telemetry.ps1", "META", "maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)"),
-    ("tools/protect-branches.ps1", "META", "maintainer repo-setup tooling (NEW_APP_GUIDE Phase 2): branch protection on GitHub, not part of the rebuilt app"),
 
     # ---- Part 0 ----
     (".gitignore", "0.2", ""),
@@ -128,7 +127,7 @@ RULES: list[tuple[str, str, str]] = [
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
-    ("tests/Api.Tests/ForgejoCiParityTests.cs", "8.3", "the Forgejo workflow copy cannot drift from the GitHub one; pins deploy.yml's guard + dispatch-only trigger (LOCALCI-4: R80, ADR-028)"),
+    ("tests/Api.Tests/CiWorkflowTests.cs", "8.3", "the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)"),
     ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),
     ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)"),
     ("tests/Api.Tests/RulesEnforcement.cs", "1.4", "the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)"),
@@ -522,9 +521,7 @@ RULES: list[tuple[str, str, str]] = [
     (".github/workflows/ci.yml", "1.6", "born here (build+test+secret/license gates); every part adds jobs — e2e 3.6, docker 8.2, deploy 8.3, native A.1"),
     (".github/forbidden-licenses.json", "1.6", "copyleft ban (R26)"),
     (".github/*", "8.3", ""),
-    (".forgejo/workflows/ci.yml", "8.3", "the same pipeline on the self-hosted Forgejo — a held copy of the GitHub one (LOCALCI-4, ADR-028, R80)"),
-    ("tests/ci-logic/*", "8.3", "CI's own verdict logic (classifier, QA guard, sharding, reports, mirror push) run for real against fixtures (v4 T8)"),
-    (".forgejo/*", "8.3", "Forgejo copies + the push-to-GitHub deploy step (LOCALCI-4)"),
+    ("tests/ci-logic/*", "8.3", "CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)"),
 
     ("render.yaml", "8.2", "Render blueprint (ADR-017)"),
 

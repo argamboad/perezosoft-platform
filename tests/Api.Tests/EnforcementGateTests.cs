@@ -70,9 +70,8 @@ public class EnforcementGateTests
         Assert.Matches(@"mkdir -p [^\n]*/app/storage", beforeUser);
         Assert.Matches(@"chown [^\n]*app:app [^\n]*/app/storage", beforeUser);
 
-        // CI proves it on the built image, in both workflow copies (R80 keeps them together).
-        foreach (var workflow in new[] { Path.Combine(".github", "workflows", "ci.yml"), Path.Combine(".forgejo", "workflows", "ci.yml") })
-            Assert.Contains("/app/storage/.write-probe", File.ReadAllText(Path.Combine(RepoRoot(), workflow)));
+        // CI proves it on the built image.
+        Assert.Contains("/app/storage/.write-probe", File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml")));
     }
 
     [Fact]
@@ -115,9 +114,8 @@ public class EnforcementGateTests
         Assert.True(libDiff.Count == 0, "src/Web/wwwroot/lib and src/Maui/wwwroot/lib differ — vendor the same files into both: " + string.Join(", ", libDiff));
     }
 
-    [Theory] // LOCALCI-4: the Forgejo copy (R80) is held to the same gate
+    [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void EveryCiJob_EitherGatesOnChanges_OrIsOnTheAlwaysRunList(string workflow) // LOCALCI-3
     {
         // The point of the paths gate is that a docs-only push stops billing thirty minutes for
@@ -130,16 +128,15 @@ public class EnforcementGateTests
         //                  it, so gating it on code would switch it off for precisely the change it
         //                  exists to catch.
         //   changes      — it is the gate.
-        //   deploy-*     — they gate transitively, through the jobs they need.
-        //   mac         — LOCALCI-4, Forgejo only: a seconds-long probe asking whether the MacBook is
-        //                 awake, so the Apple jobs can skip instead of queueing. It gates nothing itself.
-        string[] alwaysRun = ["changes", "secret-scan", "qa-artifacts", "deploy-staging", "deploy-prod", "mac"];
+        //   deploy-*     — they gate transitively, through the jobs they need (ADR-031: dispatch only).
+        // (Since ADR-031 secret-scan and qa-artifacts do read `changes` — its run plan — but never its `code`.)
+        string[] alwaysRun = ["changes", "secret-scan", "qa-artifacts", "deploy-staging", "deploy-prod"];
 
         var ci = File.ReadAllLines(Path.Combine(RepoRoot(), workflow));
 
         // Job blocks are the two-space keys under `jobs:`; a block runs to the next such key. Start
-        // AFTER `jobs:` — the trigger list above it uses the same indentation, so `push` and
-        // `schedule` otherwise read as jobs with no gate.
+        // AFTER `jobs:` — the trigger list above it uses the same indentation, so `pull_request` and
+        // `workflow_dispatch` otherwise read as jobs with no gate.
         var jobsAt = Array.FindIndex(ci, l => l.TrimEnd() == "jobs:");
         Assert.True(jobsAt >= 0, "could not find the `jobs:` key in ci.yml");
 
@@ -173,7 +170,6 @@ public class EnforcementGateTests
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void MarkdownAnywhere_IsNeverCodeOrNative(string workflow) // LOCALCI-3 follow-up
     {
         // A docs-only pull request that touched tests/E2E.Tests/README.md billed the FULL run — build,
@@ -206,7 +202,6 @@ public class EnforcementGateTests
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void Classifier_CountsEveryFileAGateReads_AsCode(string workflow) // v4 DEP-15 (R97)
     {
         // One positive per file class the old regex missed: a PR touching only one of these skipped build-test (and
@@ -214,27 +209,24 @@ public class EnforcementGateTests
         var (Code, _, _) = ClassifierOf(workflow);
         foreach (var path in new[]
                  {
-                     ".forgejo/scripts/push-to-github.sh", ".forgejo/workflows/deploy.yml", ".forgejo/workflows/postman-sync.yml",
-                     ".github/workflows/postman-sync.yml", ".github/forbidden-licenses.json", ".dockerignore", "docs/DEPLOYMENT.md",
-                     ".env.example", "tools/protect-branches.ps1", "Perezosoft.slnx", "tools/e2e.ps1", "docs/postman/Perezosoft.postman_collection.json",
+                     ".github/workflows/postman-sync.yml", ".github/scripts/deploy-smoke.sh", ".github/forbidden-licenses.json", ".dockerignore",
+                     "docs/DEPLOYMENT.md", ".env.example", "Perezosoft.slnx", "tools/e2e.ps1", "docs/postman/Perezosoft.postman_collection.json",
                  })
             Assert.True(Code(path), $"{workflow}: {path} is read by a gate, so a change to it must run the gates");
     }
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void NativeClassifier_CoversEveryNativeInput(string workflow) // v4 NAT-16 / S0-G6 (R106)
     {
         var (_, Native, _) = ClassifierOf(workflow);
         foreach (var path in new[] { "Directory.Build.props", "Directory.Packages.props", "global.json", "tools/publish-native.ps1",
-                                     "src/Maui/MauiProgram.cs", ".github/workflows/ci.yml", ".forgejo/workflows/ci.yml" })
+                                     "src/Maui/MauiProgram.cs", ".github/workflows/ci.yml" })
             Assert.True(Native(path), $"{workflow}: {path} can break a native build, so it must run the native legs");
     }
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void Classifier_FailsOpen_OnEveryOutput(string workflow) // v4 LB-DEP-9 (R143)
     {
         // The unknown-diff-base branch exists to run everything; an output it leaves false is a job it quietly skips.
@@ -251,7 +243,6 @@ public class EnforcementGateTests
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void EveryRepoFileTheTestsRead_ClassifiesAsCode(string workflow) // v4 DEP-15 / TB-DOC-7 (R97)
     {
         // Reflective: every string literal (and every Path.Combine join) in this test project that names an existing
@@ -309,7 +300,6 @@ public class EnforcementGateTests
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void BootRetryBudget_IsOneNumber_InTheSuiteAndTheSlowestJourneysStep(string workflow)
     {
         // The suite stops at DeadBootsPerRun dead boots per process; the "Slowest journeys" step reads the same
@@ -418,10 +408,9 @@ public class EnforcementGateTests
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void ReleaseLeg_BuildsRelease_VerifiesV2OrV3_AndProvesTheGuardFires(string workflow)
     {
-        // The only MAUI Release build CI runs: on demand and on the Monday schedule (never per push).
+        // The only MAUI Release build CI runs: a device leg, only when a "Run workflow" asks for android (ADR-031).
         var ci = File.ReadAllText(Path.Combine(RepoRoot(), workflow));
         var job = ci[ci.IndexOf("\n  native-release-android:", StringComparison.Ordinal)..];
         job = job[..(job.IndexOf("\n  # ", StringComparison.Ordinal) is var n and > 0 ? n : job.Length)];
@@ -430,6 +419,7 @@ public class EnforcementGateTests
         Assert.Contains("Verified using v[23]", job);
         Assert.Contains("ApiBaseUrl-less Release build must fail", job);
         Assert.DoesNotContain("github.event_name == 'push'", job);
+        Assert.Contains("if: needs.changes.outputs.android == 'true'", job);
     }
 
     private static IEnumerable<string> TestReadFiles()
@@ -493,7 +483,6 @@ public class EnforcementGateTests
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void TheTwoGatesThatCatchDocsMistakes_AreNeverCodeGated(string workflow) // LOCALCI-3
     {
         // Stated separately from the test above because it is the opposite failure: not "someone
@@ -507,6 +496,7 @@ public class EnforcementGateTests
             var block = Regex.Match(ci, $@"(?ms)^  {Regex.Escape(job)}:\s*$.*?(?=^  [a-z][a-z0-9-]*:\s*$)");
             Assert.True(block.Success, $"{job} not found in {workflow}");
             Assert.DoesNotContain("needs.changes.outputs.code", block.Value, StringComparison.Ordinal);
+            Assert.DoesNotContain("needs.changes.outputs.web", block.Value, StringComparison.Ordinal);
         }
     }
 
@@ -591,28 +581,6 @@ public class EnforcementGateTests
     }
 
     [Fact]
-    public void ProtectBranchesScript_ProtectsTheForgejoBranches_AndFailsLoud() // v4 audit DEP-13 (H1), R98/R140
-    {
-        // Forgejo is the primary forge (ADR-028) and its develop/main were unprotected: the script only knew
-        // GitHub, where a private repo on the free plan cannot be protected at all, and it printed FAILED and
-        // still exited 0 — so running it looked like success.
-        var script = File.ReadAllText(Path.Combine(RepoRoot(), "tools", "protect-branches.ps1")).ReplaceLineEndings("\n");
-
-        Assert.StartsWith("#Requires -Version 7", script, StringComparison.Ordinal); // Windows PowerShell 5.1 misparses it
-        Assert.Contains("/branch_protections", script, StringComparison.Ordinal);    // the Forgejo API
-        Assert.Contains("push_whitelist_usernames", script, StringComparison.Ordinal); // the CI job token is not on it
-        Assert.Contains("apply_to_admins", script, StringComparison.Ordinal);
-        Assert.Contains("exit 1", script, StringComparison.Ordinal);
-        // A failure may not just print and return (the old script's exit-0 bug): every FAILED line goes through
-        // the one helper that records it, and the script ends by exiting 1 when anything was recorded.
-        Assert.Contains("$script:failed = $true", script, StringComparison.Ordinal);
-        Assert.All(script.Split('\n').Where(l => l.Contains("FAILED", StringComparison.Ordinal)),
-            line => Assert.Contains("Fail ", line, StringComparison.Ordinal));
-        Assert.Contains("if ($script:failed) { exit 1 }", script, StringComparison.Ordinal);
-        Assert.True(script.All(c => c < 128), "keep the script ASCII — Windows PowerShell reads a BOM-less file as cp1252");
-    }
-
-    [Fact]
     public void EveryMachineRule_NamesAStandingCheck() // v4 audit T67, R116
     {
         // A rule labelled [machine] that nothing enforces is a rule on paper; the audit found v3 fixes marked done
@@ -632,7 +600,7 @@ public class EnforcementGateTests
         var stale = listed.Except(machine).ToList();
         Assert.True(stale.Count == 0, "manifest entries for rules that are not [machine] in v3.0: " + string.Join(", ", stale));
 
-        // Every named check resolves: a test method or class under tests/, or a step present in BOTH workflow copies.
+        // Every named check resolves: a test method or class under tests/, or a step in ci.yml.
         var tests = Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
             .Select(File.ReadAllText).ToList();
@@ -642,9 +610,8 @@ public class EnforcementGateTests
             foreach (Match m in Regex.Matches(text, @"\b(?:Task|void)(?:<[^>]+>)?\s+([A-Za-z0-9_]+)\s*\(")) symbols.Add(m.Groups[1].Value);
             foreach (Match m in Regex.Matches(text, @"\bclass\s+([A-Za-z0-9_]+)")) symbols.Add(m.Groups[1].Value);
         }
-        var steps = new[] { ".github/workflows/ci.yml", ".forgejo/workflows/ci.yml" }
-            .Select(w => Regex.Matches(File.ReadAllText(Path.Combine(root, w)), @"- name: ([^\r\n]+)").Select(m => m.Groups[1].Value.Trim()).ToHashSet())
-            .Aggregate((a, b) => a.Intersect(b).ToHashSet());
+        var steps = Regex.Matches(File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml")), @"- name: ([^\r\n]+)")
+            .Select(m => m.Groups[1].Value.Trim()).ToHashSet();
         var unresolved = new List<string>();
         foreach (var entry in RulesEnforcement.Manifest)
         {
@@ -656,7 +623,7 @@ public class EnforcementGateTests
                 if (!ok) unresolved.Add($"{entry.Rule} -> {check}");
             }
         }
-        Assert.True(unresolved.Count == 0, "manifest names checks that do not exist (renamed? not in both workflow copies?):\n" + string.Join("\n", unresolved));
+        Assert.True(unresolved.Count == 0, "manifest names checks that do not exist (renamed? not in ci.yml?):\n" + string.Join("\n", unresolved));
     }
 
     [Fact]
@@ -761,7 +728,6 @@ public class EnforcementGateTests
 
     [Theory]
     [InlineData(".github/workflows/ci.yml")]
-    [InlineData(".forgejo/workflows/ci.yml")]
     public void CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts(string workflow) // v4 audit TR-19/TR-12 (T61), R114/R115
     {
         // gen_coverage.py only ran when someone remembered to; the map claimed 901 files and 0 unmapped while the
@@ -833,10 +799,9 @@ public class EnforcementGateTests
         Assert.Contains("on every GitHub `develop` change", File.ReadAllText(Path.Combine(root, "CLAUDE.md")).ReplaceLineEndings(" "),
             StringComparison.Ordinal);
 
-        // Both workflow copies hardcode the collection path, so a rebrand that renames the files edits both.
+        // The workflow hardcodes the collection path, so a rebrand that renames the files edits it.
         var rebranding = File.ReadAllText(Path.Combine(root, "docs", "REBRANDING.md"));
         Assert.Contains(".github/workflows/postman-sync.yml", rebranding, StringComparison.Ordinal);
-        Assert.Contains(".forgejo/workflows/postman-sync.yml", rebranding, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -874,9 +839,9 @@ public class EnforcementGateTests
     public async Task CiShellLogic_PassesItsFixtures() // v4 T8 (R136)
     {
         // CI's own pass/fail logic (the change classifier, the QA run-log guard, the e2e sharding, the slowest-journeys
-        // report, the mirror push) is shell, awk and Python that no C# test executes. tests/ci-logic/ runs each of
+        // report, the run plan) is shell, awk and Python that no C# test executes. tests/ci-logic/ runs each of
         // them for real against fixtures. It needs the GNU tools the runners have, so it runs on Linux only — and the
-        // build-test job runs on Linux on both forges, so it is never skipped where it counts.
+        // build-test job runs on Linux, so it is never skipped where it counts.
         if (!OperatingSystem.IsLinux()) return;
 
         var run = new System.Diagnostics.ProcessStartInfo("bash", "tests/ci-logic/run.sh")
@@ -906,8 +871,7 @@ public class EnforcementGateTests
             .ToList();
         Assert.NotEmpty(targets);
 
-        var anchored = new[] { ".github", ".forgejo" }
-            .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*", SearchOption.AllDirectories))
+        var anchored = Directory.EnumerateFiles(Path.Combine(root, ".github"), "*", SearchOption.AllDirectories)
             .SelectMany(f => Regex.Matches(File.ReadAllText(f), @"# ci-logic begin: ([\w-]+)")
                 .Select(m => (Block: m.Groups[1].Value, File: Path.GetRelativePath(root, f).Replace('\\', '/'))))
             .ToList();

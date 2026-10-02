@@ -74,26 +74,11 @@ Two traps the first downstream app fell into, so the conceptualization avoids th
    (ADR-C11 amendment); cite those as `ADR-…`/`ADR-C…`.
 4. Create the two branches: **`main` is deploy-only** (nothing lands there except release merges),
    **`develop` is the working branch** — one branch + PR per slice.
-5. Push. **CI runs immediately and should be green** (build, ~500 tests, secret/license/QA-doc
-   gates, native builds, browser E2E). The deploy jobs stay skipped until Phase 7's secrets exist.
-6. **Protect both branches — every new repo, before the first slice.** *(Pending the CI rebuild, ADR-030:
-   Forgejo is retired, and a private repo on GitHub Free has no branch protection at all — it needs
-   Pro, or a public repo. The steps below are the Forgejo-era ones.)* Once the first CI run has
-   reported, run from PowerShell 7 with a Forgejo token that has admin rights on the repo:
-
-   ```powershell
-   $env:FORGEJO_TOKEN = Get-Content ~/.config/forgejo/token
-   pwsh ./tools/protect-branches.ps1 -Repo <owner>/<app>
-   ```
-
-   On **Forgejo** (the primary forge, ADR-028) `develop` and `main` then refuse force pushes and deletion,
-   accept pushes only from the owner — so the CI job token, which Forgejo gives write access, cannot push to
-   them — and merge a pull request only when every gate job is green (a skipped job counts as passed, so a
-   docs-only PR still merges). The rules bind admins too. **CI checks this on every run**: the `changes` job
-   fails while either branch is unprotected (v4 audit DEP-13/DEP-14). `-Forge github` (or `both`) also
-   protects the GitHub mirror — a **private** GitHub repo needs Pro for that, and the script exits 1 on the
-   403 rather than failing silently. On GitHub list only checks the repo's CI actually reports on pull
-   requests, matrix legs by their reported name: a required check that never reports blocks every merge.
+5. Open a pull request (a push alone runs nothing — ADR-031). **Its CI run should be green** (build,
+   ~500 tests, secret/license/QA-doc gates, browser E2E). The device legs (MAUI builds + native smokes)
+   run from *Run workflow* → `devices`; deploys from *Run workflow* → `deploy`, once Phase 7's secrets exist.
+6. **No branch protection** (ADR-031): a private repo on GitHub Free has none, and the template does not ask
+   for it. Wait for a pull request's run to finish green before merging it.
 
 ## Phase 3 — Rebrand + fill the placeholders (first Claude Code session)
 
@@ -195,7 +180,7 @@ The rhythm, per `docs/WAYS_OF_WORKING.md`:
 3. Copy **`src/Api/Features/Notes`** as the reference slice shape; **delete the Notes sample**
    when your first real feature lands.
 4. CI gates every PR; once Phase 7 is done, a manual GitHub *Run workflow* with `deploy=staging` deploys
-   `develop` to staging (ADR-030; until the CI rebuild, today's GitHub pipeline auto-deploys it on merge).
+   `develop` to staging (ADR-031).
 
 Scope discipline: before building anything, check the OUT list in `PROJECT_BRIEF.md`.
 
@@ -210,9 +195,8 @@ Follow **`docs/DEPLOYMENT.md`** top to bottom — it's the runbook. The order an
 4. **§4 Render** — apply `render.yaml` as a Blueprint, paste the secrets from 1–3, deploy.
 5. **§5 OAuth (optional)** — register your staging domain with Google/Microsoft, add the client
    id/secret env vars. One provider console entry per domain.
-6. **§6 CI deploy** — the **`RENDER_DEPLOY_HOOK_STAGING`** secret on GitHub; after the CI rebuild
-   (ADR-030) a manual *Run workflow* with `deploy=staging` deploys `develop` and runs the version-gated
-   smoke. Until then, today's GitHub pipeline makes every merge to `develop` auto-deploy staging (§6).
+6. **§6 CI deploy** — the **`RENDER_DEPLOY_HOOK_STAGING`** secret on GitHub; a manual *Run workflow* with `deploy=staging` deploys `develop` and runs the version-gated
+   smoke (§6, ADR-031).
 
 ⚠️ **Verify you are pointed at YOUR database — a green health check does not prove it.** Every app
 from this platform shares the same base schema, so if a connection string names *another* app's

@@ -72,13 +72,12 @@ public static class RulesEnforcement
 
         // ── 6. Deploy / CI / supply-chain ──
         new("R97", ["EveryRepoFileTheTestsRead_ClassifiesAsCode", "Classifier_CountsEveryFileAGateReads_AsCode"]),
-        new("R98", ["EveryCheckout_LeavesNoTokenBehind", "ForgejoCi_RefusesToRunWhileItsBranchesAreUnprotected", "ProtectBranchesScript_ProtectsTheForgejoBranches_AndFailsLoud"]),
+        new("R98", ["EveryCheckout_LeavesNoTokenBehind"]),
         new("R99", ["EveryContainerImage_IsPinned_NotFloating"], Pending: "perezosoft-platform#39 (T16: widen to workflow services:/docker run and Dockerfile FROM)"),
         new("R136", ["CiShellLogic_PassesItsFixtures", "CiShellLogic_EveryAnchoredBlockIsATarget_WithCases"]),
-        new("R137", ["ChangedFileLists_AreByteSafe_InBothCopies"]),
-        new("R138", ["AlreadyGreenDeploy_ExpectsCiYmlsOwnMatrixSizes"]),
-        new("R139", ["NativeSmokeProviderProbe_MatchesTheStatusField_InAllFourSites"]),
-        new("R140", ["ProtectBranchesScript_ProtectsTheForgejoBranches_AndFailsLoud", "PublishScript_ThrowsUnlessTheSignatureIsVerified_AndFindsTheSdkThroughAndroidHome"], Pending: "perezosoft-platform#75 (T52: the pwsh harness with fakes)"),
+        new("R137", ["ChangedFileLists_AreByteSafe"]),
+        new("R139", ["NativeSmokeProviderProbe_MatchesTheStatusField_InBothSites"]),
+        new("R140", ["PublishScript_ThrowsUnlessTheSignatureIsVerified_AndFindsTheSdkThroughAndroidHome"], Pending: "perezosoft-platform#75 (T52: the pwsh harness with fakes)"),
         new("R143", ["Classifier_FailsOpen_OnEveryOutput"]),
 
         // ── 7. Native ──

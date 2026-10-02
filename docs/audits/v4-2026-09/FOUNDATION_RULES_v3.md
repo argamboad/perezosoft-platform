@@ -5,6 +5,9 @@
 > v2.0 historical layer.
 > **Range.** R1–R35 (v1.0, `docs/audits/v2-2026-07/FOUNDATION_RULES.md`) and R36–R76 + R80 (v2.0,
 > `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md`) carry forward **unchanged except for the amendments in §1**.
+> **Amended 2026-10-02 by ADR-031:** R80 and R138 retired with `.forgejo/` (GitHub is the only forge again,
+> ADR-030); R98, R137 and R139 now speak of the one workflow; R98 no longer asks for branch protection (a private
+> repo on GitHub Free has none, and none is wanted).
 > This file adds **R81–R158** as finals, with **R77, R78, R79, R94 and R156 retired** (R77–R79: the LOCALCI-1/2
 > reservation is withdrawn — LOCALCI-1 is superseded by LOCALCI-4 and R79's intent is R114; R94 merged into R130;
 > R156 merged into R86). A number, once retired, is never reused. Candidate ids (`-cand`, letter suffixes) never
@@ -34,7 +37,7 @@ check does not exist; the mechanism text below is the intent, the manifest is th
 | R70 [machine] | Per-page floor: **every `src/Shared.Ui/Pages/*.razor` has ≥1 bUnit test**. |
 | R73 [review] | Gate-state proof is owned by bUnit (both states) + one gate-off E2E lane (**R147**); a gate-on E2E suite does not satisfy it. |
 | R75 [machine] | "…covers C# reads (`IConfiguration`, `GetEnvironmentVariable`, flat indexers — R95, `SectionName` consts — R153); deploy-time YAML keys are a DEPLOYMENT §10 review item (R100)"; the QA run-log clause is **unverified on Forgejo** until the `guard=ran/skipped` marker lands (C18). |
-| R80 [machine] | Unchanged; note: the parity test's XML summary said "deploy/* branches" — corrected in B9. |
+| R80 [retired] | Retired 2026-10-02 (ADR-031): `.forgejo/` was removed, so there is no second workflow copy to hold together. |
 | R15 | Clock-injection scan widened to `src/Shared.Ui` (**R148**). |
 
 ## 2. Auth / session (Critical/High)
@@ -85,14 +88,14 @@ check does not exist; the mechanism text below is the intent, the manifest is th
 
 ## 6. Deploy / CI / supply-chain
 - **R97 [machine]** — The change classifier is safe-by-default: every path an arch test or CI gate reads is `code`; docs only by explicit allowlist. — positives + reflective read-path test. — DEP-15.
-- **R98 [machine]** — On a forge that ignores `permissions:` the job token is treated as write: `persist-credentials: false` on every checkout unless allowlisted with a reason; no token to third-party code; `develop`/`main` carry branch protection on that forge (asserted by a `changes`-job read of `/branch_protections`); the protection script covers both forges and exits non-zero on failure. — `ForgejoCiParityTests` + CI step. — DEP-13/14/27.
+- **R98 [machine]** — No checkout leaves the job token behind: `persist-credentials: false` on every checkout unless allowlisted with a reason; no token to third-party code. (Amended by ADR-031: the branch-protection clause and the Forgejo protection script are retired — private repos on GitHub Free have no branch protection, by decision.)
 - **R99 [machine]** — Every container image reference (Testcontainers, compose, workflow `services:`/`docker run`, Dockerfile `FROM`) carries at least `major.minor` or a digest. — widened image-pin gate. — DEP-18.
 - **R100 [review]** — Operator procedures in `DEPLOYMENT.md` are executable by the scripts they name; runbook numbers are stated once. — PR checkbox + knobs test. — DEP-16/25.
 - **R101 [review]** — A deploy push to a mirror never silently buys paid runner minutes: the mirror's Apple legs/smokes sit behind a `vars.` knob; "public/free" cost claims re-verified on visibility change. — DEP-17.
 - **R136 [machine]** — Every CI step computing a verdict in shell/jq/PowerShell/python/JS has a fixture case in `tests/ci-logic/` that runs the **committed text** on the Linux `build-test` leg; the verdict-step inventory equals the fixture set. — `CiShellLogic_PassesItsFixtures`. — LB-DEP-1/3/4/5/6/7/9/10.
-- **R137 [machine]** — Path classification is byte-safe: `git -c core.quotePath=false diff --name-only` (or `-z`) in both copies, with a non-ASCII fixture. — LB-DEP-2.
-- **R138 [machine]** — Matrix completeness is derived: the already-green deploy refuses any non-success task under a matrix prefix (`success|skipped` for smokes), takes the newest task per job, and expected leg counts are parsed from `ci.yml` (refines R98). — TB-DEP-3/10. — LB-DEP-3, DEP-19.
-- **R139 [machine]** — Log-grep verdicts match the status **field** (`providers - 200 - `) in all four probe sites. — TB-DEP-6. — LB-DEP-4.
+- **R137 [machine]** — Path classification is byte-safe: `git -c core.quotePath=false diff --name-only` (or `-z`) in the workflow, with a non-ASCII fixture. — LB-DEP-2.
+- **R138 [retired]** — Retired 2026-10-02 (ADR-031) with the Forgejo already-green deploy it governed. Was: Matrix completeness is derived: the already-green deploy refuses any non-success task under a matrix prefix (`success|skipped` for smokes), takes the newest task per job, and expected leg counts are parsed from `ci.yml` (refines R98). — TB-DEP-3/10. — LB-DEP-3, DEP-19.
+- **R139 [machine]** — Log-grep verdicts match the status **field** (`providers - 200 - `) in both probe sites (bash + PowerShell). — TB-DEP-6. — LB-DEP-4.
 - **R140 [machine]** — Operator PowerShell under `tools/`: `#Requires -Version 7.0`, ASCII or BOM UTF-8, `$ErrorActionPreference='Stop'`, non-zero exit on every failure path; pwsh harness with fakes. — TB-DEP-9. — LB-DEP-8, DEP-13.
 - **R143 [machine]** — The classifier's fail-open branch sets every output permissive. — TB-DEP-4. — LB-DEP-9.
 
@@ -139,4 +142,4 @@ reconciled in the same PR (R114/R115); run log append-only.
 
 ---
 *R1–R35 (v1.0) + R36–R76, R80 (v2.0, amended §1) + R81–R158 minus {R94, R156} (v4) = FOUNDATION_RULES v3.0.
-Retired numbers: R77, R78, R79, R94, R156.*
+Retired numbers: R77, R78, R79, R80, R94, R138, R156.*
