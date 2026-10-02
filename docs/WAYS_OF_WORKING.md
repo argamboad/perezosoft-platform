@@ -189,19 +189,14 @@ PR title = a Conventional Commit line, ideally referencing the story:
      rotate weekly; an SDK/Xcode rollout can land *between* the branch run and the merge
      (2026-07-14: NU1004 locked-mode restore + an Xcode/workload mismatch, from one SDK patch).
      The fix playbook lives in `CLAUDE.md` → Tech stack.
-  2. **Develop-only jobs** — the Apple builds/smokes run only on develop pushes (the
-     `native-paths` gate; macOS bills 10×), so an Apple-affecting change is first *proven* by the
-     post-merge run. Watch that run to completion; don't stack the next merge onto an unverified
-     one.
-- **Recommended repo setting:** GitHub branch protection on `develop` requiring the `build-test`
-  and `e2e` status checks (Settings → Branches → Add rule, or
-  `gh api repos/{owner}/{repo}/branches/develop/protection`). This makes "merge before CI
-  finishes" impossible at the platform level instead of relying on habit. (Not enabled by
-  default in this template — it needs repo admin and blocks solo-maintainer hotfix pushes to
-  develop, so opt in per deployment.)
-- After merging, `deploy-staging` only runs off a fully green develop run — a red develop
-  silently **freezes staging** at the last good commit, so a broken develop is not a
-  "fix it later" state.
+  2. **Device legs run on request** (ADR-031) — a pull request runs the web gates only; the MAUI builds
+     and native smokes run from *Run workflow* → `devices`. A change that can affect the MAUI app
+     (`src/Maui`, `src/Shared.Ui`, build props, the SDK pin) is not proven by its PR: run the device
+     legs before a release, and now and then.
+- **No branch protection** (ADR-031): the repos are private on GitHub Free, which has none, by decision —
+  so wait for a pull request's run to finish green before merging it.
+- A merge runs nothing; a deploy is a manual *Run workflow* (`deploy` = staging/prod) that re-runs every
+  web gate on that branch first and deploys only if they pass (ADR-031).
 
 ### PR template
 Stored at `.github/pull_request_template.md` (auto-loaded by GitHub). Contents:

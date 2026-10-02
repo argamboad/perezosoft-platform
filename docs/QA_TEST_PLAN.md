@@ -123,12 +123,12 @@ Neon Postgres and Brevo email. Point the browser at the staging URL (e.g.
 - **Billing** uses Stripe **test mode** — exercise webhooks with `stripe trigger …` against the staging
   `/api/billing/webhook`.
 
-**Deploy + smoke gate (ADR-028).** A merge to `develop` deploys nothing. Staging is deployed from **Forgejo** →
-Actions → `ci.yml` → Run workflow with `deploy=staging` (or `deploy.yml` for an already-green commit): the run
-fast-forwards GitHub's `develop`, fires the Render hook, waits for the new build to be live (`/api/version`
-reports the commit) and runs the automated post-deploy smoke (liveness/readiness, SPA shell + deep-link, `/api`
-returns an API-shaped 404, `/api/auth/providers`). A red smoke blocks — so a broken deploy is caught before
-manual QA starts (QA-DEP-01..04). Manual QA on staging complements it (the human-only paths: real email, OAuth,
+**Deploy + smoke gate (ADR-031).** A merge to `develop` deploys nothing. Staging is deployed from **GitHub** →
+Actions → `CI` → *Run workflow* on `develop` with `deploy` = staging: the run re-runs every web gate, and only
+if all pass fires the Render hook, waits for the new build to be live (`/api/version` reports the commit) and
+runs the automated post-deploy smoke (liveness/readiness, SPA shell + deep-link, `/api` returns an API-shaped
+404, `/api/auth/providers`). A red gate or smoke blocks — so a broken deploy is caught before manual QA starts
+(QA-DEP-01..04). Manual QA on staging complements it (the human-only paths: real email, OAuth,
 billing, visual checks).
 
 ---
@@ -1606,16 +1606,13 @@ Full per-feature native regression (every case in §12–13b) is for releases th
 (`src/Maui/**`, the RCL seams: `ICulturePersistence` / `IFileDownloadLauncher` / `AppResumeNotifier`)
 or bumped the .NET/MAUI toolchain.
 
-> **⚠️ The Apple smoke's CI cadence is WEEKLY, not per-push (LOCALCI-3).** `native-smoke-apple` bills
-> 87 minutes on hosted runners, because macOS bills at 10×, so it runs on a Monday 06:00 UTC schedule
-> plus manual dispatch rather than on every develop push. It returns to every-push the moment a
-> self-hosted Mac is configured (`vars.CI_MACOS_RUNNER`), where it is free. The Apple **build**
-> (`native-build-apple`) still runs on every develop push that touches native-relevant paths, so
-> compile rot is still caught within one merge.
+> **⚠️ The native legs run ON REQUEST, never per push (ADR-031).** A pull request runs the web gates only.
+> The MAUI builds and the Windows / Android / Apple smokes run from GitHub → Actions → `CI` → *Run workflow*
+> → `devices` (android / windows / apple / all) — macOS bills at 10× and Windows at 2× on a private repo.
 >
-> **What that means for a release:** the newest Apple smoke result may be up to a week old. Before
-> shipping a native client, trigger the workflow by hand (`workflow_dispatch`) or run the iOS/macOS
-> cases in §13b on a Mac. Do not read a green develop run as a green Apple smoke.
+> **What that means for a release:** a green pull request says nothing about the native apps. Before
+> shipping a native client, run the device legs for that platform (or all) on the commit you ship, or run the
+> iOS/macOS cases in §13b on a Mac.
 
 ---
 
@@ -2454,40 +2451,39 @@ Then the redirect is not followed, and the delivery log records a failure with s
 2. Search the exported log records for `@`. **Expected:** none — records carry user ids only. **Today:** every
    token issue exports `{Email}` as an attribute.
 
-### QA-DEP-01 — Deploy staging from Forgejo 🔴 (Operator)
+### QA-DEP-01 — Deploy staging from GitHub 🔴 (Operator)
 **Gherkin**
 ```gherkin
-Given a green develop commit on Forgejo
-When I run ci.yml with deploy=staging
-Then GitHub's develop fast-forwards to that commit, the Render hook fires, and the version-gated smoke passes
+Given develop on GitHub
+When I run the CI workflow on develop with deploy = staging
+Then every web gate runs, and only when all pass the Render hook fires and the version-gated smoke passes
 ```
 **Walkthrough**
-1. Forgejo → Actions → `ci.yml` → Run workflow on `develop`, input `deploy=staging` (ADR-028; DEPLOYMENT §10).
-2. **Expected:** the run pushes the commit to GitHub `develop` as a plain fast-forward, fires
-   `RENDER_DEPLOY_HOOK_STAGING`, waits until `/api/version` reports the commit and runs the post-deploy smoke
-   green. A merge alone deploys nothing.
+1. GitHub → Actions → `CI` → *Run workflow* on `develop`, `deploy` = staging, `devices` = none (ADR-031;
+   DEPLOYMENT §6).
+2. **Expected:** `build-test`, `secret-scan`, `qa-artifacts`, `license-scan`, `docker-build` and `e2e` run, then
+   `deploy-staging` fires `RENDER_DEPLOY_HOOK_STAGING`, waits until `/api/version` reports the commit and runs the
+   post-deploy smoke green. No device leg runs. A merge alone deploys nothing.
 
-### QA-DEP-02 — "Deploy (already green)" refuses a commit that is not green 🟠 (Operator)
+### QA-DEP-02 — A deploy run on the wrong branch fails loudly 🟠 (Operator)
 **Walkthrough**
-1. Pick a docs-only develop commit (gates skipped) → run `deploy.yml`. **Expected:** refused, naming the
-   skipped gate.
-2. Pick a commit whose run had a red gate → **Expected:** refused.
-3. **⚠️ PENDING remediation** (v4 DEP-19 / LB-DEP-3, task T4): a commit whose selected native smoke went red, or
-   whose e2e matrix grew and one shard failed, is still deployed today — record **Blocked** for this step.
+1. *Run workflow* on `main` with `deploy` = staging. **Expected:** the web gates run, then `deploy-staging` fails
+   at its first step: "staging deploys from develop". Nothing is deployed.
+2. *Run workflow* on `develop` with `deploy` = prod. **Expected:** `deploy-prod` fails the same way ("prod deploys
+   from main").
 
-### QA-DEP-03 — A refused push to GitHub says why 🟢 (Operator)
+### QA-DEP-03 — A red gate blocks the deploy 🟢 (Operator)
 **Walkthrough**
-1. Make GitHub's `develop` one commit ahead of Forgejo's (a throwaway commit pushed straight to GitHub).
-2. Deploy staging from Forgejo. **Expected:** the push is refused and the log says GitHub's develop is **not an
-   ancestor** — reconcile first (`git fetch github && git merge github/develop && git push`). No force push.
-3. Remove the throwaway commit afterwards (reconcile), then re-run QA-DEP-01.
+1. On a throwaway branch off `develop`, break a unit test; run the workflow on that branch with `deploy` = staging.
+   **Expected:** `build-test` is red, `deploy-staging` is skipped, and the Render hook never fires.
+2. Delete the throwaway branch.
 
-### QA-DEP-04 — develop and main are protected on the primary forge 🔴 (Operator)
-**⚠️ PENDING remediation** — v4 DEP-13, task T14 (R98).
+### QA-DEP-04 — The device legs run only when asked for 🟠 (Operator)
 **Walkthrough**
-1. Forgejo → repo Settings → Branches (or `GET /api/v1/repos/argamboad/<repo>/branch_protections`).
-   **Expected:** `develop` and `main` listed: no force-push, no deletion, required status checks.
-   **Today:** empty on all three repos.
+1. Open a pull request that changes `src/Shared.Ui`. **Expected:** only the web gates run — no `native-*` job.
+2. *Run workflow* on `develop` with `deploy` = none, `devices` = android. **Expected:** `native-build` (Android
+   leg only), `native-release-android` and `native-smoke-android` run; no web gate, no Windows or Apple job.
+3. Repeat with `devices` = all before a release (macOS bills 10×). **Expected:** every native job green.
 
 ### QA-SET-09 — A theme saved just before a reload survives the reload 🟠 (Web + Android)
 **Walkthrough**
@@ -2529,7 +2525,7 @@ Then GitHub's develop fast-forwards to that commit, the Render hook fires, and t
 | Billing — quotas (BILLING-5) | **HH-14** (seat limit blocks invite → 402 upgrade message) + `Api.Tests` (`QuotaServiceTests`) | seats (members + pending invites vs `Plan.SeatLimit`) enforced on `POST /api/household/invitations` → 402 `seat_limit_reached`; metered usage via `IQuotaService.TryConsumeAsync` (monthly `UsageCounter`). Limits in `PlanCatalog` (null = unlimited). |
 | Billing — trial/dunning (BILLING-6) | covered by `Api.Tests` (`BillingWebhookHandlerTests`, `SubscriptionLapseSweepJobTests`); manual via Stripe test triggers | webhook transition into `active`/`trialing` from nothing or a lapsed state → owner **"Subscription active"** notification (`billing.activated`, plan + renewal date) once — a renewal or a trial converting is silent; transition into `past_due`/`canceled` → owner **notification** (in-app bell + outbox email, NOTIFY) once; `SubscriptionLapseSweepJob` (6h) nudges the owner once when a paid period lapses without a webhook (`LapseNotifiedAt`). Verify with `stripe trigger invoice.payment_failed` (test mode) → owner sees a billing notification in the bell. |
 | v4 audit — adversarial (§14d) | **ADV-25..35** (⚠️ PENDING remediation — each names its v4 task) | accept-path dissolve, outbox erasure, logout/grace, impersonation expiry, webhook redirects + error codes, billing-off admin comp, expired-invite seats, native bearer scope, exported-log PII |
-| Deploy from the primary forge (ADR-028) | **DEP-01..04** (operator) | Forgejo `ci.yml` `deploy=staging`, `deploy.yml` (already green), `push-to-github.sh` (FF-only), branch protection |
+| Deploys + device legs on request (ADR-031) | **DEP-01..04** (operator) | GitHub `CI` *Run workflow*: `deploy` = staging/prod behind every web gate, branch guards, `devices` = android/windows/apple/all |
 | Regressions (#233, #230) | **SET-09**, **AND-16** | `PUT /api/auth/theme` + remembered preference; native `ApiBaseUrl` normalization |
 | Billing — dissolve cleanup (BILLING-7) | covered by `Api.Tests` (`BillingDissolveTests`) | on tenant dissolve, `BillingDataContributor` wipes the `Subscription` projection **and** enqueues a `"billing.cancel"` outbox message → `IBillingProvider.CancelSubscriptionAsync` (a deleted tenant stops being billed). `HasDataAsync`=false (billing never blocks leaving); export gains a `billing` section (plan/status/period, no Stripe ids). Manual (Stripe test mode): subscribe a throwaway tenant, delete the account, confirm the Stripe subscription is canceled. |
 | Public API + API keys (PUBAPI, **config-gated off**) | **QA-API-01..04** (curl/Postman) + `Api.Tests` (`ApiKeyServiceTests`, `RateLimitingTests`); boot-verified on/off | `PublicApi:Enabled` toggles it. Owner-only `/api/apikeys` (create → raw `pk_…` once, list, revoke; `Permission.ManageApiKeys`); API-key auth scheme mints a `tenant_id`-scoped principal; demo `/api/public/whoami` (read scope) + `/api/public/echo` (write scope) via `.RequireApiScope`. **PUBAPI-2:** per-key rate limit (60/min, isolated per key → 429) + a leak-free public OpenAPI doc at `/api/public/openapi.json` (only the public routes). **Off (default) ⇒ routes 404.** Manual: `PublicApi__Enabled=true`, mint a key, `curl -H "X-Api-Key: pk_…" /api/public/whoami`; fetch `/api/public/openapi.json`. |
@@ -2607,8 +2603,7 @@ Postgres + Mailpit + API + Web stack — so they are continuously regression-gua
 | QA-DSK-01 (desktop boot) | the `native-smoke-windows` job boots the REAL Windows exe as a process-alive + provider-probe canary (WebView2 150 strips CDP under elevation — PRs #170/#171); the OTP journey is CI-driven on Android only. `NativeSmokeTests` remains for local non-elevated runs |
 | QA-AND-01 (Android OTP sign-in) | `tests/native-smoke-android/smoke.js` — the `native-smoke-android` job boots a real emulator and drives the app via playwright-core's `_android` module |
 
-The two native smoke jobs run on develop pushes that touch native-relevant paths (see the
-`native-paths` gate in ci.yml) — they are boot-and-sign-in canaries, not the per-feature native
+The native smoke jobs run from *Run workflow* → `devices` (ADR-031) — they are boot-and-sign-in canaries, not the per-feature native
 regression, which stays manual (§12–13b). All other cases remain manual-only or API-test-backed as
 noted per row.
 
@@ -2667,9 +2662,9 @@ cases now expects **Pass** on re-run.
 | QA-ADV-34 | Android/Desktop | Blocked | | | | Expected Blocked until v4 T49 (NAT-12) lands |
 | QA-ADV-35 | Ops | Blocked | | | | Expected Blocked until v4 T41 (OBS-1) lands |
 | QA-DEP-01 | Operator | | | | | |
-| QA-DEP-02 | Operator | | | | | Step 3 Blocked until v4 T4 (DEP-19) |
+| QA-DEP-02 | Operator | | | | | |
 | QA-DEP-03 | Operator | | | | | |
-| QA-DEP-04 | Operator | Blocked | | | | Expected Blocked until v4 T14 (DEP-13) |
+| QA-DEP-04 | Operator | | | | | |
 | QA-SET-09 | Web + Android | | | | | |
 | QA-AND-16 | Android | | | | | |
 
@@ -3007,3 +3002,8 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   task that flips it), four operator drills **QA-DEP-01..04** for the primary-forge deploy (DEP-02 step 3 and
   DEP-04 Blocked), and two regressions **QA-SET-09** (#233 theme save across a reload) and **QA-AND-16** (#230
   trailing-slash API base). 156 → 173 cases.
+- **Updated 2026-10-02** — **CI on billed minutes (ADR-031).** GitHub is the only forge again (ADR-030). A pull
+  request runs the web gates only; the MAUI builds and native smokes run from *Run workflow* → `devices`; deploys
+  run from *Run workflow* → `deploy` behind every web gate. QA-DEP-01..04 rewritten for that (deploy from GitHub,
+  wrong-branch guard, red gate blocks, device legs on request); the Apple-cadence note became the device-legs
+  note.

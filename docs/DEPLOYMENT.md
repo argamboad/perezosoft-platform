@@ -206,11 +206,11 @@ generated redirect URIs match what you register. Render redeploys on the env cha
 
 ## 6. Continuous deployment (DEPLOY-3, optional)
 
-> **GitHub is the forge again (ADR-030, 2026-10-02).** Until the CI rebuild, this repo's GitHub `CI`
-> workflow is disabled, so nothing deploys. The rebuild makes staging and prod deploy only from a manual
-> GitHub *Run workflow*; the push-triggered GitHub pipeline below is what it replaces.
+> **Deploys are manual (ADR-031).** Nothing deploys on a push or a merge: you run the `CI` workflow by hand
+> (Actions → CI → *Run workflow*) with **`deploy` = staging** on `develop` or **`deploy` = prod** on `main`.
+> That run re-runs every web gate on the branch and deploys only if they all pass.
 
-By default you deploy by pushing to the branch Render tracks. To instead gate deploys on **green CI** and
+Render can also deploy on every push to the branch it tracks. To instead gate deploys on **green CI** and
 run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.yml`:
 
 1. In Render → your staging service → **Settings → Deploy Hook**, copy the hook URL, and **turn off
@@ -222,25 +222,23 @@ run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.y
    > **Set them together — the hook without the base URL now FAILS the run** (v3 audit DEP-6). The hook is
    > what fires the deploy; the base URL is what verifies it. Previously a hook-without-URL deployed for
    > real and reported green having asserted nothing. Configure both, or neither.
-3. Now a push to `develop` that passes every CI gate triggers the deploy, **waits for the new build to
-   actually be live** (polls `/api/version` until it reports the pushed commit — the old instance keeps
+3. Now a *Run workflow* on `develop` with `deploy` = staging runs every web gate, triggers the deploy, **waits
+   for the new build to actually be live** (polls `/api/version` until it reports the pushed commit — the old instance keeps
    serving during Render's build), then smoke-tests the live URL (liveness/readiness, SPA shell +
    deep-link, `/api/*` → 404, `/api/auth/providers`). A red smoke fails the run. Until the secret +
-   variable exist, the `deploy-staging` job logs a notice and passes. **Two merges in quick succession:**
-   Render builds the branch head, so the first push may never appear at `/api/version`; the smoke then
+   variable exist, the `deploy-staging` job logs a notice and passes. **Two deploy runs in quick succession:**
+   Render builds the branch head, so the first one may never appear at `/api/version`; the smoke then
    accepts a live commit that *contains* the expected one (GitHub compare API, `GH_TOKEN` is the
    workflow token) and verifies that build instead — no spurious red, no unverified deploy.
-4. **Prod** (when you have a prod service) — all three, and the reviewer is the actual gate:
-   - Create a **`production`** GitHub Environment (repo Settings → Environments) and add a **required
-     reviewer**. ⚠️ **Do not skip this.** The `deploy-prod` job names the environment, but the *approval*
-     lives only in repo settings — it cannot be committed. A clone that adds the hook without the reviewer
-     gets **un-gated auto-deploy to prod on every `main` push on GitHub** (v3 audit DEP-7).
+4. **Prod** (when you have a prod service) — a *Run workflow* on `main` with `deploy` = prod, behind every web
+   gate. Choosing it is the approval: a private repo on GitHub Free has no Environment reviewers (ADR-031),
+   and nothing deploys prod on a push (v3 audit DEP-7).
    - Secret **`RENDER_DEPLOY_HOOK_PROD`** = the prod deploy hook URL.
    - Variable **`PROD_BASE_URL`** = the prod service URL. Same pairing rule as staging: hook without base
      URL fails the run rather than shipping unverified.
 
    Prod then runs the **same** version-gated smoke as staging (they share
-   `.github/scripts/deploy-smoke.sh`, so the two cannot drift), behind your approval.
+   `.github/scripts/deploy-smoke.sh`, so the two cannot drift).
 5. **Postman workspace mirror** (optional, same graceful-skip pattern): secret **`POSTMAN_API_KEY`**
    (Postman → Settings → API keys) + variable **`POSTMAN_WORKSPACE_ID`** let the `postman-sync`
    workflow push `docs/postman/**` to the Postman workspace whenever GitHub's `develop` moves, i.e. on
@@ -456,137 +454,11 @@ Desktop uses a localhost loopback instead and needs nothing.
 
 **iOS / macCatalyst** need a Mac, an Apple developer identity and provisioning — out of scope for this guide.
 
-## 10. Forgejo as the primary forge — CI/CD from the desk (LOCALCI-4, ADR-028) — RETIRED
+## 10. Forgejo — retired
 
-> **Retired 2026-10-02 by ADR-030: GitHub is the forge again.** Forgejo's repos are archived read-only
-> and its runners are stopped, so nothing in this section runs. It stays until the CI rebuild deletes
-> `.forgejo/` (R80 holds the two workflow copies together until then). Kept as history.
-
-Day-to-day git lives on a private Forgejo (`origin`); GitHub (`github`) is a mirror you push to on
-purpose. `.forgejo/workflows/ci.yml` runs the same pipeline as GitHub's, on the maintainer's machines.
-The server itself (compose file, runners, CI image, backups) is set up by the separate Forgejo guide
-(`SETUP.md` in the maintainer's `Portafolio/forgejo` folder); this section covers what the **repo** needs.
-
-**Remotes.**
-```bash
-git remote -v                       # origin = ssh://git@localhost:2222/argamboad/<repo>.git, github = GitHub
-git push                            # → Forgejo: runs the Forgejo pipeline
-git push github develop             # → GitHub, on purpose: runs the GitHub pipeline (no deploy — see step 3)
-git push -u github my-branch        # before `gh pr create` — PRs still live on GitHub when you want one
-```
-
-**Runners** (labels match GitHub's so `runs-on` is identical in both files — R80):
-
-| Label | Machine | Notes |
-|---|---|---|
-| `ubuntu-latest` | WSL runner `linux-local` (3 jobs at once, 3 CPUs each) → image `forgejo-ci/ubuntu:24.04` | Docker-in-Docker, host network, `/dev/kvm` passed through. Shared with the other migrated repos on the same Forgejo. |
-| `ubuntu-host-ports` | WSL runners `linux-ports`, **`linux-ports-2` and `linux-ports-3`** (1 job each, own dockerd each), same image | `e2e` + `native-smoke-android`: they bind fixed ports and every job on one dockerd shares its network, so each lane takes one at a time; three lanes with separate networks run three at once — one run's three `e2e` shards (2026-09-22). A second repo's `e2e` queues behind. **No lane shares a daemon with the build slots**: containers starting there made Chromium drop every boot fetch (`ERR_NETWORK_CHANGED`) — the e2e flake. The lanes also outrank the build slots for CPU (`--cpu-shares 4096` vs `256`). |
-| `windows-latest` | the Windows desk, host mode (logon task) | `DOTNET_INSTALL_DIR=C:/forgejo-runner/_tool/dotnet`. **Stop the dev stack before it takes jobs** — the smoke fails fast if 5432/5238 are busy. |
-| `macos-26` | the MacBook, runner `macos-air` | Needs **`CI_MACOS_RUNNER`** (set); asleep or away ⇒ the `mac` probe (**`CI_MACOS_PROBE`**) makes the Apple jobs skip with a warning instead of queueing forever. |
-
-**One-time setup** (nothing changes on Render or GitHub — Render keeps following GitHub's `develop`,
-GitHub keeps its hook and its pipeline). **Forgejo** → repo → **Settings → Actions**:
-- Secret **`RENDER_DEPLOY_HOOK_STAGING`** = the same hook GitHub has (Render → service → Settings → Deploy
-  Hook); `RENDER_DEPLOY_HOOK_PROD` when prod exists.
-- Secret **`DEPLOY_MIRROR_TOKEN`** = a GitHub **fine-grained** token, only this repository,
-  *Contents: Read and write* **and *Workflows: Read and write*** (it pushes `develop`/`main` and reads the
-  compare API for the smoke). Without Workflows, GitHub refuses any deploy whose commits touch
-  `.github/workflows/` — `GH013: … refusing to allow a Personal Access Token to create or update workflow`
-  — which is how y-el-vuelto's first deploy died (2026-09-18). One token can cover every migrated repo.
-- Variables **`DEPLOY_MIRROR_REPO`** = `argamboad/<repo>`, **`STAGING_BASE_URL`**, **`PROD_BASE_URL`**
-  (when prod exists), **`POSTMAN_WORKSPACE_ID`**; secret **`POSTMAN_API_KEY`**.
-- Enable **Actions** for the repo (Settings → Units) if it was switched off during the migration.
-- **Protect `develop` and `main`** with `pwsh ./tools/protect-branches.ps1 -Repo argamboad/<repo>`
-  (`FORGEJO_TOKEN` set to an admin token). Forgejo gives every job a token that can write and ignores the
-  `permissions:` key GitHub uses to narrow it, so the branch rules are what stop CI (or a poisoned build
-  dependency) from pushing: pushes only from the owner, no force push or deletion, merges only with the
-  gate jobs green. The `changes` job fails every run while either branch is unprotected, and no checkout
-  leaves the token in the workspace (`persist-credentials: false`, v4 audit DEP-13/DEP-14). The GitHub
-  mirror is private on the free plan, where GitHub offers no branch protection.
-
-**What runs when.**
-
-| Event | Runs | Wall clock |
-|---|---|---|
-| Push / PR, docs only | `changes`, `secret-scan`, `qa-artifacts` | ≈ 1 min |
-| Push / PR with code | + `build-test`, `license-scan`, `docker-build`, `e2e` (3 shards), Android + Windows **builds** | ≈ 10–13 min alone (everything in parallel; the slowest `e2e` shard or the Windows build decides — measured 2026-10-01); longer while another repo's run holds the desk runners |
-| Push to `develop`/`main` merging an **up-to-date** PR whose run went green | `changes`, `secret-scan`, `qa-artifacts` (+ the Apple build, which never runs on a PR) — the code gates already passed on the PR, on this exact tree (Env L23) | ≈ 1 min |
-| **Run workflow**, `smokes=…` | the above + the selected native **smokes** (windows / android / apple / all) | + 3–10 min |
-| **Run workflow**, `deploy=staging` (on `develop`) | the above, then `deploy-staging` — only if every gate and every selected smoke is green | + 5–8 min |
-| **Run workflow**, `deploy=prod` (on `main`) | same, `deploy-prod` | |
-| Monday 06:00 UTC | all three smokes (the weekly safety net for legs that no longer run per push) | |
-
-The native builds run whenever code does, but when the change cannot affect the MAUI app (`maui=`: `src/Maui`,
-`src/Shared.Ui` — which references nothing else — the build props, the SDK pin, `ci.yml`, the workload script) their
-legs do nothing and pass in seconds (Env L29): a backend-only PR no longer holds the single Windows lane.
-
-"Docs only" means no file a test or gate reads. Markdown is free wherever it sits (README.MD included),
-except the few files the tests read (the root README and CLAUDE.md, this runbook, DATA_MODEL, QA_TEST_PLAN,
-REBRANDING, the Postman README, the E2E story and README): those count as code, like both forges' workflows
-and scripts, `tools/` (less the editor tooling in `devtools=` — the start-profile generator, its emulator helper,
-the telemetry dashboard: Env L22), `.env.example`, `.dockerignore` and the Postman collection. The lists are the
-`changes` step's `code=`, `testdocs=` and `devtools=`, identical in both workflows; `EveryRepoFileTheTestsRead_ClassifiesAsCode`
-fails when a test starts reading a file they miss (v4 T2).
-
-CI's own pass/fail logic (that classifier, the QA run-log guard, the e2e sharding, the slowest-journeys report,
-the push to GitHub) is shell, awk and Python, and `tests/ci-logic/` runs it for real against fixtures:
-`bash tests/ci-logic/run.sh` on any Linux box, and inside `Api.Tests` on the Linux leg
-(`EnforcementGateTests.CiShellLogic_PassesItsFixtures`). Each block is marked `# ci-logic begin/end: <name>` in the
-workflow; change one and its fixtures tell you what else changed (v4 T8).
-
-**The merge skip (Env L23).** A PR's run tests its head, not the merge, so the push its merge makes used to re-run
-everything. Now `changes` first asks `.forgejo/scripts/tested-on-pr.sh`: is this push a two-parent merge whose tree
-is byte-identical to its PR head's (the PR was up to date with its base), and did that head pass every gate on its
-pull request (the same verdict **Deploy (already green)** uses)? Only a yes skips the code gates. A PR merged while
-behind its base is a tree nothing tested, so it runs everything; so does any doubt (API down, a red or re-running
-gate). Keep PRs up to date before merging (Forgejo's *Update branch*) to get the skip. Not while
-`CI_DEPLOY_ON_PUSH` is set: that deploy waits for the push run's own gates.
-
-**Desk-runner shortcuts (Env L24–L26), Forgejo copy only.** The `e2e` shards install the Playwright browser without
-`--with-deps`: the CI image already carries Chromium's system libraries for the same Playwright version (bump its
-`ARG PLAYWRIGHT` with `Microsoft.Playwright.NUnit`) and the journeys run headless. The Windows `native-build` restores
-the MAUI workloads through `.forgejo/scripts/workloads.ps1`, which skips a restore the host-mode runner already did
-for the same workload set, project and `global.json` (it stamps the SDK folder). The Android build uses the image's
-JDK 17 (`JAVA_HOME`) instead of `actions/setup-java`, and fails loudly if the image lost it. GitHub's copy keeps all
-three: a hosted runner starts bare.
-
-By default the native smokes and the deploys never run on a push. Pick both inputs in one dispatch to
-smoke and deploy in a single run.
-
-**Knobs** — repo variables (Forgejo → repo → Settings → Actions → Variables) that change the table above
-without a commit. Set one to turn a behaviour on, delete it to go back to the default; the next run picks
-it up. The workflow header lists the same four, and `ForgejoKnobs_AreTheDocumentedFour` fails if the
-workflow reads a `CI_*` variable that is not documented here.
-
-| Variable | Values | Default | Effect |
-|---|---|---|---|
-| `CI_SMOKES_ON_PUSH` | `windows` · `android` · `apple` · `all` | unset (none) | Also run those native smokes on **every code push to `develop`** — GitHub's behaviour. Costs 3–10 min per merge and the desk's CPU while you work. |
-| `CI_DEPLOY_ON_PUSH` | `staging` | unset (manual only) | Also deploy staging on **every green code push to `develop`** — GitHub's behaviour: staging tracks `develop`. Combine with `CI_SMOKES_ON_PUSH` and the deploy waits for those smokes too. **Prod is never deployed on a push**, whatever this says. |
-| `CI_WEEKLY_SMOKES` | `off` | unset (on) | Switch off the Monday 06:00 UTC smoke run (e.g. while the laptop is away). |
-| `CI_MACOS_RUNNER` | anything non-empty | unset | Set once the MacBook runner is Online. Until then the Apple jobs **skip**. |
-| `CI_MACOS_PROBE` | `host:port` (e.g. `100.103.211.64:22`) | unset (assume awake) | What the `mac` job connects to in order to decide whether the MacBook is awake. Asleep ⇒ the Apple jobs **skip with a warning** instead of queueing for `ABANDONED_JOB_TIMEOUT` (24 h) or being killed as zombies mid-build (10 min) and turning the run red. Wake it and re-run the workflow. |
-
-Any value not listed reads as the default (an unknown `CI_SMOKES_ON_PUSH` matches no smoke).
-
-**Two deploy buttons.** *CI* → **Run workflow** → `deploy=staging` runs every gate first and then deploys
-(~15 min): the right one for a commit that has not been tested yet. **Deploy (already green)** → **Run
-workflow** → `target=staging` deploys a commit whose gates already passed (~2 min) — it verifies that
-against this Forgejo's own API first, looking only at the newest attempt of each job, and refuses if any gate
-or matrix leg is missing, red, skipped or still running, or if a native smoke that ran went red, so the shortcut
-cannot become "deploy something untested" (a merge that skipped its code gates under Env L23 counts as green
-exactly when `tested-on-pr.sh` says yes) (the verdict is fixture-tested in `tests/ci-logic/`, v4 T4). Both publish the same way, and both refuse a branch/target
-mismatch (staging deploys from `develop`, prod from `main`).
-
-**How a deploy runs.** `deploy-staging` pushes the commit to `develop` **on GitHub**
-(`.forgejo/scripts/push-to-github.sh` — `develop`/`main` only, a plain fast-forward, never forced), fires
-the Render hook, and runs `.github/scripts/deploy-smoke.sh`. That push also triggers GitHub's own pipeline,
-which re-deploys the same commit; accepted. If GitHub's `develop` has a commit Forgejo's does not, the push
-is refused and the deploy stops: `git fetch github && git merge github/develop`, push to Forgejo, dispatch
-again. **Rollback:** dispatch `deploy=staging` on an older commit (Actions → Run workflow lets you pick the
-ref), or Render → Deploys → Redeploy.
-**Laptop off = no deploy.** GitHub is the other route: `git push github develop` deploys as it always did.
-
----
+From 2026-09-16 to 2026-10-02 a self-hosted Forgejo was the primary forge and ran this pipeline on the
+maintainer's machines (LOCALCI-4, ADR-028). GitHub is the only forge again (ADR-030), and `.forgejo/` was
+removed with the CI rebuild (ADR-031). The runbook that lived here is in the git history of this file.
 
 ## 11. Observability — what leaves the host (v4 audit OBS-1, decision #7)
 
