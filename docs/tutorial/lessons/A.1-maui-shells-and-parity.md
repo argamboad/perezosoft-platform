@@ -225,6 +225,23 @@ Worth stating because they're easy to violate silently:
   URL — because unlike a browser tab, a native app that navigates away doesn't automatically come
   back to your state.
 
+### Posture and hygiene, held as files (v4 audit, 2026-10)
+
+Three things about the native shell used to live in someone's memory and are now gates that need no MAUI
+workload to run (`NativeShellGateTests`, `ToolsScriptsTests`):
+
+- **Nothing the app stores leaves the device.** `allowBackup="false"` covers Android 11 and older;
+  Android 12+ ignores that attribute for device-to-device transfer, so `data_extraction_rules.xml` excludes
+  everything there too. Cleartext is permitted only to the dev loopback (`10.0.2.2`, `localhost`).
+- **Signing material and its passwords.** `.gitignore` covers `*.jks`, `*.keystore`, `*.p12` and `*.pfx`,
+  and a signing password is never a `-p:` literal in a doc, script or workflow: the Android SDK reads
+  `env:NAME` itself, so the command line names a variable. `publish-native.ps1 -KeyStore … -KeyAlias …`
+  does exactly that. A build signed with a different key than the installed one will not install over it —
+  uninstall first.
+- **The operator scripts have a contract.** Every `tools/*.ps1` starts with `#Requires -Version 7.0`, is
+  ASCII or carries a BOM, and sets `$ErrorActionPreference = 'Stop'`. `publish-native.ps1` is also *run*, with
+  a fake `dotnet` and a fake `apksigner`: a v1-only verdict or a failed publish exits 1 and hands nothing out.
+
 ## 8. Architecture Decision
 
 > **The fork:** how do you build native apps, and how do you keep them at parity? (a) Separate native

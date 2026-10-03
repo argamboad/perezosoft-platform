@@ -129,7 +129,7 @@
   tenant-axis canary cannot see a nullable-`TenantId` table. Phase 4 showed a dissolved tenant's document and recipient
   surviving in the outbox.
 - **Test first.** TB-TEN-21 `TenantScopedEmailEnqueues_StampTenantId…` (broadcast is the one allowlisted tenant-less
-  origin, by name); TB-TEN-20 / TB-JOBS-10 `Dissolve_WipesTheTenantsOutboxRows_OtherTenantsIntact` (uses H4's helper).
+  origin, by name); TB-TEN-20 / TB-JOBS-10 `OutboxMessage_Lifecycle_Dissolve_WipesTheTenantsRows_OtherTenantsIntact` (uses H4's helper).
 - **Fix.** Stamp `TenantId` from `ICurrentTenant` in `OutboxEmailSender`; add `OutboxDataContributor` (wipe pending rows,
   export nothing); extend the canary to nullable-`TenantId` tables carrying tenant content.
 - **Done when.** Dissolve leaves 0 outbox rows for the tenant; the other tenant's rows are intact.

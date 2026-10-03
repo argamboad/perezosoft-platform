@@ -266,17 +266,21 @@ Don't sign an app you haven't seen working.
 
 **Sideloading a build at a host** (before any of that, and how you will test on a real device):
 `pwsh tools/publish-native.ps1 -ApiBaseUrl https://<your-host>` — see `docs/DEPLOYMENT.md` §9,
-which names the three ways an Android sideload fails **silently** (the unsigned twin APK, a v1-only
-signature, an upgrade over a running app). Use the script; every one of those is a wrong-file or
+which names the four ways an Android sideload fails **silently** (the unsigned twin APK, a v1-only
+signature, an upgrade over a running app, a build signed with a different key than the installed one). Use the script; every one of those is a wrong-file or
 wrong-state trap the phone will not explain.
 
 **Then, the first-native-release checklist:**
 
 1. **Android** (native.md → NATIVE-8): generate the release keystore once with `keytool` — it IS
    your app's identity; losing it is unrecoverable. Base64 → repo secrets + an offline backup,
-   never git. Build with `AndroidKeyStore=true` + the four signing props from env,
+   never git (keep the file outside the repo; `.gitignore` covers `*.jks`/`*.keystore`/`*.p12`/`*.pfx` as
+   the net under that). Build with `AndroidKeyStore=true` + the signing props, the two passwords as
+   `env:NAME` — never a `-p:` literal (`pwsh tools/publish-native.ps1 … -KeyStore … -KeyAlias …` does this),
    `AndroidPackageFormat=aab`, in a **tag-triggered** release workflow (`ubuntu-latest`); assert
-   the artifact with `jarsigner -verify`. Enroll in **Play App Signing** — your keystore becomes
+   the artifact with `apksigner verify --verbose` (v2/v3 — `jarsigner` passes a v1-only file that Android 11+
+   refuses to install). A store-signed build will not install over a debug-signed sideload: testers
+   uninstall the sideload first (DEPLOYMENT §9). Enroll in **Play App Signing** — your keystore becomes
    the upload key (Google holds the app-signing key; effectively required for new Play apps).
 2. **Windows** (native.md → NATIVE-9): the app runs unpackaged today (`WindowsPackageType=None`);
    add a packaged Release flavor (MSIX + `Package.appxmanifest`). Don't buy a code-signing cert —
