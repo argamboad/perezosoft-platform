@@ -397,6 +397,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/BillingDataContributor.cs", "5.3", ""),
     ("src/Infrastructure/Billing/BillingCancelOutboxHandler.cs", "5.3", ""),
     ("tests/Api.Tests/Billing/QuotaServiceTests.cs", "5.3", ""),
+    ("tests/Api.Tests/Billing/CatalogNumbersTests.cs", "5.3", "catalog numbers are read, never copied: docs that state a seat cap state PlanCatalog's, QA drills count relative to the cap (v4 T47, R88)"),
     ("tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs", "5.3", ""),
     ("tests/Api.Tests/Billing/BillingDissolveTests.cs", "5.3", ""),
 

@@ -76,8 +76,12 @@
     // would stay hidden for the whole session on a billing-on deployment (v4 audit BILL-7).
     protected override async Task OnInitializedAsync()
     {
-        _isStaff = await Auth.IsStaffAsync();
-        _billingEnabled = await Auth.IsBillingEnabledAsync();
+        // In parallel (v4 audit T47): two sequential round trips delayed the header by one of them.
+        var staff = Auth.IsStaffAsync();
+        var billing = Auth.IsBillingEnabledAsync();
+        await Task.WhenAll(staff, billing);
+        _isStaff = staff.Result;
+        _billingEnabled = billing.Result;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

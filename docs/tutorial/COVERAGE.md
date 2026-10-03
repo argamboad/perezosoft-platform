@@ -528,7 +528,7 @@
 - `tests/Api.Tests/Billing/BillingWebhookHandlerTests.cs`
 - `tests/Api.Tests/Billing/StripeBillingProviderTests.cs`
 
-## 5.3 — Quotas, dunning & billing dissolve (14 files)
+## 5.3 — Quotas, dunning & billing dissolve (15 files)
 
 - `src/Api/Services/BillingDataContributor.cs`
 - `src/Api/Services/BillingNotifier.cs`
@@ -541,6 +541,7 @@
 - `src/Infrastructure/Persistence/Configurations/UsageCounterConfiguration.cs`
 - `tests/Api.Tests/Billing/AcceptSeatQuotaTests.cs` — BILLING-9: seat quota re-checked at invitation ACCEPT (402 seat_limit_reached)
 - `tests/Api.Tests/Billing/BillingDissolveTests.cs`
+- `tests/Api.Tests/Billing/CatalogNumbersTests.cs` — catalog numbers are read, never copied: docs that state a seat cap state PlanCatalog's, QA drills count relative to the cap (v4 T47, R88)
 - `tests/Api.Tests/Billing/QuotaServiceTests.cs`
 - `tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs`
 - `tests/E2E.Tests/SeatQuotaJourneyTests.cs` — seat-quota 402 UX
@@ -1309,4 +1310,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1142 tracked files · 777 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1143 tracked files · 778 built in lessons · 365 bucketed · 0 unmapped
