@@ -67,10 +67,13 @@
         // Impersonation swaps the active token in place (a soft nav, no parameter change), so this
         // parameterless component wouldn't otherwise re-render — re-source identity + staff flag then.
         Auth.IdentityChanged += OnIdentityChanged;
+        Auth.SignedIn += OnIdentityChanged; // a sign-in after a cold start that could not probe: ask again
     }
 
     // Show the Admin link only for platform staff (cheap, cached probe). Hidden while impersonating.
-    // The billing probe is anonymous and deployment-wide, so it needs no re-check on identity change.
+    // The billing probe is anonymous and deployment-wide, and cached once it answers — but a probe that
+    // FAILED at cold start (the server waking up) is asked again on the next identity event, or the link
+    // would stay hidden for the whole session on a billing-on deployment (v4 audit BILL-7).
     protected override async Task OnInitializedAsync()
     {
         _isStaff = await Auth.IsStaffAsync();
@@ -91,9 +94,11 @@
         try
         {
             var isStaff = await Auth.IsStaffAsync();
+            var billing = _billingEnabled || await Auth.IsBillingEnabledAsync();
             await InvokeAsync(() =>
             {
                 _isStaff = isStaff;
+                _billingEnabled = billing;
                 StateHasChanged();
             });
         }
@@ -112,5 +117,6 @@
     {
         Nav.LocationChanged -= OnLocationChanged;
         Auth.IdentityChanged -= OnIdentityChanged;
+        Auth.SignedIn -= OnIdentityChanged;
     }
 }
