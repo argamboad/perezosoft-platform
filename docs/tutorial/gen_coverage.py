@@ -560,6 +560,8 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/ToolsScriptsTests.cs", "A.1", "the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)"),
     ("tests/Api.Tests/NativeShellGateTests.cs", "A.1", "Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)"),
     ("tests/native-smoke-android/*", "A.1", "Android playwright-core smoke harness"),
+    ("tests/Api.Tests/TestIdContractTests.cs", "3.6", "the test-id contract (every data-testid is used, every used id exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)"),
+    ("tests/Ui.Tests/Pages/*", "3.4", "the page tests: every branch of Household, Login, Join, Billing, the header and the admin console on the bUnit chassis, plus the per-page floor (v4 T56)"),
     ("tests/js-logic/*", "3.4", "the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)"),
     ("tests/Api.Tests/JsLogicTests.cs", "3.4", "runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)"),
 
@@ -569,6 +571,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/LocalStorageThemePersistence.cs", "3.4", ""),
     ("src/Shared.Ui/Components/ThemeSwitcher.razor", "3.4", ""),
     ("tests/E2E.Tests/ThemeJourneyTests.cs", "3.4", "dark-mode journey (live flip, reload persist, cross-device reconcile)"),
+    ("tests/E2E.Tests/SessionJourneyTests.cs", "3.6", "session journeys only a browser can prove: Back after sign-out with the back/forward cache on, keep-alive on Playwright's clock, a theme save during a renewal (v4 T58)"),
 
     # ---- drift absorbed 2026-08-31 (QA-SEC-03 bfcache guard) ----
     ("src/Shared.Ui/wwwroot/js/bfcache-guard.js", "3.4", "reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)"),
