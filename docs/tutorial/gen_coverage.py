@@ -557,6 +557,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/BrowserFileDownloadLauncher.cs", "6.3", ""),
     ("src/Shared.Ui/AppResumeNotifier.cs", "A.1", "refresh-on-resume seam (NATIVE-4 G2)"),
     ("tests/E2E.Tests/NativeSmokeTests.cs", "A.1", "NATIVE-7 emulator/WebView2 smoke"),
+    ("tests/Api.Tests/ToolsScriptsTests.cs", "A.1", "the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)"),
     ("tests/Api.Tests/NativeShellGateTests.cs", "A.1", "Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)"),
     ("tests/native-smoke-android/*", "A.1", "Android playwright-core smoke harness"),
 

@@ -858,7 +858,7 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 
-## A.1 — Appendix — MAUI shells & parity (42 files)
+## A.1 — Appendix — MAUI shells & parity (43 files)
 
 - `src/Maui/App.xaml`
 - `src/Maui/App.xaml.cs`
@@ -897,6 +897,7 @@
 - `src/Shared.Ui/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
 - `tests/Api.Tests/NativeChromeGateTests.cs` — Android bar colours = app.css tokens; top inset applied once
 - `tests/Api.Tests/NativeShellGateTests.cs` — Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)
+- `tests/Api.Tests/ToolsScriptsTests.cs` — the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)
 - `tests/E2E.Tests/NativeSmokeTests.cs` — NATIVE-7 emulator/WebView2 smoke
 - `tests/Ui.Tests/SystemBarThemeSyncTests.cs` — the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)
 - `tests/native-smoke-android/package-lock.json` — Android playwright-core smoke harness
@@ -1295,4 +1296,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1128 tracked files · 763 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1129 tracked files · 764 built in lessons · 365 bucketed · 0 unmapped
