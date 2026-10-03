@@ -31,3 +31,10 @@ src/Maui/packages.lock.json
 
 # Native installables (DEPLOYMENT §9 publishes to out/android and out/windows)
 out/
+
+# Signing material (v4 audit NAT-15, R104): a keystore or certificate IS the app's identity. Keep it
+# outside the repo; these patterns are the net under that habit.
+*.jks
+*.keystore
+*.p12
+*.pfx
