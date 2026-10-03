@@ -149,6 +149,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Infrastructure/ServiceHarness.cs", "1.3", ""),
     ("tests/Api.Tests/Infrastructure/TestAppDbContext.cs", "1.3", "test-only subclass so platform tests don't depend on Notes (R9)"),
     ("tests/Api.Tests/Infrastructure/DbFaultInjector.cs", "1.3", "the database-fault + interleaving seam (v4 T54, R7)"),
+    ("tests/Api.Tests/Infrastructure/Recording.cs", "1.3", "the recording double: forwards to the real implementation and writes down what was asked (v4 T25, R151)"),
     ("tests/Api.Tests/Infrastructure/Concurrently.cs", "1.3", "the shared concurrency runner (v4 T54, R7)"),
     ("tests/Api.Tests/Infrastructure/CapturingLogger.cs", "1.3", "the one log double the suite shares"),
     ("tests/Api.Tests/MigrationsTests.cs", "1.3", ""),

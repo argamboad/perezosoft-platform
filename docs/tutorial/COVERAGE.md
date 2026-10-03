@@ -48,7 +48,7 @@
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 
-## 1.3 — Database & the test container (11 files)
+## 1.3 — Database & the test container (12 files)
 
 - `src/Api/AppDbContextFactory.cs` — design-time factory for dotnet ef
 - `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
@@ -58,6 +58,7 @@
 - `tests/Api.Tests/Infrastructure/DbFaultInjector.cs` — the database-fault + interleaving seam (v4 T54, R7)
 - `tests/Api.Tests/Infrastructure/PostgresFixture.cs`
 - `tests/Api.Tests/Infrastructure/PostgresTestBase.cs` — model-derived TRUNCATE (R11)
+- `tests/Api.Tests/Infrastructure/Recording.cs` — the recording double: forwards to the real implementation and writes down what was asked (v4 T25, R151)
 - `tests/Api.Tests/Infrastructure/ServiceHarness.cs`
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
@@ -829,7 +830,7 @@
 - `tests/ci-logic/stubs/git` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/targets` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 
-## 8.4 — The RLS tenancy backstop (15 files)
+## 8.4 — The RLS tenancy backstop (16 files)
 
 - `docker/db/provision-rls-runtime-role.sql` — non-BYPASSRLS runtime role — mirrors prod (Neon) provisioning
 - `src/Infrastructure/Persistence/RlsDdl.cs` — policy DDL — source of the RlsMigrationGateTests parity gate
@@ -838,6 +839,7 @@
 - `src/Infrastructure/Persistence/RlsTags.cs`
 - `tests/Api.Tests/Architecture/CrossTenantWriteGuard.cs` — EnterTenant required on set-based cross-tenant writes — tags don't render for ExecuteUpdate (v3/T7)
 - `tests/Api.Tests/Architecture/CrossTenantWriteGuardTests.cs`
+- `tests/Api.Tests/Rls/CrossTenantTagSiteTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/DissolveUnderForeignTenantTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsBackstopTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsMigrationGateBitesTests.cs` — backstop + migration-parity + posture-guard tests
@@ -1291,4 +1293,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1124 tracked files · 759 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1126 tracked files · 761 built in lessons · 365 bucketed · 0 unmapped
