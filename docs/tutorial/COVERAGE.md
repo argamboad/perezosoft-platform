@@ -253,7 +253,7 @@
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (113 files)
+## 3.4 — The web client & auth UI (119 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AppClaims.cs`
@@ -348,6 +348,7 @@
 - `src/Web/wwwroot/og_image_1200x630.png`
 - `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)
 - `tests/Api.Tests/BfcacheGuardTests.cs` — pins the guard's contract + presence in BOTH hosts' index.html
+- `tests/Api.Tests/JsLogicTests.cs` — runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
 - `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -368,6 +369,11 @@
 - `tests/Ui.Tests/SessionKeepAliveTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SignupRefusedCopyTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/SwitcherStateTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/js-logic/bfcache-guard.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/load.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/mfa-qr.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/smoke.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/theme.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
 
 ## 3.5 — Localization (EN/ES) (11 files)
 
@@ -1296,4 +1302,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1129 tracked files · 764 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1135 tracked files · 770 built in lessons · 365 bucketed · 0 unmapped

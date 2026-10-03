@@ -560,6 +560,8 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/ToolsScriptsTests.cs", "A.1", "the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)"),
     ("tests/Api.Tests/NativeShellGateTests.cs", "A.1", "Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)"),
     ("tests/native-smoke-android/*", "A.1", "Android playwright-core smoke harness"),
+    ("tests/js-logic/*", "3.4", "the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)"),
+    ("tests/Api.Tests/JsLogicTests.cs", "3.4", "runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)"),
 
     # ---- drift absorbed 2026-07-10 (THEME-1 dark mode) ----
     ("src/Shared.Ui/wwwroot/js/theme.js", "3.4", "THEME-1 pre-paint dark-mode bootstrap (data-bs-theme)"),
