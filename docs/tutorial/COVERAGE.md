@@ -1308,4 +1308,8 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1141 tracked files · 776 built in lessons · 365 bucketed · 0 unmapped
+## ❌ UNMAPPED (1 files) — course holes, fix the rules or add lessons
+
+- `tests/E2E.Tests/SessionJourneyTests.cs`
+
+**Totals:** 1142 tracked files · 776 built in lessons · 365 bucketed · 1 unmapped
