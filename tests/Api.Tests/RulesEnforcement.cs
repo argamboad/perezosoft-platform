@@ -51,13 +51,13 @@ public static class RulesEnforcement
         // ── 4. Admin / config gates / billing ──
         new("R86", ["GateOff_NothingUnderTheGatedPrefixes_IsMapped", "GateOff_AdminComp_Returns404_BeforeTheStaffCheck"]),
         new("R87", ["AGatedSwitch_IsReadOnlyThroughItsSettingsClass"]),
-        new("R88", [], Pending: "perezosoft-platform#70 (T47: the stale-count doc-grep gate)"),
+        new("R88", [], Pending: "perezosoft-platform#284 (T47: the stale-count doc-grep gate)"),
         new("R122", ["ConfigPostureTests"]),
         new("R128", ["StripeBillingProviderTests"]),
         new("R133", ["LapseSweep_NotificationAndStamp_AreOneTransaction", "JobTests_UseTheRealOutboxEmailSender"]),
         new("R134", ["PeriodKey_IsTheInvariantCalendar_WhateverTheRequestCultureIs", "ServerCode_FormatsYearsWithTheInvariantCulture"]),
         new("R153", ["EverySectionBoundSettingsClass_DeclaresItsSectionName", "ReadKeysIn_SeesEveryReadShape"]),
-        new("R154", [], Pending: "perezosoft-platform#82 (T59: the per-gate harness seam and all-gates-on Postman parity)"),
+        new("R154", [], Pending: "perezosoft-platform#296 (T59: the per-gate harness seam and all-gates-on Postman parity)"),
 
         // ── 5. Jobs / email / webhooks / observability ──
         new("R89", ["Handler_RecordsAnEnumeratedReason_NeverTheExceptionText", "NoErrorColumn_IsAssignedFromAnExceptionMessage"]),
@@ -73,7 +73,7 @@ public static class RulesEnforcement
         // ── 6. Deploy / CI / supply-chain ──
         new("R97", ["EveryRepoFileTheTestsRead_ClassifiesAsCode", "Classifier_CountsEveryFileAGateReads_AsCode"]),
         new("R98", ["EveryCheckout_LeavesNoTokenBehind"]),
-        new("R99", ["EveryContainerImage_IsPinned_NotFloating"], Pending: "perezosoft-platform#39 (T16: widen to workflow services:/docker run and Dockerfile FROM)"),
+        new("R99", ["EveryContainerImage_IsPinned_NotFloating"], Pending: "perezosoft-platform#253 (T16: widen to workflow services:/docker run and Dockerfile FROM)"),
         new("R136", ["CiShellLogic_PassesItsFixtures", "CiShellLogic_EveryAnchoredBlockIsATarget_WithCases"]),
         new("R137", ["ChangedFileLists_AreByteSafe"]),
         new("R139", ["NativeSmokeProviderProbe_MatchesTheStatusField_InBothSites"]),
@@ -93,9 +93,9 @@ public static class RulesEnforcement
         new("R109", ["E2eNavigations_GoThroughBlazorBoot", "BootRetryBudget_IsOneNumber_InTheSuiteAndTheSlowestJourneysStep", "BlazorBootTests"]),
         new("R113", ["E2eShardsTests"]),
         new("R144", ["ClientRefreshTimeoutPlusRetry_FitsInsideTheServersReuseGrace", "PrTemplate_CarriesTheRuleCheckboxes"]),
-        new("R147", [], Pending: "perezosoft-platform#71 (T48: the gate-off E2E lane in both copies)"),
-        new("R148", [], Pending: "perezosoft-platform#80 (T57: the RCL clock gate)"),
-        new("R149", [], Pending: "perezosoft-platform#82 (T59: the test-id contract)"),
+        new("R147", [], Pending: "perezosoft-platform#285 (T48: the gate-off E2E lane in both copies)"),
+        new("R148", [], Pending: "perezosoft-platform#294 (T57: the RCL clock gate)"),
+        new("R149", [], Pending: "perezosoft-platform#296 (T59: the test-id contract)"),
         new("R155", ["RouteTableGuardTests"]),
         new("R157", ["SliceReferenceInspectorTests", "RoutePrefixInspectorTests"]),
 
@@ -104,10 +104,10 @@ public static class RulesEnforcement
         new("R114", ["CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts", "ci:Course coverage and quote currency"]),
         new("R115", ["CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts", "ci:Course coverage and quote currency"]),
         new("R116", ["RuleIds_CitedInTests_AreFinalRules", "EveryMachineRule_NamesAStandingCheck"]),
-        new("R118", ["ClaudeMdDocMap_ListsEveryTopLevelDoc"], Pending: "perezosoft-platform#86 (T63: widen the doc-map gate to docs/**)"),
-        new("R119", [], Pending: "perezosoft-platform#86 (T63: the Postman gate/refusal description floor)"),
-        new("R120", [], Pending: "perezosoft-platform#86 (T63: the compiled-in limits block gate)"),
-        new("R121", [], Pending: "perezosoft-platform#86 (T63: diagram currency)"),
+        new("R118", ["ClaudeMdDocMap_ListsEveryTopLevelDoc"], Pending: "perezosoft-platform#300 (T63: widen the doc-map gate to docs/**)"),
+        new("R119", [], Pending: "perezosoft-platform#300 (T63: the Postman gate/refusal description floor)"),
+        new("R120", [], Pending: "perezosoft-platform#300 (T63: the compiled-in limits block gate)"),
+        new("R121", [], Pending: "perezosoft-platform#300 (T63: diagram currency)"),
         new("R152", ["NoResx_DeclaresAKeyTwice"]),
         new("R158", ["AddASliceChecklist_NamesEveryArtifactAGateForces"]),
     ];
