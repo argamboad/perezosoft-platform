@@ -94,7 +94,7 @@ public static class RulesEnforcement
         new("R113", ["E2eShardsTests"]),
         new("R144", ["ClientRefreshTimeoutPlusRetry_FitsInsideTheServersReuseGrace", "PrTemplate_CarriesTheRuleCheckboxes"]),
         new("R147", [], Pending: "perezosoft-platform#285 (T48: the gate-off E2E lane in both copies)"),
-        new("R148", [], Pending: "perezosoft-platform#294 (T57: the RCL clock gate)"),
+        new("R148", ["RclComponents_ScheduleOnTheInjectedClock", "Bell_Poll_RefetchesOnTheClock_KeepsTheLastCountOnAnError_StopsWhenSignedOut_AndResumes"]),
         new("R149", [], Pending: "perezosoft-platform#296 (T59: the test-id contract)"),
         new("R155", ["RouteTableGuardTests"]),
         new("R157", ["SliceReferenceInspectorTests", "RoutePrefixInspectorTests"]),
