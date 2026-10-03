@@ -571,6 +571,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/LocalStorageThemePersistence.cs", "3.4", ""),
     ("src/Shared.Ui/Components/ThemeSwitcher.razor", "3.4", ""),
     ("tests/E2E.Tests/ThemeJourneyTests.cs", "3.4", "dark-mode journey (live flip, reload persist, cross-device reconcile)"),
+    ("tests/E2E.Tests/SessionJourneyTests.cs", "3.6", "session journeys only a browser can prove: Back after sign-out with the back/forward cache on, keep-alive on Playwright's clock, a theme save during a renewal (v4 T58)"),
 
     # ---- drift absorbed 2026-08-31 (QA-SEC-03 bfcache guard) ----
     ("src/Shared.Ui/wwwroot/js/bfcache-guard.js", "3.4", "reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)"),

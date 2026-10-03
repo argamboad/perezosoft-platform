@@ -394,7 +394,7 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (18 files)
+## 3.6 — The E2E harness (Playwright) (19 files)
 
 - `tests/Api.Tests/E2E/BlazorBootTests.cs` — the boot decision driven by a scripted page — the audit's six cases (v4 T55)
 - `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
@@ -412,6 +412,7 @@
 - `tests/E2E.Tests/Pages/JoinPage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/LoginPage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/SettingsPage.cs` — Page Object Model
+- `tests/E2E.Tests/SessionJourneyTests.cs` — session journeys only a browser can prove: Back after sign-out with the back/forward cache on, keep-alive on Playwright's clock, a theme save during a renewal (v4 T58)
 - `tests/E2E.Tests/playwright.runsettings`
 - `tools/e2e.ps1` — runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)
 
@@ -1308,8 +1309,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-## ❌ UNMAPPED (1 files) — course holes, fix the rules or add lessons
-
-- `tests/E2E.Tests/SessionJourneyTests.cs`
-
-**Totals:** 1142 tracked files · 776 built in lessons · 365 bucketed · 1 unmapped
+**Totals:** 1142 tracked files · 777 built in lessons · 365 bucketed · 0 unmapped
