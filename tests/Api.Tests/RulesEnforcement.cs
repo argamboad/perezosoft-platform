@@ -57,7 +57,7 @@ public static class RulesEnforcement
         new("R133", ["LapseSweep_NotificationAndStamp_AreOneTransaction", "JobTests_UseTheRealOutboxEmailSender"]),
         new("R134", ["PeriodKey_IsTheInvariantCalendar_WhateverTheRequestCultureIs", "ServerCode_FormatsYearsWithTheInvariantCulture"]),
         new("R153", ["EverySectionBoundSettingsClass_DeclaresItsSectionName", "ReadKeysIn_SeesEveryReadShape"]),
-        new("R154", [], Pending: "perezosoft-platform#296 (T59: the per-gate harness seam and all-gates-on Postman parity)"),
+        new("R154", ["EveryMappedApiEndpoint_WithEveryGateOn_IsDocumentedInThePostmanCollection", "Tests_DoNotSwitchTheEnvironment_FromAModuleInitializer"]),
 
         // ── 5. Jobs / email / webhooks / observability ──
         new("R89", ["Handler_RecordsAnEnumeratedReason_NeverTheExceptionText", "NoErrorColumn_IsAssignedFromAnExceptionMessage"]),
@@ -95,7 +95,7 @@ public static class RulesEnforcement
         new("R144", ["ClientRefreshTimeoutPlusRetry_FitsInsideTheServersReuseGrace", "PrTemplate_CarriesTheRuleCheckboxes"]),
         new("R147", [], Pending: "perezosoft-platform#285 (T48: the gate-off E2E lane in both copies)"),
         new("R148", ["RclComponents_ScheduleOnTheInjectedClock", "Bell_Poll_RefetchesOnTheClock_KeepsTheLastCountOnAnError_StopsWhenSignedOut_AndResumes"]),
-        new("R149", [], Pending: "perezosoft-platform#296 (T59: the test-id contract)"),
+        new("R149", ["EveryTestId_IsUsedByATestOrAQaCase_AndEveryUsedIdExists"]),
         new("R155", ["RouteTableGuardTests"]),
         new("R157", ["SliceReferenceInspectorTests", "RoutePrefixInspectorTests"]),
 
