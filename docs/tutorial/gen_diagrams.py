@@ -101,8 +101,11 @@ def render(name, source, force=False):
     env.setdefault("PUPPETEER_CACHE_DIR",
                    os.path.join(os.environ.get("LOCALAPPDATA", HERE), "puppeteer-cache"))
     try:
+        # CREATE_NO_WINDOW: run from a console-less parent, Windows would
+        # otherwise pop a cmd window per diagram (0 = no-op elsewhere)
         subprocess.run('%s -i "%s" -o "%s"' % (MMDC, mmd, png),
-                       check=True, shell=True, env=env)
+                       check=True, shell=True, env=env,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     finally:
         os.unlink(mmd)
     open(stamp, "w").write(digest)
