@@ -1053,7 +1053,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (254 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (255 files)
 
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
@@ -1186,6 +1186,7 @@
 - `docs/stories/prefs.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/pubapi.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/rbac.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/test-toolchain.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/theme.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1310,4 +1311,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1143 tracked files · 778 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1144 tracked files · 778 built in lessons · 366 bucketed · 0 unmapped

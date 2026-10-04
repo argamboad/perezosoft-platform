@@ -1524,6 +1524,16 @@ ADR-018's "honest counterweight" (store distribution as a platform commitment) i
 direction the 2026-07-06 amendment anticipated.
 
 
+**ADR-025 — (number reserved; never adopted) CI runner selection is variable-driven with a hosted fallback (LOCALCI-1). (drafted 2026-09-08)**
+*Stub.* The draft lives in [`stories/localci.md`](stories/localci.md) ("ADR-025 draft") and was to be pasted
+here with LOCALCI-1's first commit. It never was: LOCALCI-4 (ADR-028) replaced the variable-driven design
+before it was built, and ADR-030 then retired self-hosted CI altogether. The number stays reserved so the
+references to it in `localci.md` resolve; do not reuse it.
+
+**ADR-026 — (draft, not yet adopted) The platform becomes the reference implementation of a stack-neutral spec (FLAVORS). (drafted 2026-09-08)**
+*Stub.* The draft lives in [`stories/flavors.md`](stories/flavors.md), with the spec ADRs S-001..S-003 beside
+it, and is pasted here when the FLAVORS program starts (SPEC-1). Nothing is decided until then.
+
 **ADR-027 — Pre-launch gates: billing and account creation are deployment configuration, not runtime switches (GATES-1/2). (2026-09-11)**
 A deployment must be able to run **private and free** before it is published: nothing offers to sell
 a tester anything, and a stranger who finds the URL cannot create an account. Hiding the deployment

@@ -50,7 +50,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"culture\": \"en\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/otp/send", "host": ["{{baseUrl}}"], "path": ["api", "auth", "otp", "send"] },
-            "description": "Rate-limited 5/min per IP (429 after — QA-AUTH-11). Email delivery is async (outbox): wait a few seconds before fetching the code."
+            "description": "Rate-limited 5/min per IP (429 after — QA-AUTH-11). Email delivery is async (outbox): wait a few seconds before fetching the code. Errors: 400 `invalid_email`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 (429 = rate limit, wait ~1 min)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 429]));"], "type": "text/javascript" } }]
         },
@@ -97,7 +97,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"{{otpCode}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["api", "auth", "otp", "verify"] },
-            "description": "Stores accessToken/refreshToken on success. If the account has MFA enabled, stores mfaChallenge instead — run 'MFA — verify (step-up)' next. 401 invalid_code = wrong/expired; 401 too_many_attempts = cumulative lockout (QA-AUTH-04); 429 = throttle."
+            "description": "Stores accessToken/refreshToken on success. If the account has MFA enabled, stores mfaChallenge instead — run 'MFA — verify (step-up)' next. 401 invalid_code = wrong/expired; 401 too_many_attempts = cumulative lockout (QA-AUTH-04); 429 = throttle. 403 `signup_not_allowed` = the deployment has a signup green list (`Signup:AllowedEmails` / `Signup:AllowedDomains`) and this address is neither on it nor invited into a green-listed owner's household (GATES-2, ADR-027). Refused here, at account creation — never at send time, and never for an existing account."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
@@ -124,7 +124,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"challenge\": \"{{mfaChallenge}}\",\n  \"code\": \"<TOTP or recovery code (xxxxx-xxxxx)>\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/mfa/verify", "host": ["{{baseUrl}}"], "path": ["api", "auth", "mfa", "verify"] },
-            "description": "Completes sign-in for an MFA-enabled account. Accepts a 6-digit TOTP or a single-use recovery code (case/hyphen/space-insensitive). Challenge is single-use and short-lived (~5 min)."
+            "description": "Completes sign-in for an MFA-enabled account. Accepts a 6-digit TOTP or a single-use recovery code (case/hyphen/space-insensitive). Challenge is single-use and short-lived (~5 min). Errors: 401 `mfa_failed`."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
@@ -144,7 +144,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh"] },
-            "description": "Rotates the refresh token (old one is revoked; replaying it revokes every session — reuse detection — unless the replay lands within RefreshToken:ReuseGraceSeconds (60 s) of the rotation while the new token is still live: that race gets a fresh session and nothing is revoked — once per rotated token; a further replay of it is reuse). The stored refreshToken is updated automatically."
+            "description": "Rotates the refresh token (old one is revoked; replaying it revokes every session — reuse detection — unless the replay lands within RefreshToken:ReuseGraceSeconds (60 s) of the rotation while the new token is still live: that race gets a fresh session and nothing is revoked — once per rotated token; a further replay of it is reuse). The stored refreshToken is updated automatically. Errors: 401 `invalid_refresh_token`, 401 `no_refresh_token`, 401 `user_not_found`, 500 `refresh_failed`."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
@@ -164,7 +164,7 @@
               { "key": "X-Native-Client", "value": "true" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }, "description": "Errors: 500 `logout_failed`."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"2xx\", () => pm.expect(pm.response.code).to.be.below(300));",
@@ -179,7 +179,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"culture\": \"en\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/magic-link/send", "host": ["{{baseUrl}}"], "path": ["api", "auth", "magic-link", "send"] },
-            "description": "The verify half is a browser redirect flow (GET /api/auth/magic-link/verify?token=&email= → 302 to the web app) — click the link from Mailpit in a browser; it isn't meaningful as a pure API call."
+            "description": "The verify half is a browser redirect flow (GET /api/auth/magic-link/verify?token=&email= → 302 to the web app) — click the link from Mailpit in a browser; it isn't meaningful as a pure API call. Errors: 400 `invalid_email`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 (429 = rate limit)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 429]));"], "type": "text/javascript" } }]
         }
@@ -199,7 +199,7 @@
             "auth": { "type": "noauth" },
             "method": "GET",
             "url": { "raw": "{{baseUrl}}/api/auth/callback/google", "host": ["{{baseUrl}}"], "path": ["api", "auth", "callback", "google"] },
-            "description": "**Documentation-only \u2014 a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). The PROVIDER redirects here after consent (carries its code/state). Issues the session (refresh cookie) and 302s to the client. Never called by an API client directly."
+            "description": "**Documentation-only — a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). The PROVIDER redirects here after consent (carries its code/state). Issues the session (refresh cookie) and 302s to the client. Never called by an API client directly. Error redirects: `/login?error=email_unverified` (same-email merge refused: the provider did not vouch for the address), `/login?error=signup_not_allowed` (a signup green list is configured and the address is neither on it nor invited by a green-listed owner — GATES-2, ADR-027); in link mode `/settings?link_error=expired` (link token expired) and `/settings?link_error=in_use` (that provider login belongs to another account)."
           }
         },
         {
@@ -208,7 +208,7 @@
             "auth": { "type": "noauth" },
             "method": "GET",
             "url": { "raw": "{{baseUrl}}/api/auth/magic-link/verify?token={{magicLinkToken}}", "host": ["{{baseUrl}}"], "path": ["api", "auth", "magic-link", "verify"], "query": [{ "key": "token", "value": "{{magicLinkToken}}" }] },
-            "description": "**Documentation-only \u2014 a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). The emailed magic-link URL. Single-use, hashed, time-limited token in the query; consumes it, sets the refresh cookie (or MFA step-up redirect), then 302s to the client."
+            "description": "**Documentation-only — a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). The emailed magic-link URL. Single-use, hashed, time-limited token in the query; consumes it, sets the refresh cookie (or MFA step-up redirect), then 302s to the client. Error redirects: `/login?error=invalid_link` (unknown, expired or already used) and `/login?error=signup_not_allowed` (a signup green list is configured and the address is neither on it nor invited by a green-listed owner — GATES-2, ADR-027; refused at account creation, never for an existing account)."
           }
         },
         {
@@ -217,7 +217,7 @@
             "auth": { "type": "noauth" },
             "method": "GET",
             "url": { "raw": "{{baseUrl}}/api/auth/native/login/google", "host": ["{{baseUrl}}"], "path": ["api", "auth", "native", "login", "google"] },
-            "description": "**Documentation-only \u2014 a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). Opened in the OS browser by MAUI clients (WebAuthenticator). Like /login/{provider} but the callback returns a deep link carrying a one-time code instead of a cookie."
+            "description": "**Documentation-only — a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). Opened in the OS browser by MAUI clients (WebAuthenticator). Like /login/{provider} but the callback returns a deep link carrying a one-time code instead of a cookie. Errors: 400 `invalid_request`."
           }
         },
         {
@@ -226,7 +226,7 @@
             "auth": { "type": "noauth" },
             "method": "GET",
             "url": { "raw": "{{baseUrl}}/api/auth/native/callback/google", "host": ["{{baseUrl}}"], "path": ["api", "auth", "native", "callback", "google"] },
-            "description": "**Documentation-only \u2014 a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). Provider redirect for the native flow: issues a short-lived ONE-TIME CODE and 302s to the app's custom-scheme deep link. The code is redeemed via POST /api/auth/native/exchange."
+            "description": "**Documentation-only — a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). Provider redirect for the native flow: issues a short-lived ONE-TIME CODE and 302s to the app's custom-scheme deep link. The code is redeemed via POST /api/auth/native/exchange. Errors: 400 `invalid_request`. Error deep links (the callback URL carries `?error=<code>` instead of a code): `auth_failed`, `email_unverified`, `expired`, `in_use`, `signup_not_allowed`. `signup_not_allowed` = a signup green list is configured and the address is neither on it nor invited by a green-listed owner (GATES-2, ADR-027)."
           }
         },
         {
@@ -237,7 +237,7 @@
             "header": [{ "key": "X-Native-Client", "value": "true" }, { "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"code\": \"{{nativeOneTimeCode}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/native/exchange", "host": ["{{baseUrl}}"], "path": ["api", "auth", "native", "exchange"] },
-            "description": "Redeems the one-time code from the native callback deep link for tokens on the BODY transport (access + refresh token JSON; no cookie). 400/401 invalid_code on unknown/expired/replayed codes (single-use, 5-min TTL); {mfa_required, challenge} when the user has MFA enabled — step up via POST /api/auth/mfa/verify. Requires the X-Native-Client: true header."
+            "description": "Redeems the one-time code from the native callback deep link for tokens on the BODY transport (access + refresh token JSON; no cookie). 400/401 invalid_code on unknown/expired/replayed codes (single-use, 5-min TTL); {mfa_required, challenge} when the user has MFA enabled — step up via POST /api/auth/mfa/verify. Requires the X-Native-Client: true header. A signup refusal never reaches this call: the callback deep link carries `error=signup_not_allowed` instead of a code (GATES-2). Errors: 401 `user_not_found`."
           }
         }
       ]
@@ -247,7 +247,7 @@
       "item": [
         {
           "name": "Me",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] } },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }, "description": "Errors: 401 `invalid_token`, 401 `user_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200\", () => pm.response.to.have.status(200));", "console.log(pm.response.json());"], "type": "text/javascript" } }]
         },
         {
@@ -257,7 +257,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"locale\": \"es\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/locale", "host": ["{{baseUrl}}"], "path": ["api", "auth", "locale"] },
-            "description": "en / es shipped. Drives UI + email language. Follows the user across devices: applied (with one reload on mismatch) on every sign-in, and a device-local login-page choice is adopted here automatically on sign-in when unset (PREFS-1, ADR-022). With an impersonation token as bearer → 403 impersonation_not_allowed (server-side guard, v3 ADM-8)."
+            "description": "en / es shipped. Drives UI + email language. Follows the user across devices: applied (with one reload on mismatch) on every sign-in, and a device-local login-page choice is adopted here automatically on sign-in when unset (PREFS-1, ADR-022). With an impersonation token as bearer → 403 impersonation_not_allowed (server-side guard, v3 ADM-8). Errors: 400 `unsupported_locale`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"2xx\", () => pm.expect(pm.response.code).to.be.below(300));"], "type": "text/javascript" } }]
         },
@@ -291,7 +291,7 @@
           "request": {
             "method": "DELETE",
             "url": { "raw": "{{baseUrl}}/api/auth/me?confirm_dissolve=false", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"], "query": [{ "key": "confirm_dissolve", "value": "false" }] },
-            "description": "GDPR erasure — IRREVERSIBLE. Owner-with-members → 400 (transfer first). Sole owner → 409 until confirm_dissolve=true (which also dissolves the household)."
+            "description": "GDPR erasure — IRREVERSIBLE. Owner-with-members → 400 (transfer first). Sole owner → 409 until confirm_dissolve=true (which also dissolves the household). Errors: 400 `must_transfer_first`, 401 `invalid_token`, 401 `user_not_found`, 409 `confirmation_required`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"deliberate outcome\", () => pm.expect(pm.response.code).to.be.oneOf([204, 400, 409]));"], "type": "text/javascript" } }]
         }
@@ -302,7 +302,7 @@
             "auth": { "type": "noauth" },
             "method": "POST",
             "url": { "raw": "{{baseUrl}}/api/auth/link/google", "host": ["{{baseUrl}}"], "path": ["api", "auth", "link", "google"] },
-            "description": "**Documentation-only \u2014 a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). Starts linking an additional OAuth provider to the signed-in account: responds with the provider redirect carrying a short-lived link token; completes at the callback with ?linked=\u2026 (or ?link_error=\u2026) on the client's /settings. Requires the Bearer token."
+            "description": "**Documentation-only — a browser flow, not runnable from Postman.** Listed so the collection stays a complete mirror of the API surface (v3 audit TR-6; the parity gate `PostmanParityTests` enforces it). Starts linking an additional OAuth provider to the signed-in account: responds with the provider redirect carrying a short-lived link token; completes at the callback with ?linked=… (or ?link_error=…) on the client's /settings. Requires the Bearer token. Errors: 400 `unsupported_provider`."
           }
         },
         {
@@ -329,7 +329,7 @@
           "request": {
             "method": "POST",
             "url": { "raw": "{{baseUrl}}/api/auth/mfa/enroll", "host": ["{{baseUrl}}"], "path": ["api", "auth", "mfa", "enroll"] },
-            "description": "Returns the otpauth:// provisioning URI + Base32 secret (shown once). Add the secret to an authenticator app, then Confirm."
+            "description": "Returns the otpauth:// provisioning URI + Base32 secret (shown once). Add the secret to an authenticator app, then Confirm. Errors: 401 `user_not_found`."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
@@ -345,7 +345,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"code\": \"<current 6-digit TOTP>\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/auth/mfa/confirm", "host": ["{{baseUrl}}"], "path": ["api", "auth", "mfa", "confirm"] },
-            "description": "Enables MFA and returns the 10 one-time recovery codes (xxxxx-xxxxx) — logged to console, shown ONCE."
+            "description": "Enables MFA and returns the 10 one-time recovery codes (xxxxx-xxxxx) — logged to console, shown ONCE. Errors: 400 `invalid_code`, 400 `not_enrolled`."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
@@ -360,7 +360,7 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"code\": \"<TOTP or recovery code>\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/mfa/disable", "host": ["{{baseUrl}}"], "path": ["api", "auth", "mfa", "disable"] }
+            "url": { "raw": "{{baseUrl}}/api/auth/mfa/disable", "host": ["{{baseUrl}}"], "path": ["api", "auth", "mfa", "disable"] }, "description": "Errors: 400 `invalid_code`, 400 `mfa_not_enabled`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"204\", () => pm.response.to.have.status(204));"], "type": "text/javascript" } }]
         }
@@ -371,7 +371,7 @@
       "item": [
         {
           "name": "Get household",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/household", "host": ["{{baseUrl}}"], "path": ["api", "household"] } },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/household", "host": ["{{baseUrl}}"], "path": ["api", "household"] }, "description": "Errors: 404 `household_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
             "if (pm.response.code !== 200) return;",
@@ -387,7 +387,7 @@
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Test Household\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/household", "host": ["{{baseUrl}}"], "path": ["api", "household"] }
+            "url": { "raw": "{{baseUrl}}/api/household", "host": ["{{baseUrl}}"], "path": ["api", "household"] }, "description": "Errors: 400 `invalid_request`, 404 `household_not_found`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"2xx (403 = not owner/admin)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 204, 403]));"], "type": "text/javascript" } }]
         },
@@ -403,7 +403,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{inviteeEmail}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/household/invitations", "host": ["{{baseUrl}}"], "path": ["api", "household", "invitations"] },
-            "description": "Returns the raw token ONCE (also emailed). 402 = seat quota reached (QA-HH-14). 409 = already a member."
+            "description": "Returns the raw token ONCE (also emailed). 402 = seat quota reached (QA-HH-14). 409 = already a member. Errors: 400 `invalid_request`, 402 `seat_limit_reached`, 409 `already_member`."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"created (402 = seat quota)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 402, 409]));",
@@ -415,7 +415,7 @@
         },
         {
           "name": "Invitations — regenerate token",
-          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/household/invitations/{{invitationId}}/regenerate", "host": ["{{baseUrl}}"], "path": ["api", "household", "invitations", "{{invitationId}}", "regenerate"] } },
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/household/invitations/{{invitationId}}/regenerate", "host": ["{{baseUrl}}"], "path": ["api", "household", "invitations", "{{invitationId}}", "regenerate"] }, "description": "Errors: 400 `invitation_not_pending`, 404 `invitation_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
             "if (pm.response.code !== 200) return;",
@@ -430,13 +430,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{invitationToken}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/household/invitations/accept", "host": ["{{baseUrl}}"], "path": ["api", "household", "invitations", "accept"] },
-            "description": "Sign in as the invitee first (re-run folder 1 with the invitee email) — accept joins the CALLER to the inviting household. Errors: 400 invitation_invalid/must_transfer_first/would_abandon_data, 409 already_member, 402 seat_limit_reached when the household downgraded below its reserved seats (BILLING-9 — the token stays pending and works again after an upgrade)."
+            "description": "Sign in as the invitee first (re-run folder 1 with the invitee email) — accept joins the CALLER to the inviting household. Errors: 400 invitation_invalid/must_transfer_first/would_abandon_data, 409 already_member, 402 seat_limit_reached when the household downgraded below its reserved seats (BILLING-9 — the token stays pending and works again after an upgrade). Errors: 400 `invalid_request`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"outcome\", () => pm.expect(pm.response.code).to.be.below(500));"], "type": "text/javascript" } }]
         },
         {
           "name": "Invitations — revoke",
-          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/household/invitations/{{invitationId}}", "host": ["{{baseUrl}}"], "path": ["api", "household", "invitations", "{{invitationId}}"] } },
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/household/invitations/{{invitationId}}", "host": ["{{baseUrl}}"], "path": ["api", "household", "invitations", "{{invitationId}}"] }, "description": "Errors: 404 `invitation_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"204/404\", () => pm.expect(pm.response.code).to.be.oneOf([204, 404]));"], "type": "text/javascript" } }]
         },
         {
@@ -446,13 +446,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"role\": \"admin\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/household/members/{{memberUserId}}/role", "host": ["{{baseUrl}}"], "path": ["api", "household", "members", "{{memberUserId}}", "role"] },
-            "description": "Roles: member | admin (owner is transferred, never assigned). Owner-only."
+            "description": "Roles: member | admin (owner is transferred, never assigned). Owner-only. Errors: 400 `cannot_change_owner`, 400 `invalid_request`, 400 `invalid_role`, 404 `member_not_found`, 500 `internal_error`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"outcome\", () => pm.expect(pm.response.code).to.be.below(500));"], "type": "text/javascript" } }]
         },
         {
           "name": "Remove member (owner/admin)",
-          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/household/members/{{memberUserId}}", "host": ["{{baseUrl}}"], "path": ["api", "household", "members", "{{memberUserId}}"] } },
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/household/members/{{memberUserId}}", "host": ["{{baseUrl}}"], "path": ["api", "household", "members", "{{memberUserId}}"] }, "description": "Errors: 400 `cannot_remove_owner`, 400 `invalid_request`, 404 `member_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"outcome\", () => pm.expect(pm.response.code).to.be.below(500));"], "type": "text/javascript" } }]
         },
         {
@@ -462,7 +462,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{memberUserId}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/household/transfer-ownership", "host": ["{{baseUrl}}"], "path": ["api", "household", "transfer-ownership"] },
-            "description": "Owner-only; you become a member afterwards."
+            "description": "Owner-only; you become a member afterwards. Errors: 400 `invalid_request`, 404 `member_not_found`, 409 `concurrent_modification`, 500 `internal_error`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"outcome\", () => pm.expect(pm.response.code).to.be.below(500));"], "type": "text/javascript" } }]
         },
@@ -473,7 +473,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"confirm_dissolve\": false\n}" },
             "url": { "raw": "{{baseUrl}}/api/household/leave", "host": ["{{baseUrl}}"], "path": ["api", "household", "leave"] },
-            "description": "Member: leaves + re-homes to a fresh solo household. Owner with members: refused (transfer first). Sole owner: needs confirm_dissolve=true (dissolves)."
+            "description": "Member: leaves + re-homes to a fresh solo household. Owner with members: refused (transfer first). Sole owner: needs confirm_dissolve=true (dissolves). Errors: 400 `must_transfer_first`, 409 `confirmation_required`, 500 `internal_error`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"outcome\", () => pm.expect(pm.response.code).to.be.below(500));"], "type": "text/javascript" } }]
         },
@@ -508,7 +508,7 @@
       "item": [
         {
           "name": "List",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/notifications?limit=20", "host": ["{{baseUrl}}"], "path": ["api", "notifications"], "query": [{ "key": "limit", "value": "20" }, { "key": "before", "value": "", "disabled": true }] } },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/notifications?limit=20", "host": ["{{baseUrl}}"], "path": ["api", "notifications"], "query": [{ "key": "limit", "value": "20" }, { "key": "before", "value": "", "disabled": true }] }, "description": "Errors: 401 `invalid_token`." },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200\", () => pm.response.to.have.status(200));",
             "const items = pm.response.json();",
@@ -517,37 +517,37 @@
         },
         {
           "name": "Unread count",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "unread-count"] } },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "unread-count"] }, "description": "Errors: 401 `invalid_token`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200\", () => pm.response.to.have.status(200));"], "type": "text/javascript" } }]
         },
         {
           "name": "Mark one read",
-          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "{{notificationId}}", "read"] } },
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "{{notificationId}}", "read"] }, "description": "Errors: 401 `invalid_token`, 404 `notification_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"204/404\", () => pm.expect(pm.response.code).to.be.oneOf([204, 404]));"], "type": "text/javascript" } }]
         },
         {
           "name": "Mark all read",
-          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "read-all"] } },
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "read-all"] }, "description": "Errors: 401 `invalid_token`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"204\", () => pm.response.to.have.status(204));"], "type": "text/javascript" } }]
         },
         {
           "name": "Delete one",
-          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/notifications/{{notificationId}}", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "{{notificationId}}"] } },
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/notifications/{{notificationId}}", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "{{notificationId}}"] }, "description": "Errors: 401 `invalid_token`, 404 `notification_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"204/404\", () => pm.expect(pm.response.code).to.be.oneOf([204, 404]));"], "type": "text/javascript" } }]
         },
         {
           "name": "Clear read only",
-          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/notifications?read=true", "host": ["{{baseUrl}}"], "path": ["api", "notifications"], "query": [{ "key": "read", "value": "true" }] } },
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/notifications?read=true", "host": ["{{baseUrl}}"], "path": ["api", "notifications"], "query": [{ "key": "read", "value": "true" }] }, "description": "Errors: 400 `scope_required`, 401 `invalid_token`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 + cleared count\", () => pm.response.to.have.status(200));", "console.log(pm.response.json());"], "type": "text/javascript" } }]
         },
         {
           "name": "Clear all",
-          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/notifications?read=false", "host": ["{{baseUrl}}"], "path": ["api", "notifications"], "query": [{ "key": "read", "value": "false" }] }, "description": "Clears ALL of the caller's notifications. The scope is REQUIRED (v3 LB-UI-10): read=false = all, read=true = only read; omitting ?read is a 400 (scope_required), so delete-all can never be hit by a dropped param." },
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/notifications?read=false", "host": ["{{baseUrl}}"], "path": ["api", "notifications"], "query": [{ "key": "read", "value": "false" }] }, "description": "Clears ALL of the caller's notifications. The scope is REQUIRED (v3 LB-UI-10): read=false = all, read=true = only read; omitting ?read is a 400 (scope_required), so delete-all can never be hit by a dropped param. Errors: 401 `invalid_token`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 + cleared count\", () => pm.response.to.have.status(200));", "console.log(pm.response.json());"], "type": "text/javascript" } }]
         },
         {
           "name": "Preferences — get",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/notifications/preferences", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "preferences"] } },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/notifications/preferences", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "preferences"] }, "description": "Errors: 401 `invalid_token`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200\", () => pm.response.to.have.status(200));"], "type": "text/javascript" } }]
         },
         {
@@ -556,7 +556,7 @@
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"in_app\": true,\n  \"email\": false\n}" },
-            "url": { "raw": "{{baseUrl}}/api/notifications/preferences", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "preferences"] }
+            "url": { "raw": "{{baseUrl}}/api/notifications/preferences", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "preferences"] }, "description": "Errors: 401 `invalid_token`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200\", () => pm.response.to.have.status(200));"], "type": "text/javascript" } }]
         }
@@ -567,7 +567,7 @@
       "item": [
         {
           "name": "Summary",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/billing", "host": ["{{baseUrl}}"], "path": ["api", "billing"] }, "description": "Plan, status, seats — owner-only (403 otherwise)." },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/billing", "host": ["{{baseUrl}}"], "path": ["api", "billing"] }, "description": "Plan, status, seats — owner-only (403 otherwise). 404 when `Billing:Enabled` is off (the default — GATES-1, ADR-027): the billing controllers are not mapped at all." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200/403\", () => pm.expect(pm.response.code).to.be.oneOf([200, 403]));"], "type": "text/javascript" } }]
         },
         {
@@ -577,13 +577,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"plan_key\": \"pro\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/billing/checkout", "host": ["{{baseUrl}}"], "path": ["api", "billing", "checkout"] },
-            "description": "Returns the provider checkout URL (fake provider locally: billing.test/... — won't load, by design)."
+            "description": "Returns the provider checkout URL (fake provider locally: billing.test/... — won't load, by design). Errors: 400 `invalid_plan`. 404 when `Billing:Enabled` is off (the default — GATES-1, ADR-027): the billing controllers are not mapped at all."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200/403\", () => pm.expect(pm.response.code).to.be.oneOf([200, 403]));", "if (pm.response.code === 200) console.log(pm.response.json().url);"], "type": "text/javascript" } }]
         },
         {
           "name": "Portal",
-          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/billing/portal", "host": ["{{baseUrl}}"], "path": ["api", "billing", "portal"] } },
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/billing/portal", "host": ["{{baseUrl}}"], "path": ["api", "billing", "portal"] }, "description": "Errors: 400 `no_subscription`. 404 when `Billing:Enabled` is off (the default — GATES-1, ADR-027): the billing controllers are not mapped at all." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200/400/403\", () => pm.expect(pm.response.code).to.be.oneOf([200, 400, 403]));"], "type": "text/javascript" } }]
         },
         {
@@ -597,7 +597,7 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"EventId\": \"evt_postman_{{$timestamp}}\",\n  \"TenantId\": \"{{tenantId}}\",\n  \"PlanKey\": \"pro\",\n  \"Status\": \"active\",\n  \"StripeCustomerId\": \"cus_postman\",\n  \"OccurredAt\": \"{{$isoTimestamp}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/billing/webhook", "host": ["{{baseUrl}}"], "path": ["api", "billing", "webhook"] },
-            "description": "Upgrades {{tenantId}} to pro/active as if checkout completed (QA-BILL upgrade loop). Requires the FAKE provider (dev default) — on an environment wired to real Stripe (test mode), this returns 400 invalid signature by design; use `stripe trigger` there instead. Run 'Get household' first to populate {{tenantId}}. Re-sending the same EventId is deduped (inbox); an older OccurredAt than the last applied event is ignored."
+            "description": "Upgrades {{tenantId}} to pro/active as if checkout completed (QA-BILL upgrade loop). Requires the FAKE provider (dev default) — on an environment wired to real Stripe (test mode), this returns 400 invalid signature by design; use `stripe trigger` there instead. Run 'Get household' first to populate {{tenantId}}. Re-sending the same EventId is deduped (inbox); an older OccurredAt than the last applied event is ignored. Errors: 400 `invalid_signature`. 404 when `Billing:Enabled` is off (the default — GATES-1, ADR-027): the billing controllers are not mapped at all."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 applied\", () => pm.response.to.have.status(200));"], "type": "text/javascript" } }]
         }
@@ -637,7 +637,7 @@
       "item": [
         {
           "name": "Am I staff",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/admin/me", "host": ["{{baseUrl}}"], "path": ["api", "admin", "me"] } },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/admin/me", "host": ["{{baseUrl}}"], "path": ["api", "admin", "me"] }, "description": "Errors: 401 `invalid_token`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200\", () => pm.response.to.have.status(200));", "console.log(pm.response.json());"], "type": "text/javascript" } }]
         },
         {
@@ -652,7 +652,7 @@
         },
         {
           "name": "Tenant detail (audited in-tenant)",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/admin/tenants/{{adminTenantId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "tenants", "{{adminTenantId}}"] } },
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/admin/tenants/{{adminTenantId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "tenants", "{{adminTenantId}}"] }, "description": "Errors: 404 `tenant_not_found`." },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200/403/404\", () => pm.expect(pm.response.code).to.be.oneOf([200, 403, 404]));",
             "if (pm.response.code !== 200) return;",
@@ -668,7 +668,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"title\": \"Postman announcement\",\n  \"body\": \"Hello from the API collection.\",\n  \"user_ids\": null\n}" },
             "url": { "raw": "{{baseUrl}}/api/admin/tenants/{{adminTenantId}}/announce", "host": ["{{baseUrl}}"], "path": ["api", "admin", "tenants", "{{adminTenantId}}", "announce"] },
-            "description": "user_ids: null/omitted = every member; a NON-empty list = just those (intersected with the roster); an explicitly-empty [] = NO ONE (v3 LB-ADM-2). Audited in-tenant."
+            "description": "user_ids: null/omitted = every member; a NON-empty list = just those (intersected with the roster); an explicitly-empty [] = NO ONE (v3 LB-ADM-2). Audited in-tenant. Errors: 400 `invalid_request`, 404 `tenant_not_found`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200/403\", () => pm.expect(pm.response.code).to.be.oneOf([200, 403]));", "if (pm.response.code === 200) console.log(pm.response.json());"], "type": "text/javascript" } }]
         },
@@ -679,7 +679,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"title\": \"Platform notice\",\n  \"body\": \"Broadcast to every user of every tenant.\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/admin/announce-all", "host": ["{{baseUrl}}"], "path": ["api", "admin", "announce-all"] },
-            "description": "Queued (202) — the outbox dispatcher fans out a few seconds later. ADR-021."
+            "description": "Queued (202) — the outbox dispatcher fans out a few seconds later. ADR-021. Errors: 400 `invalid_request`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"202/403\", () => pm.expect(pm.response.code).to.be.oneOf([202, 403]));"], "type": "text/javascript" } }]
         },
@@ -690,13 +690,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"plan_key\": \"pro\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/admin/tenants/{{adminTenantId}}/subscription", "host": ["{{baseUrl}}"], "path": ["api", "admin", "tenants", "{{adminTenantId}}", "subscription"] },
-            "description": "Simulates a completed checkout (active, never lapses, no provider ids). 409 = tenant has a LIVE Stripe subscription — keyed on liveness (status ≠ canceled), so a churned/canceled tenant is comp-able even though it kept its Stripe id (ADR-006/021, v3 ADM-5). 404 while Billing:Enabled is off — the comp is part of the billing surface (GATES-1, v4 T45)."
+            "description": "Simulates a completed checkout (active, never lapses, no provider ids). 409 = tenant has a LIVE Stripe subscription — keyed on liveness (status ≠ canceled), so a churned/canceled tenant is comp-able even though it kept its Stripe id (ADR-006/021, v3 ADM-5). 404 while Billing:Enabled is off — the comp is part of the billing surface (GATES-1, v4 T45). Errors: 400 `invalid_plan`, 404 `tenant_not_found`, 409 `provider_managed`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200/400/403/409\", () => pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 409]));"], "type": "text/javascript" } }]
         },
         {
           "name": "Revert tenant to Free",
-          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/admin/tenants/{{adminTenantId}}/subscription", "host": ["{{baseUrl}}"], "path": ["api", "admin", "tenants", "{{adminTenantId}}", "subscription"] }, "description": "Deletes the projection (absence ⇒ Free). Idempotent. 409 = LIVE provider subscription (status ≠ canceled); a canceled-but-lingering projection is cleaned up, not blocked (v3 ADM-5). 404 while Billing:Enabled is off (GATES-1, v4 T45)." },
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/admin/tenants/{{adminTenantId}}/subscription", "host": ["{{baseUrl}}"], "path": ["api", "admin", "tenants", "{{adminTenantId}}", "subscription"] }, "description": "Deletes the projection (absence ⇒ Free). Idempotent. 409 = LIVE provider subscription (status ≠ canceled); a canceled-but-lingering projection is cleaned up, not blocked (v3 ADM-5). 404 while Billing:Enabled is off (GATES-1, v4 T45). Errors: 404 `tenant_not_found`, 409 `provider_managed`." },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"204/403/409\", () => pm.expect(pm.response.code).to.be.oneOf([204, 403, 409]));"], "type": "text/javascript" } }]
         },
         {
@@ -704,7 +704,7 @@
           "request": {
             "method": "POST",
             "url": { "raw": "{{baseUrl}}/api/admin/impersonate/{{adminTargetUserId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "impersonate", "{{adminTargetUserId}}"] },
-            "description": "Stores {{impersonationToken}} (does NOT overwrite your session). To act as the target, temporarily set a request's bearer to {{impersonationToken}}. ~15 min, non-refreshable, audited in the target's tenant."
+            "description": "Stores {{impersonationToken}} (does NOT overwrite your session). To act as the target, temporarily set a request's bearer to {{impersonationToken}}. ~15 min, non-refreshable, audited in the target's tenant. Errors: 404 `user_not_found`."
           },
           "event": [{ "listen": "test", "script": { "exec": [
             "pm.test(\"200/403/404\", () => pm.expect(pm.response.code).to.be.oneOf([200, 403, 404]));",
@@ -716,7 +716,7 @@
           "request": {
             "method": "DELETE",
             "url": { "raw": "{{baseUrl}}/api/admin/users/{{adminTargetUserId}}/mfa", "host": ["{{baseUrl}}"], "path": ["api", "admin", "users", "{{adminTargetUserId}}", "mfa"] },
-            "description": "Staff recovery path (ADR-021 addendum): wipes the user's TOTP secret + recovery codes WITHOUT a code — verify their identity out-of-band first. Also REVOKES the target's refresh tokens/sessions (v3 ADM-7 — compromise recovery). Audited in the target's tenant (admin.mfa.reset) and the user is notified (in-app + email). 204 also when the user had no MFA (idempotent no-op)."
+            "description": "Staff recovery path (ADR-021 addendum): wipes the user's TOTP secret + recovery codes WITHOUT a code — verify their identity out-of-band first. Also REVOKES the target's refresh tokens/sessions (v3 ADM-7 — compromise recovery). Audited in the target's tenant (admin.mfa.reset) and the user is notified (in-app + email). 204 also when the user had no MFA (idempotent no-op). Errors: 404 `user_not_found`."
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"204/403/404\", () => pm.expect(pm.response.code).to.be.oneOf([204, 403, 404]));"], "type": "text/javascript" } }]
         }
