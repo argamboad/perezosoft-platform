@@ -211,6 +211,7 @@ public class EnforcementGateTests
                  {
                      ".github/workflows/postman-sync.yml", ".github/scripts/deploy-smoke.sh", ".github/forbidden-licenses.json", ".dockerignore",
                      "docs/DEPLOYMENT.md", ".env.example", "Perezosoft.slnx", "tools/e2e.ps1", "docs/postman/Perezosoft.postman_collection.json",
+                     "docs/ARCHITECTURE.md", "docs/FLOWS.md", // R121: the diagram-currency gate reads both
                  })
             Assert.True(Code(path), $"{workflow}: {path} is read by a gate, so a change to it must run the gates");
     }
@@ -442,6 +443,7 @@ public class EnforcementGateTests
             }
             foreach (var c in candidates.Select(c => c.Replace(@"\\", "/").Replace('\\', '/')))
                 if (c.Length > 0 && !c.StartsWith('/') && !c.Contains(' ') && c != ".env" // .env is the developer's, gitignored
+                    && !c.Split('/').Contains("..") // a traversal payload ("../../etc/passwd") names nothing in the repo, wherever it is checked out
                     && File.Exists(Path.Combine(root, c)))
                     found.Add(c);
         }
@@ -549,19 +551,50 @@ public class EnforcementGateTests
     }
 
     [Fact]
-    public void ClaudeMdDocMap_ListsEveryTopLevelDoc() // R75, doc-map half
+    public void ClaudeMdDocMap_ListsEveryDoc() // R75 (doc-map half), widened to docs/** by R118
     {
+        // The map is what makes a doc visible to every session (v3 TR-1). It used to check docs/*.md only, and
+        // what sat one folder down went unmapped: a live story file, the QA run logs, the entire course (v4 TR-24).
         var root = RepoRoot();
         var claudeMd = File.ReadAllText(Path.Combine(root, "CLAUDE.md"));
 
-        var missing = Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.TopDirectoryOnly)
-            .Select(f => "docs/" + Path.GetFileName(f))
+        // Folders mapped as ONE row: their files come and go (a new run log, a new lesson) without a map edit.
+        string[] folderRows = ["docs/tutorial/", "docs/qa-runs/", "docs/postman/"];
+        var missingRows = folderRows.Where(row => !claudeMd.Contains($"| `{row}` |", StringComparison.Ordinal)).ToList();
+        Assert.True(missingRows.Count == 0, $"CLAUDE.md doc map has no row for: {string.Join(", ", missingRows)}");
+
+        // Not mapped, on purpose: audit runs are reached through AUDIT_SUITE.md and the rules pointer; the
+        // example epic is a template, named by WAYS_OF_WORKING.md.
+        string[] unmapped = ["docs/audits/", "docs/stories/_EXAMPLE_"];
+
+        var docs = Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
+            .ToList();
+        Assert.True(docs.Count(d => d.Count(c => c == '/') > 1) >= 20, "probe: the walk found too few docs below docs/ — did the tree move?");
+
+        var missing = docs
+            .Where(rel => !unmapped.Any(u => rel.StartsWith(u, StringComparison.Ordinal)))
+            .Where(rel => !folderRows.Any(row => rel.StartsWith(row, StringComparison.Ordinal)))
             .Where(rel => !claudeMd.Contains(rel, StringComparison.Ordinal))
             .ToList();
 
         Assert.True(missing.Count == 0,
-            "Top-level docs missing from the CLAUDE.md doc map — the map is what makes a doc visible "
-            + $"to every session (v3 TR-1): {string.Join(", ", missing)}");
+            "Docs missing from the CLAUDE.md doc map — add a row (or, for a folder whose files come and go, a "
+            + $"folder row in this gate): {string.Join(", ", missing)}");
+    }
+
+    [Fact]
+    public void ClaudeMd_CarriesTheCourseReconcileRule() // R118
+    {
+        // The habit that keeps the course true — a lesson is reconciled in the PR that changes the code it
+        // quotes — lived only in the maintainer's memory, so a clone lost it.
+        var claudeMd = File.ReadAllText(Path.Combine(RepoRoot(), "CLAUDE.md")).ReplaceLineEndings("\n");
+        var start = claudeMd.IndexOf("## Read before you act", StringComparison.Ordinal);
+        Assert.True(start >= 0, "CLAUDE.md no longer has a 'Read before you act' section");
+        var section = claudeMd[start..claudeMd.IndexOf("\n## ", start + 1, StringComparison.Ordinal)];
+        Assert.True(section.Contains("docs/tutorial/", StringComparison.Ordinal) && section.Contains("--check-quotes", StringComparison.Ordinal),
+            "CLAUDE.md 'Read before you act' must carry the course-reconcile rule: name docs/tutorial/ and the "
+            + "quote check (gen_coverage.py --check-quotes).");
     }
 
     [Fact]

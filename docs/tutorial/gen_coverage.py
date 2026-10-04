@@ -397,6 +397,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/BillingDataContributor.cs", "5.3", ""),
     ("src/Infrastructure/Billing/BillingCancelOutboxHandler.cs", "5.3", ""),
     ("tests/Api.Tests/Billing/QuotaServiceTests.cs", "5.3", ""),
+    ("tests/Api.Tests/Billing/CatalogNumbersTests.cs", "5.3", "catalog numbers are read, never copied: docs that state a seat cap state PlanCatalog's, QA drills count relative to the cap (v4 T47, R88)"),
     ("tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs", "5.3", ""),
     ("tests/Api.Tests/Billing/BillingDissolveTests.cs", "5.3", ""),
 
@@ -462,6 +463,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Integration/NotificationClearScopeTests.cs", "7.2", "bulk-clear requires an explicit scope (v3 LB-UI-10)"),
     ("tests/Api.Tests/Integration/ContributorRegistrationTests.cs", "6.3", "every declared contributor resolves from the app DI (v3 TB-TEN-11)"),
     ("tests/Api.Tests/Integration/PostmanParityTests.cs", "8.3", "every mapped /api endpoint documented in the canonical collection (v3 TR-6)"),
+    ("tests/Api.Tests/PostmanParityDescriptionTests.cs", "8.3", "each request's description names the error codes its action returns, the signup refusal and the billing gate key (v4 T63, R83/R119)"),
     ("src/Api/Models/NotificationModels.cs", "7.2", ""),
     ("src/Shared.Ui/Components/NotificationBell.razor", "7.2", ""),
     ("src/Shared.Ui/Components/NotificationPrefsCard.razor", "7.2", ""),

@@ -528,7 +528,7 @@
 - `tests/Api.Tests/Billing/BillingWebhookHandlerTests.cs`
 - `tests/Api.Tests/Billing/StripeBillingProviderTests.cs`
 
-## 5.3 — Quotas, dunning & billing dissolve (14 files)
+## 5.3 — Quotas, dunning & billing dissolve (15 files)
 
 - `src/Api/Services/BillingDataContributor.cs`
 - `src/Api/Services/BillingNotifier.cs`
@@ -541,6 +541,7 @@
 - `src/Infrastructure/Persistence/Configurations/UsageCounterConfiguration.cs`
 - `tests/Api.Tests/Billing/AcceptSeatQuotaTests.cs` — BILLING-9: seat quota re-checked at invitation ACCEPT (402 seat_limit_reached)
 - `tests/Api.Tests/Billing/BillingDissolveTests.cs`
+- `tests/Api.Tests/Billing/CatalogNumbersTests.cs` — catalog numbers are read, never copied: docs that state a seat cap state PlanCatalog's, QA drills count relative to the cap (v4 T47, R88)
 - `tests/Api.Tests/Billing/QuotaServiceTests.cs`
 - `tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs`
 - `tests/E2E.Tests/SeatQuotaJourneyTests.cs` — seat-quota 402 UX
@@ -716,7 +717,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (124 files)
+## 8.3 — The deploy pipeline & CI gates (125 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -725,6 +726,7 @@
 - `tests/Api.Tests/CiWorkflowTests.cs` — the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
+- `tests/Api.Tests/PostmanParityDescriptionTests.cs` — each request's description names the error codes its action returns, the signup refusal and the billing gate key (v4 T63, R83/R119)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -1052,7 +1054,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (254 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (255 files)
 
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
@@ -1185,6 +1187,7 @@
 - `docs/stories/prefs.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/pubapi.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/rbac.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/test-toolchain.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/theme.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -1309,4 +1312,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1142 tracked files · 777 built in lessons · 365 bucketed · 0 unmapped
+**Totals:** 1145 tracked files · 779 built in lessons · 366 bucketed · 0 unmapped

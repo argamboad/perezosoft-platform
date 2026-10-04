@@ -51,7 +51,7 @@ public static class RulesEnforcement
         // ── 4. Admin / config gates / billing ──
         new("R86", ["GateOff_NothingUnderTheGatedPrefixes_IsMapped", "GateOff_AdminComp_Returns404_BeforeTheStaffCheck"]),
         new("R87", ["AGatedSwitch_IsReadOnlyThroughItsSettingsClass"]),
-        new("R88", [], Pending: "perezosoft-platform#284 (T47: the stale-count doc-grep gate)"),
+        new("R88", ["DocsThatStateASeatCap_StateTheCatalogs", "QaDrills_ExpressSeatCountsRelativeToTheCap", "TheBrowserTests_HoldOneCopyOfTheFreeCap_AndItIsTheCatalogs"]),
         new("R122", ["ConfigPostureTests"]),
         new("R128", ["StripeBillingProviderTests"]),
         new("R133", ["LapseSweep_NotificationAndStamp_AreOneTransaction", "JobTests_UseTheRealOutboxEmailSender"]),
@@ -100,14 +100,14 @@ public static class RulesEnforcement
         new("R157", ["SliceReferenceInspectorTests", "RoutePrefixInspectorTests"]),
 
         // ── 9. Docs / course / rule hygiene / template ──
-        new("R83", ["PostmanParityTests"]),
+        new("R83", ["PostmanParityTests", "EveryErrorCodeAnActionReturns_IsNamedInItsRequestDescription"]),
         new("R114", ["CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts", "ci:Course coverage and quote currency"]),
         new("R115", ["CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts", "ci:Course coverage and quote currency"]),
         new("R116", ["RuleIds_CitedInTests_AreFinalRules", "EveryMachineRule_NamesAStandingCheck"]),
-        new("R118", ["ClaudeMdDocMap_ListsEveryTopLevelDoc"], Pending: "perezosoft-platform#300 (T63: widen the doc-map gate to docs/**)"),
-        new("R119", [], Pending: "perezosoft-platform#300 (T63: the Postman gate/refusal description floor)"),
-        new("R120", [], Pending: "perezosoft-platform#300 (T63: the compiled-in limits block gate)"),
-        new("R121", [], Pending: "perezosoft-platform#300 (T63: diagram currency)"),
+        new("R118", ["ClaudeMdDocMap_ListsEveryDoc", "ClaudeMd_CarriesTheCourseReconcileRule"]),
+        new("R119", ["GatedAndRefusingRequests_NameTheGateKeyAndTheRefusal"]),
+        new("R120", ["CompiledInLimits_AreListedInTheEnvExample"]),
+        new("R121", ["ArchitectureAndFlows_NameTheClassesAndTheAuthErrorCodes"]),
         new("R152", ["NoResx_DeclaresAKeyTwice"]),
         new("R158", ["AddASliceChecklist_NamesEveryArtifactAGateForces"]),
     ];

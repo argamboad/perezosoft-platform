@@ -1955,11 +1955,14 @@ When both invitees accept near-simultaneously
 Then exactly one joins, the other gets 402 seat_limit_reached, and seats never exceed the cap
 ```
 **Walkthrough**
-1. Put a Free (cap 3) tenant at **2 seats used** with **two** distinct pending invites.
+1. Bring a Free tenant to **one seat below its cap** with **two** pending invitations outstanding (the cap
+   is the M in the Billing page's "N of M seats"). A pending invitation reserves a seat, so a Free tenant
+   cannot be put in that state directly: comp it to Pro from the staff console, add members until it has
+   **cap − 1**, send the two invitations, then revert it to Free — the downgrade setup QA-INV-10 uses.
 2. In **two browser contexts**, sign in as each invitee and open both `/join` links; click **accept**
    as close to simultaneously as you can (or double-submit).
-3. **Expected:** **one** join succeeds (seat 3), the other returns **402 `seat_limit_reached`** with the
-   "household is full" state; the member count settles at **exactly 3** — the atomic seat check has no
+3. **Expected:** **one** join succeeds (the last seat), the other returns **402 `seat_limit_reached`** with the
+   "household is full" state; the member count settles at **exactly the cap** — the atomic seat check has no
    race (audit **TB-BILL-19 / BILLING-9**). Should **Pass**.
 
 ### QA-ADV-16 — Magic-link / OTP double-redemption issues exactly one session 🟠 (Web — two contexts)
@@ -2326,13 +2329,16 @@ Then the sign-in succeeds
 
 ## 14d. v4 audit — adversarial, forge & regression (QA-ADV-25+, QA-DEP-*) 🟠
 
-The v4 delta audit (`docs/audits/v4-2026-09/`, 2026-09-23) found the classes below. **EXPECT-FAIL discipline:**
-a case marked **⚠️ PENDING remediation** asserts behaviour the audit proved is currently broken — record it
-**Blocked** (never Pass) with the finding id in Notes; the remediation task named in the case flips it to an
-expected Pass. Cases without the marker should Pass today.
+The v4 delta audit (`docs/audits/v4-2026-09/`, 2026-09-23) found the classes below. When this section was
+written, eleven of its cases asserted behaviour the audit had proved broken and were pre-recorded **Blocked**.
+**All eleven are remediated** (v4 batches B3–B7, merged 2026-09-24 → 2026-10-01): each case below names the
+finding and the task that fixed it, and **every case in this section is expected to Pass**. A failure here
+is a regression — record it **Fail** with the finding id in Notes. (The discipline for a future audit is
+unchanged: a case that asserts known-broken behaviour is marked **⚠️ PENDING remediation** and recorded
+Blocked, never Pass, until its task lands.)
 
 ### QA-ADV-25 — Joining another household wipes your old one completely 🟠 (curl + DB)
-**⚠️ PENDING remediation** — v4 LB-AUTH-5 / LB-BILL-19, task T21 (R123).
+**✅ Remediated** — v4 LB-AUTH-5 / LB-BILL-19, task T21 (R123) landed; expected **Pass**.
 **Gherkin**
 ```gherkin
 Given I am the only member of household A, with an API key and a webhook subscription (PUBAPI/HOOKS on)
@@ -2351,7 +2357,7 @@ Then household A is gone AND its API key no longer authenticates AND no row of A
    running the dissolution contributors). With a Stripe-backed A, also expect a `billing.cancel` outbox row.
 
 ### QA-ADV-26 — Dissolving a household leaves no queued email or attachment behind 🟠 (curl + DB)
-**⚠️ PENDING remediation** — v4 JOBS-2 / ADV-P4-7, tasks T22–T23 (R90/R91).
+**✅ Remediated** — v4 JOBS-2 / ADV-P4-7, tasks T22–T23 (R90/R91) landed; expected **Pass**.
 **Gherkin**
 ```gherkin
 Given household A has emails in the outbox (an invitation, a notification)
@@ -2367,7 +2373,7 @@ Then no outbox row for A keeps a recipient address, a body or attachment bytes
    payload — and sent rows are never purged.
 
 ### QA-ADV-27 — Signing out while a background renewal is in flight really signs out 🟠 (curl)
-**⚠️ PENDING remediation** — v4 LB-AUTH-4 / LB-UI-12, tasks T29/T31 (R124/R125).
+**✅ Remediated** — v4 LB-AUTH-4 / LB-UI-12, tasks T29/T31 (R124/R125) landed; expected **Pass**.
 **Gherkin**
 ```gherkin
 Given I refreshed once, rotating token A into B
@@ -2382,7 +2388,7 @@ Then B is revoked too, and no further refresh succeeds
    live session: the second session should be revoked as well.
 
 ### QA-ADV-28 — A rotated token is forgiven once, not forever 🟠 (curl)
-**⚠️ PENDING remediation** — v4 AUTH-1, task T28 (R81).
+**✅ Remediated** — v4 AUTH-1, task T28 (R81) landed; expected **Pass**.
 **Gherkin**
 ```gherkin
 Given token A was rotated into B less than 60 seconds ago
@@ -2396,7 +2402,7 @@ Then it is treated as theft: 401 and every session revoked
    **Today:** 200 again — each replay mints another live chain.
 
 ### QA-ADV-29 — An expired impersonation never turns into the staff account mid-page 🟠 (Web)
-**⚠️ PENDING remediation** — v4 LB-UI-13, task T31 (R125).
+**✅ Remediated** — v4 LB-UI-13, task T31 (R125) landed; expected **Pass**.
 **Gherkin**
 ```gherkin
 Given staff is impersonating a member on the member's Household page
@@ -2411,7 +2417,7 @@ Then the action is refused or staff is returned home — it never runs as the st
    renews into the staff identity and the rename lands on the **staff's own** household.
 
 ### QA-ADV-30 — A webhook endpoint that redirects is a failed delivery 🟠 (curl)
-**⚠️ PENDING remediation** — v4 LB-JOBS-1 / JOBS-9 / ADV-P4-9, task T37 (R130).
+**✅ Remediated** — v4 LB-JOBS-1 / JOBS-9 / ADV-P4-9, task T37 (R130) landed; expected **Pass**.
 **Gherkin**
 ```gherkin
 Given a webhook subscription whose URL answers 302 to another host
@@ -2426,14 +2432,14 @@ Then the redirect is not followed, and the delivery log records a failure with s
    delivered (200). With a 307, today the signed body itself reaches `<other>`.
 
 ### QA-ADV-31 — The delivery log never shows raw server exception text 🟢 (curl)
-**⚠️ PENDING remediation** — v4 JOBS-1, task T39 (R89).
+**✅ Remediated** — v4 JOBS-1, task T39 (R89) landed; expected **Pass**.
 **Walkthrough**
 1. Subscribe a webhook to `https://does-not-exist.invalid/hook`; send a test.
 2. `GET /api/webhooks/{id}/deliveries`. **Expected:** `error` is a short code (`dns`, `timeout`, `connection`,
    `http_<status>`, `url_refused`). **Today:** the raw exception message (resolver text, IPs, the SSRF verdict).
 
 ### QA-ADV-32 — Billing off leaves no billing-shaped surface anywhere 🟠 (curl)
-**⚠️ PENDING remediation** — v4 BILL-2/BILL-3, task T45 (R86).
+**✅ Remediated** — v4 BILL-2/BILL-3, task T45 (R86) landed; expected **Pass**.
 **Walkthrough**
 1. Environment with `Billing__Enabled` unset. As staff: `PUT /api/admin/tenants/{id}/subscription`
    `{"plan_key":"pro"}`. **Expected:** **404** (the comp write goes with the billing surface) and the console's
@@ -2441,7 +2447,7 @@ Then the redirect is not followed, and the delivery log records a failure with s
 2. Complements QA-GATE-01 (which checks `/api/billing*` only).
 
 ### QA-ADV-33 — Expired invitations stop holding seats 🟠 (Web)
-**⚠️ PENDING remediation** — v4 LB-AUTH-7 / LB-BILL-20, task T34 (R127).
+**✅ Remediated** — v4 LB-AUTH-7 / LB-BILL-20, task T34 (R127) landed; expected **Pass**.
 **Walkthrough**
 1. Free household at `cap − 1` members plus pending invitations that are **past their expiry** (seed
    `ExpiresAt` in the past in the DB, or wait out `LifespanDays`).
@@ -2449,7 +2455,7 @@ Then the redirect is not followed, and the delivery log records a failure with s
    `seat_limit_reached` / "household full" — dead invitations keep their seats forever.
 
 ### QA-ADV-34 — The native export download never sends your sign-in token to the file host 🟢 (Android/Desktop)
-**⚠️ PENDING remediation** — v4 NAT-12, task T49 (R102).
+**✅ Remediated** — v4 NAT-12, task T49 (R102) landed; expected **Pass**.
 **Walkthrough**
 1. Environment with `Files__Provider=S3` (MinIO in compose). On the native app, Household → Export data.
 2. Watch the MinIO/S3 access log (or a proxy). **Expected:** the presigned GET carries **no**
@@ -2457,7 +2463,7 @@ Then the redirect is not followed, and the delivery log records a failure with s
    rejects a presigned GET that also carries an Authorization header).
 
 ### QA-ADV-35 — Exported logs carry no email addresses 🟢 (Ops)
-**⚠️ PENDING remediation** — v4 OBS-1, task T41 (R93).
+**✅ Remediated** — v4 OBS-1, task T41 (R93) landed; expected **Pass**.
 **Walkthrough**
 1. Set `OpenTelemetry__Otlp__Endpoint` to a collector you can read (Grafana Cloud or a local otel-collector
    with a file exporter). Sign in with OTP twice.
@@ -2537,7 +2543,7 @@ Then every web gate runs, and only when all pass the Render hook fires and the v
 | Billing — checkout/portal/webhook + billing page | **BILL-01/02** (§10c, ⚙️ E2E `BillingJourneyTests`) + **DSK-11 / AND-11** (native refresh-on-return — NATIVE-4) + `Api.Tests` (Billing*/Entitlement* tests) | `POST /api/billing/checkout`, `…/portal`, `…/webhook` |
 | Billing — quotas (BILLING-5) | **HH-14** (seat limit blocks invite → 402 upgrade message) + `Api.Tests` (`QuotaServiceTests`) | seats (members + pending invites vs `Plan.SeatLimit`) enforced on `POST /api/household/invitations` → 402 `seat_limit_reached`; metered usage via `IQuotaService.TryConsumeAsync` (monthly `UsageCounter`). Limits in `PlanCatalog` (null = unlimited). |
 | Billing — trial/dunning (BILLING-6) | covered by `Api.Tests` (`BillingWebhookHandlerTests`, `SubscriptionLapseSweepJobTests`); manual via Stripe test triggers | webhook transition into `active`/`trialing` from nothing or a lapsed state → owner **"Subscription active"** notification (`billing.activated`, plan + renewal date) once — a renewal or a trial converting is silent; transition into `past_due`/`canceled` → owner **notification** (in-app bell + outbox email, NOTIFY) once; `SubscriptionLapseSweepJob` (6h) nudges the owner once when a paid period lapses without a webhook (`LapseNotifiedAt`). Verify with `stripe trigger invoice.payment_failed` (test mode) → owner sees a billing notification in the bell. |
-| v4 audit — adversarial (§14d) | **ADV-25..35** (⚠️ PENDING remediation — each names its v4 task) | accept-path dissolve, outbox erasure, logout/grace, impersonation expiry, webhook redirects + error codes, billing-off admin comp, expired-invite seats, native bearer scope, exported-log PII |
+| v4 audit — adversarial (§14d) | **ADV-25..35** (all remediated in v4 B3–B7 — each names the task that fixed it) | accept-path dissolve, outbox erasure, logout/grace, impersonation expiry, webhook redirects + error codes, billing-off admin comp, expired-invite seats, native bearer scope, exported-log PII |
 | Deploys + device legs on request (ADR-031) | **DEP-01..04** (operator) | GitHub `CI` *Run workflow*: `deploy` = staging/prod behind every web gate, branch guards, `devices` = android/windows/apple/all |
 | Regressions (#233, #230) | **SET-09**, **AND-16** | `PUT /api/auth/theme` + remembered preference; native `ApiBaseUrl` normalization |
 | Billing — dissolve cleanup (BILLING-7) | covered by `Api.Tests` (`BillingDissolveTests`) | on tenant dissolve, `BillingDataContributor` wipes the `Subscription` projection **and** enqueues a `"billing.cancel"` outbox message → `IBillingProvider.CancelSubscriptionAsync` (a deleted tenant stops being billed). `HasDataAsync`=false (billing never blocks leaving); export gains a `billing` section (plan/status/period, no Stripe ids). Manual (Stripe test mode): subscribe a throwaway tenant, delete the account, confirm the Stripe subscription is canceled. |
@@ -2663,17 +2669,17 @@ cases now expects **Pass** on re-run.
 | QA-ADV-22 | API | | | | | |
 | QA-ADV-23 | Desktop/Android | | | | | Was pre-seeded Blocked (NAT-3 (Release build cleartext localhost base URL)) — fixed in v3; re-run |
 | QA-ADV-24 | Desktop | | | | | |
-| QA-ADV-25 | API | Blocked | | | | Expected Blocked until v4 T21 (LB-AUTH-5) lands |
-| QA-ADV-26 | API | Blocked | | | | Expected Blocked until v4 T22–T23 (JOBS-2) lands |
-| QA-ADV-27 | API | Blocked | | | | Expected Blocked until v4 T29/T31 (LB-AUTH-4) lands |
-| QA-ADV-28 | API | Blocked | | | | Expected Blocked until v4 T28 (AUTH-1) lands |
-| QA-ADV-29 | Web | Blocked | | | | Expected Blocked until v4 T31 (LB-UI-13) lands |
-| QA-ADV-30 | API | Blocked | | | | Expected Blocked until v4 T37 (LB-JOBS-1) lands |
-| QA-ADV-31 | API | Blocked | | | | Expected Blocked until v4 T39 (JOBS-1) lands |
-| QA-ADV-32 | API | Blocked | | | | Expected Blocked until v4 T45 (BILL-2) lands |
-| QA-ADV-33 | Web | Blocked | | | | Expected Blocked until v4 T34 (LB-AUTH-7) lands |
-| QA-ADV-34 | Android/Desktop | Blocked | | | | Expected Blocked until v4 T49 (NAT-12) lands |
-| QA-ADV-35 | Ops | Blocked | | | | Expected Blocked until v4 T41 (OBS-1) lands |
+| QA-ADV-25 | API | | | | | Was pre-seeded Blocked (LB-AUTH-5) — fixed in v4 T21; re-run |
+| QA-ADV-26 | API | | | | | Was pre-seeded Blocked (JOBS-2) — fixed in v4 T22–T23; re-run |
+| QA-ADV-27 | API | | | | | Was pre-seeded Blocked (LB-AUTH-4) — fixed in v4 T29/T31; re-run |
+| QA-ADV-28 | API | | | | | Was pre-seeded Blocked (AUTH-1) — fixed in v4 T28; re-run |
+| QA-ADV-29 | Web | | | | | Was pre-seeded Blocked (LB-UI-13) — fixed in v4 T31; re-run |
+| QA-ADV-30 | API | | | | | Was pre-seeded Blocked (LB-JOBS-1) — fixed in v4 T37; re-run |
+| QA-ADV-31 | API | | | | | Was pre-seeded Blocked (JOBS-1) — fixed in v4 T39; re-run |
+| QA-ADV-32 | API | | | | | Was pre-seeded Blocked (BILL-2) — fixed in v4 T45; re-run |
+| QA-ADV-33 | Web | | | | | Was pre-seeded Blocked (LB-AUTH-7) — fixed in v4 T34; re-run |
+| QA-ADV-34 | Android/Desktop | | | | | Was pre-seeded Blocked (NAT-12) — fixed in v4 T49; re-run |
+| QA-ADV-35 | Ops | | | | | Was pre-seeded Blocked (OBS-1) — fixed in v4 T41; re-run |
 | QA-DEP-01 | Operator | | | | | |
 | QA-DEP-02 | Operator | | | | | |
 | QA-DEP-03 | Operator | | | | | |
@@ -2820,7 +2826,7 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   pending invites vs `Plan.SeatLimit`, enforced on the invite path → **402 `seat_limit_reached`**, with an
   upgrade message in the Household invite UI) and **metered usage** (`TryConsumeAsync` against a monthly,
   self-resetting `UsageCounter`). Limits are `PlanCatalog` data — `null`/absent = unlimited, so it's inert
-  until set (platform ships example caps: Free 3/3, Pro 10/100). New entity + migration `AddUsageCounter`.
+  until set (platform shipped example caps Free 3/3, Pro 10/100; Free seats were raised to 5 by GATES-1). New entity + migration `AddUsageCounter`.
   Covered by `QuotaServiceTests` (10 cases); **QA-HH-14**; EN/ES. Only **BILLING-6** (trial/dunning) and a
   billing-dissolve contributor remain from the BILLING epic.
 - **Updated 2026-07-01** — **BILLING-6 (trial/dunning):** the owner-facing reaction to the subscription
@@ -3020,3 +3026,10 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   run from *Run workflow* → `deploy` behind every web gate. QA-DEP-01..04 rewritten for that (deploy from GitHub,
   wrong-branch guard, red gate blocks, device legs on request); the Apple-cadence note became the device-legs
   note.
+- **Updated 2026-10-03 (v4 Later, groups C and D).** §14d's eleven adversarial cases **QA-ADV-25..35** are no
+  longer pending: every remediation they waited on landed in v4 batches B3–B7, so their markers read
+  **Remediated — expected Pass** and their §16 rows are unseeded (run them; a failure is a regression).
+  **QA-ADV-15** counts seats relative to the plan's cap instead of quoting a number (it said "cap 3" after
+  the cap became 5, which left room for both joiners and tested nothing). **QA-SEC-03** (Back after sign-out)
+  is automated by a browser journey that runs with the back/forward cache on. §13c gained the signing-key and
+  no-backup note for Android builds. 173 cases, unchanged.

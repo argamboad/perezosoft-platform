@@ -123,9 +123,9 @@
 | T60 | TR-13/14 | High (docs) | deploy-trigger wording ×3 + grep gate | R117 | no | 🟡 TR-13 fixed in Phase 6; TR-14 (H9) merged #20 with a Postman-wording gate (2026-09-24); the broad `auto-deploys` grep gate is still open |
 | T61 | TR-19, TR-12.. | High (docs) | **course reconcile ✅ landed in Phase 7** (`aa5e990`…`9d84a1a`); coverage CI step + quote sweep pending | R114, R115 | no | 🟡 (gates pending) |
 | T62 | TR-15 (docs) | Med | v2 header erratum → v3 | R116 | no | ⬜ |
-| T63 | TR-20/21/24/25/26/27, OBS-4, NAT-21, DEP-25, AUTH-10 | Med/Low | FLOWS/ARCHITECTURE; Postman descriptions + code parity; limits block; doc-map rows + gate; story statuses | R121, R83, R119, R120, R118 | no | ⬜ |
+| T63 | TR-20/21/24/25/26/27, OBS-4, NAT-21, DEP-25, AUTH-10 | Med/Low | FLOWS/ARCHITECTURE; Postman descriptions + code parity; limits block; doc-map rows + gate; story statuses | R121, R83, R119, R120, R118 | no | ✅ 2026-10-04 (v4 Later D): FLOWS signup branches + auth error codes; ARCHITECTURE SignupGate, §11 observability, §12 class index; Postman descriptions name every error code, the signup refusal and the `Billing:Enabled` 404; `.env.example` limits; doc-map rows + course-reconcile rule; ADR-025/026 stubs; story truth-ups. Gates: `PostmanParityDescriptionTests` (R83, R119), `CompiledInLimits_AreListedInTheEnvExample` (R120), `ArchitectureAndFlows_NameTheClassesAndTheAuthErrorCodes` (R121), `ClaudeMdDocMap_ListsEveryDoc` + `ClaudeMd_CarriesTheCourseReconcileRule` (R118). NAT-21, the `localci.md` status line and DEP-25's parity-test summary were already settled (the last by ADR-030 removing the file) |
 | T64 | C6/C12/C13/C26, UX-18, AUTH-8, C1/C2 | Med | ADR amendments (002/004/014/022/027/028); WAYS_OF_WORKING checklist + gate; v3 tracker errata | R85, R158 | no | ⬜ (decision 3) |
-| T65 | TOOL-5/6 | Low | xunit.v3 migration story; adapter bump | R66-adj | no | ⬜ |
+| T65 | TOOL-5/6 | Low | xunit.v3 migration story; adapter bump | R66-adj | no | ✅ 2026-10-04 (v4 Later D): `docs/stories/test-toolchain.md` (epic TOOLS; TOOLS-1 xunit.v3 planned) + `NUnit3TestAdapter` 6.3.0 — `--deprecated` clean for `E2E.Tests` |
 | T66 | Phase 6 | — | QA plan v4 cases + PDFs + counts | R75 | no | ✅ Phase 6 (§14d, 156→173 cases) |
 
 ## B10 — Enforcement close-out
