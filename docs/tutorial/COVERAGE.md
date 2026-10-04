@@ -717,7 +717,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (124 files)
+## 8.3 — The deploy pipeline & CI gates (125 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -726,6 +726,7 @@
 - `tests/Api.Tests/CiWorkflowTests.cs` — the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
+- `tests/Api.Tests/PostmanParityDescriptionTests.cs` — each request's description names the error codes its action returns, the signup refusal and the billing gate key (v4 T63, R83/R119)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -1311,4 +1312,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1144 tracked files · 778 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1145 tracked files · 779 built in lessons · 366 bucketed · 0 unmapped
