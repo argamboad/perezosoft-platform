@@ -20,7 +20,7 @@ and warns about missing ones.
 Usage:  python docs/tutorial/gen_diagrams.py
 Output: docs/tutorial/diagrams/*.png  (2x scale, white background, neutral theme)
 """
-import os, re, sys, json, hashlib, subprocess, tempfile, glob
+import os, re, sys, json, atexit, hashlib, subprocess, tempfile, glob
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DOCS = os.path.dirname(HERE)
@@ -53,6 +53,31 @@ CANON = {
 
 MMDC = ('npx -y -p @mermaid-js/mermaid-cli@11 mmdc '
         '--scale 2 --backgroundColor white --theme neutral')
+
+_PUPPETEER_CFG = []
+
+def puppeteer_config():
+    """Windows only: a puppeteer config that renders with the installed
+    Chrome/Edge. The chrome-headless-shell puppeteer downloads is a console
+    app; started from a windowless parent (an agent session, a scheduled task)
+    it opens a terminal window per diagram that steals focus. Returns None
+    elsewhere, or when neither browser is installed (mmdc's default applies)."""
+    if not _PUPPETEER_CFG:
+        cfg = None
+        if os.name == "nt":
+            for base in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
+                for rel in (r"Google\Chrome\Application\chrome.exe",
+                            r"Microsoft\Edge\Application\msedge.exe"):
+                    exe = os.path.join(os.environ.get(base, ""), rel)
+                    if cfg is None and os.path.exists(exe):
+                        with tempfile.NamedTemporaryFile(
+                                "w", suffix=".json", delete=False,
+                                encoding="utf-8") as tf:
+                            json.dump({"executablePath": exe, "headless": True}, tf)
+                        cfg = tf.name
+                        atexit.register(os.unlink, cfg)
+        _PUPPETEER_CFG.append(cfg)
+    return _PUPPETEER_CFG[0]
 
 def section_mermaid(doc_file, heading_re):
     txt = open(os.path.join(DOCS, doc_file), encoding="utf-8").read()
@@ -100,8 +125,10 @@ def render(name, source, force=False):
     # tool that drops a FILE named ~/.cache (spotipy does); use our own dir
     env.setdefault("PUPPETEER_CACHE_DIR",
                    os.path.join(os.environ.get("LOCALAPPDATA", HERE), "puppeteer-cache"))
+    cfg = puppeteer_config()
     try:
-        subprocess.run('%s -i "%s" -o "%s"' % (MMDC, mmd, png),
+        subprocess.run('%s %s-i "%s" -o "%s"'
+                       % (MMDC, '-p "%s" ' % cfg if cfg else "", mmd, png),
                        check=True, shell=True, env=env)
     finally:
         os.unlink(mmd)

@@ -84,8 +84,8 @@ projects, the test counts match the last run before the move, and CI is green.
 
 **Status: ✅ Done 2026-10-03** (v4 T65). `NUnit3TestAdapter` 5.0.0 pulled `Microsoft.ApplicationInsights` 2.22.0
 (deprecated) through `Microsoft.Testing.Extensions.VSTestBridge` 1.5.3. Adapter 6.3.0 no longer does;
-`tests/E2E.Tests/packages.lock.json` regenerated (`dotnet restore --locked-mode` passes). Run on it 2026-10-04 in CI
-(PR #359): 37/37 journeys green.
+`tests/E2E.Tests/packages.lock.json` regenerated (`dotnet restore --locked-mode` passes). The suite runs on it:
+37 of 37 journeys green in CI on 2026-10-04 (run 37215310134, the pull request that made the bump).
 
 ```gherkin
 Scenario: The E2E project has no deprecated package
