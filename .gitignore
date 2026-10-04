@@ -38,3 +38,6 @@ out/
 *.keystore
 *.p12
 *.pfx
+
+# Python bytecode (the docs/ generator scripts)
+__pycache__/
