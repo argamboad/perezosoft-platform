@@ -84,10 +84,8 @@ projects, the test counts match the last run before the move, and CI is green.
 
 **Status: ✅ Done 2026-10-03** (v4 T65). `NUnit3TestAdapter` 5.0.0 pulled `Microsoft.ApplicationInsights` 2.22.0
 (deprecated) through `Microsoft.Testing.Extensions.VSTestBridge` 1.5.3. Adapter 6.3.0 no longer does;
-`tests/E2E.Tests/packages.lock.json` regenerated (`dotnet restore --locked-mode` passes). Run on it 2026-10-04 in the
-Linux codespace: all 37 journeys discovered, 32 pass; the other five (four "no OTP email within 20 s", and the
-back/forward-cache journey, which that browser build does not restore) fail the same way on adapter 5.0.0 there,
-so they are that machine's, not the adapter's. A full green run on the desk or in CI is the last word.
+`tests/E2E.Tests/packages.lock.json` regenerated (`dotnet restore --locked-mode` passes). Run on it 2026-10-04 in CI
+(PR #359): 37/37 journeys green.
 
 ```gherkin
 Scenario: The E2E project has no deprecated package
