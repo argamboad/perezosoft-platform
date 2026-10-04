@@ -153,7 +153,8 @@ classDiagram
     }
     class RefreshTokenService {
         Issue / Inspect / MarkRotated / Revoke
-        status: Valid Expired Unknown Reuse RotatedWithinGrace
+        status: Valid Expired Unknown
+        Reuse RotatedWithinGrace
     }
     class JwtTokenService {
         IssueAccessToken (tenant_id claim)
@@ -161,11 +162,13 @@ classDiagram
     }
     class UserService {
         GetOrCreate at redemption
-        CreateUserWithTenantAsync = the one creation path
+        CreateUserWithTenantAsync
+        = the one creation path
     }
     class SignupGate {
         IsAllowedAsync(email)
-        green list, else an invitation from a green-listed owner
+        green list, else an invitation
+        from a green-listed owner
     }
     AuthController --> PasswordlessService
     AuthController --> UserService
@@ -215,12 +218,17 @@ classDiagram
     }
     class OutboxProcessor {
         claim: FOR UPDATE SKIP LOCKED
-        success: commit handler work + Sent flip atomically
-        failure: rollback, then attempt++ / backoff / dead in own tx
+        claim counts the attempt
+        and books the retry
+        success: work + Sent flip
+        in one commit
+        failure: rollback
+        dead when attempts are spent
     }
     class IOutboxHandler {
         <<interface>>
-        Type + DissolvesWithItsTenant + HandleAsync (must be idempotent)
+        Type + DissolvesWithItsTenant
+        HandleAsync (must be idempotent)
     }
     class EfOutbox {
         EnqueueAsync - stages, never saves
@@ -366,8 +374,8 @@ flowchart LR
     Otel -->|OTLP, when the endpoint is set| Col[(Collector<br/>/v1/traces /v1/metrics /v1/logs)]
     Otel -.->|ConsoleExporter=true| Con[Console]
     Probe[OtlpCollectorProbe<br/>TCP reachability, startup + interval] -.->|one Warning when unreachable| Log[App log]
-    Orch[Orchestrator] --> Live[/health - liveness/]
-    Orch --> Ready[/health/ready - DatabaseHealthCheck/]
+    Orch[Orchestrator] --> Live["/health - liveness"]
+    Orch --> Ready["/health/ready - DatabaseHealthCheck"]
 ```
 
 - **Logs** — `RequestLoggingScopeMiddleware` (registered by `RequestLoggingScopeExtensions`, after
