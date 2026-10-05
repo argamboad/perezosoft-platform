@@ -1246,7 +1246,7 @@ jobs:
               h, m, s = d.split(":")
               rows.append((float(h) * 3600 + float(m) * 60 + float(s), r.get("testName", "?"), r.get("outcome", "?")))
           if not rows:  # a run that died before any journey finished (v4 DEP-22: this divided by zero)
-              print(f"{files} hold no test results — nothing to report"); raise SystemExit
+              print(f"{', '.join(sorted(files))} holds no test results — nothing to report"); raise SystemExit
           rows.sort(reverse=True)
           total = sum(x[0] for x in rows)
           print(f"{len(rows)} journeys, {total/60:.1f} min of test time (wall clock is lower only if they run in parallel)")
