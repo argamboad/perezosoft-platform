@@ -8,8 +8,10 @@
 > Gherkin acceptance criteria. **Status: ✅ COMPLETE — E2E-1..5** (4 and 5 added after review
 > showed magic-link + destructive flows were automatable after all).
 >
-> **Current suite size: 37 tests** — 37 browser journeys; the count excludes the one `[Explicit]` native
-> smoke (`NativeSmokeTests`), which runs only on the device legs, so the tree holds 38 `[Test]` methods (v4 audit T58, 2026-10-03: +3 session journeys in `SessionJourneyTests` —
+> **Current suite size: 41 tests** — 41 browser journeys; the count excludes the one `[Explicit]` native
+> smoke (`NativeSmokeTests`), which runs only on the device legs, so the tree holds 42 `[Test]` methods (v4 audit T48, 2026-10-05:
+> +4 gate journeys in `GateJourneyTests`, run in their own gates-off lane — billing unset, a one-domain green
+> list — `pwsh tools/e2e.ps1 -Gates` locally, the "gates off" step in CI; v4 audit T58, 2026-10-03: +3 session journeys in `SessionJourneyTests` —
 > Back after sign-out with the back/forward cache really on, keep-alive past the access token's expiry on
 > Playwright's clock, and a theme save while a renewal is in flight; 34 at the v3 audit T59 reconcile,
 > 2026-07-27).
