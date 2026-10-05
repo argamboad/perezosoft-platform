@@ -488,7 +488,7 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (27 files)
+## 5.1 — Billing abstraction & entitlements (28 files)
 
 - `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
 - `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
@@ -517,6 +517,7 @@
 - `tests/Api.Tests/Billing/SubscriptionTenantIsolationTests.cs`
 - `tests/Api.Tests/Integration/FeaturesEndpointTests.cs` — GATES-1
 - `tests/E2E.Tests/BillingJourneyTests.cs` — fake-provider upgrade loop
+- `tests/E2E.Tests/GateJourneyTests.cs` — GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48
 
 ## 5.2 — Stripe: checkout, webhook, portal (7 files)
 
@@ -1312,4 +1313,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1145 tracked files · 779 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1146 tracked files · 780 built in lessons · 366 bucketed · 0 unmapped
