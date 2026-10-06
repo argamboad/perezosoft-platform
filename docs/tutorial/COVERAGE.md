@@ -253,16 +253,24 @@
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (124 files)
+## 3.4 — The web client & auth UI (132 files)
 
 - `src/Shared.Ui/App.razor`
+- `src/Shared.Ui/Auth/AccessTokenState.cs` — the token in memory and its clock (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Auth/AppClaims.cs`
 - `src/Shared.Ui/Auth/AuthErrorCopy.cs` — server error code -> localized copy key; keeps 2.4's enumeration-safe collapse client-side (landed on develop post-write)
+- `src/Shared.Ui/Auth/AuthProbes.cs` — staff / billing / providers probes (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Auth/AuthService.cs`
+- `src/Shared.Ui/Auth/AuthWireModels.cs` — the JSON shapes the auth client reads (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Auth/BearerRetry.cs` — both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)
 - `src/Shared.Ui/Auth/BearerScopedHandler.cs` — the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)
 - `src/Shared.Ui/Auth/IOAuthInitiator.cs`
 - `src/Shared.Ui/Auth/ISessionStore.cs` — per-platform session seam
+- `src/Shared.Ui/Auth/NativeSignIn.cs` — body-token sign-in and OAuth resume (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/PreferenceShadow.cs` — a just-saved theme/locale the token predates (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/RenewalScheduler.cs` — the keep-alive timer (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/SessionTransport.cs` — the refresh and logout calls per host (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/SignInModels.cs` — SignInStatus / SignInResult (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Components/AppHeader.razor`
 - `src/Shared.Ui/Components/AppHeader.razor.css` — co-located component CSS
 - `src/Shared.Ui/Components/ThemeSwitcher.razor`
@@ -488,7 +496,7 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (27 files)
+## 5.1 — Billing abstraction & entitlements (28 files)
 
 - `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
 - `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
@@ -517,6 +525,7 @@
 - `tests/Api.Tests/Billing/SubscriptionTenantIsolationTests.cs`
 - `tests/Api.Tests/Integration/FeaturesEndpointTests.cs` — GATES-1
 - `tests/E2E.Tests/BillingJourneyTests.cs` — fake-provider upgrade loop
+- `tests/E2E.Tests/GateJourneyTests.cs` — GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48
 
 ## 5.2 — Stripe: checkout, webhook, portal (7 files)
 
@@ -1312,4 +1321,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1145 tracked files · 779 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1154 tracked files · 788 built in lessons · 366 bucketed · 0 unmapped
