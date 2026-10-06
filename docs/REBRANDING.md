@@ -93,6 +93,13 @@ for f in filter(None, subprocess.check_output(["git", "ls-files", "-z"]).decode(
   app's display name on every native platform (launcher label, window title, app switcher). It sits
   right next to `ApplicationId` (§5) — change them together.
 
+**The tenant's name is "household" (ADR-032).** Routes (`api/household`, `/household`), `HouseholdController`,
+`HouseholdInvitationsController`, `Household.razor`, the `Household_*` resource keys in both languages, the
+`nav-household` test id and the QA cases all use it, by design. If your tenant is a team, a company or a
+classroom, rename the word in this same pass with a second find/replace pair (`Household` → `Team`,
+`household` → `team`), then run `TestIdContractTests` and `ResourceParityTests`: both fail on a half-done rename.
+If your tenant *is* a household, there is nothing to do.
+
 ## 2. Tagline — "Lazy reputation. Efficient engineering." → yours
 - `src/Shared.Ui/wwwroot/brand/lockup_light.svg` — the wordmark-lockup text
 - **`src/Infrastructure/Email/BrandedEmail.cs`** — email footer tagline

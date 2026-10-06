@@ -1831,3 +1831,20 @@ says so:
 
 **Consequences.** A pull request costs roughly 25–35 minutes, a docs-only one a few. The `changes` job's
 classifier still reports `native`/`maui` for the record. The platform and its downstream apps share this ADR.
+
+**ADR-032 — The platform's tenant is a "household", by design; an app whose tenant is something else renames at rebrand time. (2026-10-06)**
+The platform names its tenant with a product noun, not a neutral one: `HouseholdController` at `api/household`,
+`HouseholdInvitationsController`, the `Household.razor` page at `/household`, the `Household_*` resource keys
+(about 120 strings in EN and ES), the `nav-household` test id, and the word in emails and QA cases. The boundary
+audit of 2026-10-05 (Arch A11, #370) asked whether to rename it to a neutral word, make the display noun a per-app
+resource, or record it as intended. **Decided: record it as intended.** Both current apps (vuelto, jigger-jot) are
+household products, and the one word in code, routes, strings and tests is what lets a journey, a QA case and a
+support conversation say the same thing. A neutral word (`tenant`, `workspace`) would be right for nobody and
+would still be renamed by every app with a different noun.
+*Consequences:* the word is a **rebrand-time** concern, beside the brand itself. An app whose tenant is a team,
+a company or a classroom renames `Household` → its noun in the same pass as `Perezosoft` → its brand, following
+the entry in `docs/REBRANDING.md` §1 (routes, pages, controllers, resource keys, test ids and QA cases move
+together; `TestIdContractTests` and `ResourceParityTests` catch a half-done rename). The platform's own tests and
+docs keep saying household. Ports of platform changes into an app that renamed are three-way merges with a second
+token pair, the same mechanism the brand rename already uses. ADR-C1/C2 (tenant ≠ user; tenant-scoped data) are
+untouched: this is vocabulary, not shape.
