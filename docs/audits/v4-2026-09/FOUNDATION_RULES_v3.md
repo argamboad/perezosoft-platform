@@ -5,6 +5,7 @@
 > v2.0 historical layer.
 > **Range.** R1–R35 (v1.0, `docs/audits/v2-2026-07/FOUNDATION_RULES.md`) and R36–R76 + R80 (v2.0,
 > `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md`) carry forward **unchanged except for the amendments in §1**.
+> **Amended 2026-10-06 by Arch A12 (#371):** R149 admits a component that takes its test id as a parameter, with literal callers.
 > **Amended 2026-10-02 by ADR-031:** R80 and R138 retired with `.forgejo/` (GitHub is the only forge again,
 > ADR-030); R98, R137 and R139 now speak of the one workflow; R98 no longer asks for branch protection (a private
 > repo on GitHub Free has none, and none is wanted).
@@ -115,7 +116,7 @@ check does not exist; the mechanism text below is the intent, the manifest is th
 - **R144 [machine]** — Coupled client+server changes ship one joint-invariant test reading both constants. — `ConfigPostureTests` cross-project fact + PR line. — UX-6/7, AUTH-1.
 - **R147 [machine]** — A gate-off E2E lane exists for every deployment-config gate, in both workflow copies. — TB-DOC-2. — TB-UI-66/67/68, BILL-10.
 - **R148 [machine]** — RCL components take the clock they schedule with (`TimeProvider`); the clock gate covers `src/Shared.Ui`. — TB-UI-65. — TOOL-7/8, C24.
-- **R149 [machine]** — Test-id contract: every `data-testid` in `src/Shared.Ui` is referenced by a test or QA case and vice versa. — TB-DOC-5.
+- **R149 [machine]** — Test-id contract: every `data-testid` in `src/Shared.Ui` is referenced by a test or QA case and vice versa. *(Amended 2026-10-06, Arch A12 #371:* a reusable component may take its id as a `[Parameter] string TestId` and derive suffixed ids from it (`@($"{TestId}-input")`); every caller passes a literal, and the ids that exist — the callers' literals with the component's suffixes — are the ones a test or QA case must use. Any other computed id is refused.*)* — TB-DOC-5; `TestIdContractTests` with its fixtures.
 - **R155 [machine]** — Route uniqueness is enforced at startup (duplicate method+pattern throws), not only in CI. — ADV-P4-13.
 - **R157 [machine]** — Source-scan gates matching a namespace/prefix use a boundary, with an `X`/`X2` self-test. — ADV-P4-12.
 

@@ -95,7 +95,7 @@ public static class RulesEnforcement
         new("R144", ["ClientRefreshTimeoutPlusRetry_FitsInsideTheServersReuseGrace", "PrTemplate_CarriesTheRuleCheckboxes"]),
         new("R147", ["GateLane_RunsEveryDeploymentGate_AgainstTheShippedDefault"]),
         new("R148", ["RclComponents_ScheduleOnTheInjectedClock", "Bell_Poll_RefetchesOnTheClock_KeepsTheLastCountOnAnError_StopsWhenSignedOut_AndResumes"]),
-        new("R149", ["EveryTestId_IsUsedByATestOrAQaCase_AndEveryUsedIdExists"]),
+        new("R149", ["EveryTestId_IsUsedByATestOrAQaCase_AndEveryUsedIdExists", "AParameterisedComponent_DeclaresItsCallersLiterals_WithItsSuffixes", "AComputedId_IsRefused_EvenInsideAParameterisedComponent", "ACallerPassingAComputedTestId_IsRefused_AndAnUncalledComponentIsReported", "ATestIdUsedWithoutTheParameter_IsComputed_NotParameterised"]),
         new("R155", ["RouteTableGuardTests"]),
         new("R157", ["SliceReferenceInspectorTests", "RoutePrefixInspectorTests"]),
 
