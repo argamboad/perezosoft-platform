@@ -10,6 +10,8 @@ using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Entities;
 using Perezosoft.Infrastructure.Persistence;
 
+using Perezosoft.Api.Tests.App;
+
 namespace Perezosoft.Api.Tests;
 
 /// <summary>
@@ -128,6 +130,7 @@ public class ArchitectureTests
             nameof(UserMfa), nameof(MfaRecoveryCode),          // MfaUserDataContributor
             nameof(Notification), nameof(NotificationPreference), // NotificationUserDataContributor
         };
+        handled.UnionWith(AppAllowlists.ErasureHandled); // the app's slices (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -157,7 +160,6 @@ public class ArchitectureTests
         // did before LB-TEN-1 was fixed. Covers TenantId-carrying non-ITenantScoped entities too (WebhookDelivery).
         var handled = new HashSet<string>
         {
-            nameof(Note),                                   // NotesDataContributor
             nameof(AuditEvent),                             // AuditDataContributor
             nameof(Subscription),                           // BillingDataContributor
             nameof(ApiKey),                                 // ApiKeyDataContributor
@@ -166,6 +168,7 @@ public class ArchitectureTests
             nameof(TenantInvitation), nameof(TenantMembership),   // core teardown (WipeDataAsync)
             nameof(OutboxMessage),                          // OutboxDataContributor — the types that dissolve with their tenant
         };
+        handled.UnionWith(AppAllowlists.DissolutionHandled); // the app's slices (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -202,6 +205,7 @@ public class ArchitectureTests
         using var ctx = new AppDbContext(options, new TestCurrentTenant());
         var entities = ctx.Model.GetEntityTypes()
             .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType == typeof(Guid?))
+            .Where(e => !AppAllowlists.LifecycleSpecExceptions.ContainsKey(e.ClrType.Name)) // pinned elsewhere, with a reason (Arch A1)
             .Select(e => e.ClrType.Name).ToList();
         Assert.Contains(nameof(OutboxMessage), entities); // probe alive
 
@@ -253,6 +257,7 @@ public class ArchitectureTests
         // an explicit allowlist of by-convention exceptions, so a new tenant-relevant table can't quietly
         // rely on hand-written filtering.
         var allow = new HashSet<string> { nameof(TenantMembership), nameof(WebhookDelivery) };
+        allow.UnionWith(AppAllowlists.TenantIdByConvention); // the app's (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -284,6 +289,7 @@ public class ArchitectureTests
             // switched on. Nothing tenant-scoped to protect — the client asks it before it has an identity.
             nameof(FeaturesController),
         };
+        allow.UnionWith(AppAllowlists.ControllersOutsideTheBases); // the app's (Arch A1)
 
         var offenders = typeof(TenantApiControllerBase).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ControllerBase).IsAssignableFrom(t))
@@ -417,8 +423,9 @@ public class ArchitectureTests
         var testsDir = Path.Combine(RepoRoot(), "tests");
         string[] banned = ["Features.Notes", "Set<Note>", "new Note", "EfRepository<Note>", "IRepository<Note>"];
 
-        // NotesSliceTests legitimately tests the sample; this file lists the banned patterns as literals.
-        var exempt = new HashSet<string> { "NotesSliceTests.cs", "ArchitectureTests.cs" };
+        // NotesSliceTests legitimately tests the sample; this file and the composition-seam gate in EnforcementGateTests
+        // (CompositionFiles_AreFreeOfTheSampleSlice, Arch A1) list the banned patterns as literals.
+        var exempt = new HashSet<string> { "NotesSliceTests.cs", "ArchitectureTests.cs", "EnforcementGateTests.cs" };
         var offenders = SourceFiles(testsDir)
             .Where(f => !exempt.Contains(Path.GetFileName(f)!))
             .Where(f => File.ReadAllText(f) is var t && Array.Exists(banned, t.Contains))
@@ -517,22 +524,23 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void OnlyProgram_ReferencesFeatureNamespaces_FromOutsideFeatures()
+    public void OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures()
     {
-        // R8: the clean state is that composition happens in one place — only Program.cs wires the feature
-        // endpoints. Nothing else outside src/Api/Features/ may reach into Perezosoft.Api.Features.*.
+        // R8, as amended by Arch A1 (R159): composition happens in one app-owned place — AppComposition.cs registers
+        // and maps the slices. Nothing else outside src/Api/Features/ may reach into Perezosoft.Api.Features.*, and
+        // Program.cs in particular names no slice, which is what lets it stay identical in every app.
         var apiDir = Path.Combine(RepoRoot(), "src", "Api");
         var featuresPath = $"{Path.DirectorySeparatorChar}Features{Path.DirectorySeparatorChar}";
 
         var offenders = SourceFiles(apiDir)
             .Where(f => !f.Contains(featuresPath))                     // scope: outside the Features tree
-            .Where(f => Path.GetFileName(f) != "Program.cs")           // Program.cs is the sanctioned composer
+            .Where(f => Path.GetFileName(f) != "AppComposition.cs")    // the app's composition file is the sanctioned composer
             .Where(f => File.ReadAllText(f).Contains("Perezosoft.Api.Features", StringComparison.Ordinal))
             .Select(Path.GetFileName)
             .ToList();
 
         Assert.True(offenders.Count == 0,
-            $"Only Program.cs may reference Perezosoft.Api.Features.* from outside Features/: {string.Join(", ", offenders)}");
+            $"Only AppComposition.cs may reference Perezosoft.Api.Features.* from outside Features/ (R8 as amended, Arch A1): {string.Join(", ", offenders)}");
     }
 
     [Fact]
@@ -563,6 +571,7 @@ public class ArchitectureTests
         // `*Models.cs`, plus the two named aggregations. Enforced as a source scan rather than the
         // Meziantou MA0048 analyzer, which would enable ~150 unrelated rules under warnings-as-error.
         var allow = new HashSet<string>(StringComparer.Ordinal) { "SettingsProvider", "WebhookService" };
+        allow.UnionWith(AppAllowlists.TypeNameExceptions); // the app's (Arch A1)
         var typeDecl = new Regex(
             @"\b(?:public|internal)\s+(?:sealed\s+|abstract\s+|static\s+|partial\s+|readonly\s+|ref\s+)*(?:class|record|interface|enum|struct)\s+([A-Za-z_][A-Za-z0-9_]*)",
             RegexOptions.Compiled);
@@ -573,6 +582,7 @@ public class ArchitectureTests
             if (file.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}")) continue;
             var name = Path.GetFileNameWithoutExtension(file);           // Foo.cs → Foo
             if (name.EndsWith(".xaml", StringComparison.Ordinal)) name = name[..^5]; // App.xaml.cs → App
+            if (name.EndsWith(".App", StringComparison.Ordinal)) name = name[..^4];   // AppDbContext.App.cs → the app's half of a partial class (Arch A1)
             if (name.EndsWith("Models", StringComparison.Ordinal) || allow.Contains(name)) continue;
 
             var types = typeDecl.Matches(File.ReadAllText(file))
@@ -609,10 +619,8 @@ public class ArchitectureTests
         // rationale saying why its destinations are not attacker-influenced. Registration-only files
         // (AddHttpClient with no send call) pass automatically. File-level granularity, matching the
         // other source scans in this class.
-        var allowlisted = new Dictionary<string, string>
-        {
-            // (none today — WebhookSender, the only dynamic-URL sender, injects the guard)
-        };
+        var allowlisted = new Dictionary<string, string>(AppAllowlists.OutboundHttpSenders); // the app's fixed-host senders (Arch A1)
+        // (the platform has none — WebhookSender, the only dynamic-URL sender, injects the guard)
 
         var send = new Regex(
             @"\.(SendAsync|PostAsync|PostAsJsonAsync|GetAsync|GetStringAsync|GetFromJsonAsync|GetByteArrayAsync|PutAsync|PutAsJsonAsync|PatchAsync|DeleteAsync)\s*\(");

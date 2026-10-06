@@ -6,7 +6,7 @@ using Perezosoft.Core.Entities;
 
 namespace Perezosoft.Infrastructure.Persistence;
 
-public class AppDbContext : DbContext, IDataProtectionKeyContext
+public partial class AppDbContext : DbContext, IDataProtectionKeyContext
 {
     private readonly ICurrentTenant _currentTenant;
 
@@ -81,8 +81,6 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
     // append-only via AuditAppendOnlyInterceptor.
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
-    // 🗑️ DELETE-ME: sample feature set (remove with the Features/Notes slice).
-    public DbSet<Note> Notes => Set<Note>();
 
     // Tenant isolation is structural in BOTH directions: the global query filter (below)
     // scopes reads, and this interceptor scopes writes — stamping the current tenant onto
@@ -118,7 +116,14 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
                     .MakeGenericMethod(entityType.ClrType)
                     .Invoke(this, [builder]);
         }
+
+        // The app's model rules, if it has any (Arch A1): AppDbContext.App.cs implements the partial method.
+        OnAppModelCreating(builder);
     }
+
+    /// <summary>The app's half of the model (Arch A1, R159): its own filters and conventions, in <c>AppDbContext.App.cs</c>.
+    /// Unimplemented on the platform; the compiler drops the call.</summary>
+    partial void OnAppModelCreating(ModelBuilder builder);
 
     private static readonly MethodInfo ApplyTenantFilterMethod =
         typeof(AppDbContext).GetMethod(nameof(ApplyTenantFilter),

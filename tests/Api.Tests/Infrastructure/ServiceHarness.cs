@@ -85,8 +85,16 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
             QuotaService(), tenantContext, Clock, NullLogger<TenantInvitationService>.Instance);
     }
 
-    /// <summary>The platform's own <see cref="ITenantDataContributor"/>s, as DI registers them (feature slices
-    /// such as Notes add theirs downstream): API keys, webhooks, usage metering, billing, the audit log, the outbox.</summary>
+    /// <summary>Every <see cref="ITenantDataContributor"/> DI registers, as production resolves them: the platform's six
+    /// plus the app's slices' (<c>AppTestComposition.Contributors</c>, Arch A1). The whole set, so an accept-and-dissolve
+    /// test proves no slice counts an empty household as content and every slice's wipe runs inside the dissolve.</summary>
+    public IReadOnlyList<ITenantDataContributor> Contributors() =>
+    [
+        .. PlatformContributors(),
+        .. Perezosoft.Api.Tests.App.AppTestComposition.Contributors(Db, Clock),
+    ];
+
+    /// <summary>The platform's own contributors: API keys, webhooks, usage metering, billing, the audit log, the outbox.</summary>
     public IReadOnlyList<ITenantDataContributor> PlatformContributors() =>
     [
         new ApiKeyDataContributor(new EfRepository<ApiKey>(Db)),

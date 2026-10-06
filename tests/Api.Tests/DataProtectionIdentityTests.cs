@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 
+using Perezosoft.Api.Tests.App;
+
 namespace Perezosoft.Api.Tests;
 
 /// <summary>
@@ -23,6 +25,7 @@ public class DataProtectionIdentityTests
             "Template.Webhook.Secret.v1",  // WebhookSecretProtector — encrypted webhook secrets (AT REST)
             "template",                    // SetApplicationName — part of EVERY derivation above
         };
+        frozen.UnionWith(AppAllowlists.DataProtectionPurposes); // the app's (Arch A1)
 
         var purpose = new Regex(@"(?:CreateProtector|SetApplicationName)\s*\(\s*""([^""]+)""\s*\)");
         var found = new HashSet<string>(StringComparer.Ordinal);

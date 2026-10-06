@@ -7,7 +7,6 @@ using Perezosoft.Api;
 using Perezosoft.Api.Authentication;
 using Perezosoft.Api.Configuration;
 using Perezosoft.Api.Endpoints;
-using Perezosoft.Api.Features.Notes;
 using Perezosoft.Api.Observability;
 using Perezosoft.Api.Services;
 using Perezosoft.Core.Abstractions;
@@ -115,11 +114,10 @@ builder.Services.AddPlatformAdminServices(builder.Configuration);
 builder.Services.AddRbacServices();
 builder.Services.AddBillingServices();
 
-// 🗑️ DELETE-ME: sample feature slice (Features/Notes) — the reference for how a vertical
-// slice wires up: a handler + a tenant-data contributor, with endpoints mapped below. Kept inline
-// here (not in ServiceRegistrationExtensions) because only Program.cs may reference Features.* (R8).
-builder.Services.AddScoped<NotesHandler>();
-builder.Services.AddScoped<ITenantDataContributor, NotesDataContributor>();
+// The app's half of composition (Arch A1, R159): every slice's services, registered in AppComposition.cs — the
+// one file outside Features/ that may name a slice (R8 as amended). This file is identical in the platform and
+// every app; a slice never edits it.
+builder.Services.AddAppServices(builder.Configuration);
 
 // Caches + session (LinkTokenService uses IMemoryCache; session backed by distributed cache).
 builder.Services.AddMemoryCache();
@@ -229,6 +227,15 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// App startup tasks (Arch A1, IStartupTask): work that needs the schema and must precede the first request — a
+// curated catalog seed, an app-owned backfill — registered in AppComposition, run here in registration order in
+// one fresh scope (no ambient tenant). The platform registers none; the loop is the seam.
+using (var scope = app.Services.CreateScope())
+{
+    foreach (var task in scope.ServiceProvider.GetServices<IStartupTask>())
+        await task.RunAsync(app.Lifetime.ApplicationStopping);
+}
+
 // RLS posture guard (ADR-020, config-gated; prod activation enables it): refuse to start if the
 // runtime connection would silently bypass row-level security. Fresh scope — the migrate scope's
 // context may have been repointed at the migrator connection above.
@@ -333,8 +340,8 @@ app.MapGet("/api/version", () => Results.Ok(new
              ?? "unknown",
 })).AllowAnonymous().WithTags("Platform");
 
-// 🗑️ DELETE-ME: sample feature slice endpoints (remove with Features/Notes).
-app.MapNotes();
+// The app's endpoint groups (Arch A1): AppComposition.MapAppEndpoints, each through MapTenantFeatureGroup (R6).
+app.MapAppEndpoints();
 // Billing is a platform controller (BillingController) — auto-mapped by MapControllers above.
 
 // PUBAPI (ADR-015): map key management + the public routes only when enabled — off ⇒ they don't exist.

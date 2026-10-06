@@ -12,12 +12,14 @@ namespace Perezosoft.Api.Tests;
 /// set in <c>SessionKeepAliveTests</c>). Rename a test and this file follows in the same commit, or the gate fails.
 /// </para>
 /// </summary>
-public static class RulesEnforcement
+public static partial class RulesEnforcement
 {
     /// <param name="Rule">The final rule id.</param>
     /// <param name="Checks">Test method names, test class names, or <c>ci:&lt;step name&gt;</c> (present in both workflow copies).</param>
     /// <param name="Pending">When part of the mechanism is still unbuilt: the owning tracker issue and what is missing.</param>
-    public sealed record Entry(string Rule, string[] Checks, string? Pending = null);
+    /// <param name="NotHere">When the thing the rule guards does not exist in this repo: where it lives instead. An app sets
+    /// it through <c>AppOverrides</c> (RulesEnforcement.App.cs, Arch A1), never on this list.</param>
+    public sealed record Entry(string Rule, string[] Checks, string? Pending = null, string? NotHere = null);
 
     public static readonly Entry[] Manifest =
     [
@@ -110,5 +112,7 @@ public static class RulesEnforcement
         new("R121", ["ArchitectureAndFlows_NameTheClassesAndTheAuthErrorCodes"]),
         new("R152", ["NoResx_DeclaresAKeyTwice"]),
         new("R158", ["AddASliceChecklist_NamesEveryArtifactAGateForces"]),
+        // ── 10. Architecture · horizontal platform, vertical apps ──
+        new("R159", ["OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures", "CompositionFiles_AreFreeOfTheSampleSlice"]),
     ];
 }

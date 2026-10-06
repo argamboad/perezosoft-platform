@@ -702,8 +702,13 @@ public class EnforcementGateTests
         var unresolved = new List<string>();
         foreach (var entry in RulesEnforcement.Manifest)
         {
-            Assert.True(entry.Checks.Length > 0 || entry.Pending is not null, $"{entry.Rule}: no check and no pending issue");
-            if (entry.Pending is { } p) Assert.Matches(@"perezosoft-platform#\d+", p); // the issue that owes it, so it is visible
+            // The app's half (RulesEnforcement.App.cs, Arch A1) may name its own pending issue, or say the rule's subject is not here.
+            RulesEnforcement.AppOverrides.TryGetValue(entry.Rule, out var over);
+            var pending = over?.Pending ?? entry.Pending;
+            var notHere = over?.NotHere ?? entry.NotHere;
+            Assert.True(entry.Checks.Length > 0 || pending is not null || !string.IsNullOrWhiteSpace(notHere),
+                $"{entry.Rule}: no check, no pending issue, and no reason it does not apply here");
+            if (pending is { } p) Assert.Matches(@"[\w.-]+#\d+", p); // the issue that owes it (repo#n), so it is visible
             foreach (var check in entry.Checks)
             {
                 var ok = check.StartsWith("ci:", StringComparison.Ordinal) ? steps.Contains(check[3..]) : symbols.Contains(check);
@@ -711,6 +716,8 @@ public class EnforcementGateTests
             }
         }
         Assert.True(unresolved.Count == 0, "manifest names checks that do not exist (renamed? not in ci.yml?):\n" + string.Join("\n", unresolved));
+        var orphans = RulesEnforcement.AppOverrides.Keys.Except(listed).Order().ToList();
+        Assert.True(orphans.Count == 0, "RulesEnforcement.App.cs overrides rules the manifest does not list: " + string.Join(", ", orphans));
     }
 
     [Fact]
@@ -787,8 +794,8 @@ public class EnforcementGateTests
         {
             ("RlsDdl.StatementsFor", "RlsMigrationGateTests"),
             ("docs/DATA_MODEL.md", "EveryEntity_IsDocumentedInDataModel"),
-            ("`handled` set", "EveryTenantOwnedEntity_IsWiredIntoTenantDissolution"),
-            ("Program.cs", "SliceReferenceInspector"),
+            ("AppAllowlists", "EveryTenantOwnedEntity_IsWiredIntoTenantDissolution"),
+            ("AppComposition.cs", "OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures"),
             ("docs/postman/Perezosoft.postman_collection.json", "PostmanParityTests"),
             (".env.example", "ConfigKeys_ReadInCode_AreDocumented"),
             (".resx", "ResourceParityTests"),
@@ -803,6 +810,7 @@ public class EnforcementGateTests
             Assert.True(tests.Any(t => t.Contains(gate, StringComparison.Ordinal)), $"the checklist names a gate that does not exist: {gate}");
         }
         Assert.DoesNotContain("Fixture reset", checklist); // dead since v2 TR-3: the fixture derives its tables from the model
+        Assert.DoesNotContain("in `Program.cs`", checklist); // Arch A1: Program.cs is the platform's; a slice never edits it
         Assert.Contains("cannot declare\n   its own `Permission`", checklist); // ADV-P4-18: inherent, so the author is told
 
         // ADR-004's amendment states the list, and the same gates, not a count.
@@ -811,6 +819,34 @@ public class EnforcementGateTests
         amendment = amendment[..amendment.IndexOf("\n**ADR-005", StringComparison.Ordinal)];
         foreach (var gate in new[] { "EveryEntity_IsDocumentedInDataModel", "EveryTenantOwnedEntity_IsWiredIntoTenantDissolution", "PostmanParityTests", "AddASliceChecklist_NamesEveryArtifactAGateForces" })
             Assert.Contains(gate, amendment);
+    }
+
+    [Fact]
+    public void CompositionFiles_AreFreeOfTheSampleSlice() // Arch A1 (#362), R159
+    {
+        // The seam, proven on the one app the platform carries: the Notes sample. Before A1 the sample was registered in
+        // Program.cs, had its DbSet in AppDbContext and its entity in the canary's handled set — exactly the edits every
+        // app made for its own slices, in the same platform-owned files. Now the sample lives in the app-owned halves
+        // (AppComposition.cs, AppDbContext.App.cs, tests/Api.Tests/App/AppAllowlists.cs), and none of the platform's
+        // composition files names it. Downstream, A2's manifest gate holds the same files identical to the platform's.
+        var root = RepoRoot();
+        string[] composition =
+        [
+            "src/Api/Program.cs", "src/Infrastructure/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
+            "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs", "tests/Api.Tests/RulesEnforcement.cs",
+            "tests/Api.Tests/Infrastructure/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
+            "tests/Ui.Tests/Infrastructure/TestHttpHandler.cs",
+        ];
+        // How the sample would be named from a composition file; the ban-list literals in ArchitectureTests' Notes-independence
+        // gate are strings, not references, and are not among these.
+        string[] sample = ["NotesHandler", "NotesDataContributor", "MapNotes", "nameof(Note)", "Set<Note>()", "Features.Notes;"];
+        var offenders = composition
+            .Select(f => (f, text: File.ReadAllText(Path.Combine(root, f))))
+            .SelectMany(x => sample.Where(s => x.text.Contains(s, StringComparison.Ordinal)).Select(s => $"{x.f}: {s}"))
+            .ToList();
+        Assert.True(offenders.Count == 0, "a platform composition file names the sample slice — the seam leaks (Arch A1): " + string.Join(", ", offenders));
+        foreach (var f in composition) Assert.True(File.Exists(Path.Combine(root, f)), $"composition file moved: {f}");
+        Assert.DoesNotContain("Features.", File.ReadAllText(Path.Combine(root, "src", "Api", "Program.cs")).Replace("MapTenantFeatureGroup", ""));
     }
 
     [Theory]

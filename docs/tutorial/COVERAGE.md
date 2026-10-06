@@ -50,10 +50,12 @@
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 
-## 1.3 — Database & the test container (12 files)
+## 1.3 — Database & the test container (14 files)
 
 - `src/Api/AppDbContextFactory.cs` — design-time factory for dotnet ef
+- `src/Infrastructure/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
 - `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
+- `tests/Api.Tests/App/AppTestComposition.cs` — the app's half of the test chassis: its contributors and host pins (Arch A1)
 - `tests/Api.Tests/AppDbContextFactoryTests.cs`
 - `tests/Api.Tests/Infrastructure/CapturingLogger.cs` — the one log double the suite shares
 - `tests/Api.Tests/Infrastructure/Concurrently.cs` — the shared concurrency runner (v4 T54, R7)
@@ -65,7 +67,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (13 files)
+## 1.4 — Configuration & the options pattern (14 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -79,6 +81,7 @@
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
 - `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
+- `tests/Api.Tests/RulesEnforcement.App.cs` — the app's half of the manifest: per-rule Pending/NotHere overrides (Arch A1)
 - `tests/Api.Tests/RulesEnforcement.cs` — the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)
 
 ## 1.5 — The error envelope (1 files)
@@ -233,29 +236,32 @@
 - `src/Infrastructure/Repositories/EfUnitOfWork.cs`
 - `tests/Api.Tests/RepositoryScopingTests.cs`
 
-## 3.2 — Anatomy of a vertical slice (Notes) (10 files)
+## 3.2 — Anatomy of a vertical slice (Notes) (12 files)
 
+- `src/Api/AppComposition.cs` — the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)
 - `src/Api/Configuration/AuthPolicies.cs`
 - `src/Api/Endpoints/FeatureEndpointExtensions.cs` — MapTenantFeatureGroup (R6)
 - `src/Api/Features/Notes/NotesDataContributor.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
+- `src/Core/Abstractions/IStartupTask.cs` — work that needs the schema, run by Program.cs after Migrate(); registered in AppComposition (Arch A1)
 - `src/Core/Entities/Note.cs`
 - `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
-## 3.3 — Injected clocks & the architecture tests (6 files)
+## 3.3 — Injected clocks & the architecture tests (7 files)
 
 - `src/Api/Endpoints/RouteTableGuard.cs` — boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)
+- `tests/Api.Tests/App/AppAllowlists.cs` — the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)
 - `tests/Api.Tests/Architecture/RoutePrefixInspector.cs` — route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
 - `tests/Api.Tests/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (132 files)
+## 3.4 — The web client & auth UI (133 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AccessTokenState.cs` — the token in memory and its clock (split out of AuthService, v4 T57)
@@ -361,6 +367,7 @@
 - `tests/Api.Tests/JsLogicTests.cs` — runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
 - `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/App/TestHttpHandler.App.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BearerScopedHandlerTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BillingGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -1323,4 +1330,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1156 tracked files · 790 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1163 tracked files · 797 built in lessons · 366 bucketed · 0 unmapped

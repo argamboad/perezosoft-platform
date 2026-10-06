@@ -48,7 +48,7 @@ tenancy, the global tenant query filter, email, persistence); features bolt on a
 - `<Feature>Endpoints.cs` — a minimal-API group registered via
   **`app.MapTenantFeatureGroup("/api/<feature>")`** (NOT a raw
   `MapGroup(...).RequireAuthorization(...)` — the helper applies the shared `AuthPolicies.TenantApi`
-  policy so a slice can't forget auth), called from `app.Map<Feature>()` in `Program.cs`. Gate
+  policy so a slice can't forget auth), called from `app.Map<Feature>()` in `AppComposition.MapAppEndpoints`. Gate
   individual endpoints with the **`.RequirePermission(Permission.X)`** (→ 403; ADR-009) and
   **`.RequireEntitlement(...)`** (→ 402; ADR-006) endpoint filters as needed. Features are minimal-API
   groups; the platform stays controllers.
@@ -74,7 +74,9 @@ CI when it is skipped, and `EnforcementGateTests.AddASliceChecklist_NamesEveryAr
 1. **Entity** → `src/Core/Entities/<Entity>.cs`, implementing `ITenantScoped`. A slice **cannot declare
    its own `Permission`**: the enum and `RolePermissions` live in Core (ADR-009's coarse capabilities) —
    reuse one, or add it to Core in its own commit.
-2. **DbSet + config** → add the `DbSet<>` to `AppDbContext` and any `IEntityTypeConfiguration`.
+2. **DbSet + config** → add the `DbSet<>` to `src/Infrastructure/Persistence/AppDbContext.App.cs` (the app's half of
+   the partial context — `AppDbContext.cs` is the platform's and is not edited; Arch A1) and any
+   `IEntityTypeConfiguration` (discovered from the assembly, no registration).
 3. **Migration + RLS policy, one migration** (ADR-020, v3 audit TR-4): `dotnet ef migrations add
    Add<Entity>` scaffolds **no RLS DDL**, so append the new table's policy to the migration it just
    created — `migrationBuilder.Sql(...)` with the statements from `RlsDdl.StatementsFor` (copy the shape
@@ -82,15 +84,20 @@ CI when it is skipped, and `EnforcementGateTests.AddASliceChecklist_NamesEveryAr
    `RlsMigrationGateTests` fails on any `ITenantScoped` table whose policy did not arrive by migration.
 4. **`docs/DATA_MODEL.md`** → an entry for the entity (fields, relationships, derived rules). Gate:
    `EveryEntity_IsDocumentedInDataModel`.
-5. **Tenant-axis canary** → add `nameof(<Entity>)` to the `handled` set in
-   `tests/Api.Tests/ArchitectureTests.cs` once step 7's contributor covers it. Gate:
+5. **Tenant-axis canary** → add `nameof(<Entity>)` to `DissolutionHandled` in
+   `tests/Api.Tests/App/AppAllowlists.cs` (the app's entries in the platform's gates; `ArchitectureTests.cs` is
+   the platform's and is not edited) once step 7's contributor covers it. Gate:
    `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` — every tenant-owned entity must be reachable
    by dissolve and export, and the canary is where you say which contributor does it.
-6. **DI wiring** → register the handler/services (`Add*`) and map the group (`app.Map<Feature>()`) in
-   `Program.cs`, behind the slice's `Enabled` setting. Only `Program.cs` may reference `Features.*`
-   (R8, `SliceReferenceInspector`).
-7. **Contributor** → register the `ITenantDataContributor` (all four members) in DI, in the same
-   `Program.cs` block.
+6. **DI wiring** → register the handler/services in `AppComposition.AddAppServices` and map the group
+   (`app.Map<Feature>()`) in `AppComposition.MapAppEndpoints` — both in `src/Api/AppComposition.cs`, the app's
+   half of composition — behind the slice's `Enabled` setting. Only `AppComposition.cs` may reference
+   `Features.*` (R8 as amended by R159, `OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures`);
+   `Program.cs` is the platform's, calls those two methods once, and is never edited for a slice.
+7. **Contributor** → register the `ITenantDataContributor` (all four members) in the same `AddAppServices`, and
+   add it to `AppTestComposition.Contributors` (`tests/Api.Tests/App/`) so the accept-and-dissolve tests consult
+   it as production does. Work that must run after migrations (a catalog seed) is an `IStartupTask`, registered
+   there too; `Program.cs` runs every registered task after `Migrate()`.
 8. **Postman** → a numbered folder in `docs/postman/Perezosoft.postman_collection.json` with one request
    per endpoint (ADR-023). Gate: `PostmanParityTests` — it sees the slice's routes only while the slice is
    switched ON in the harness, so turn it on there before trusting a green run.

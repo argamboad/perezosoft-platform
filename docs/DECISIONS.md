@@ -422,6 +422,26 @@ checklist in `WAYS_OF_WORKING.md` now carries that list with each step's gate, a
 forces a new artifact must appear there. Read "without touching central code" as *this list and nothing
 else* — the durable half of the claim (filter, stamping, RLS, group auth all inherited) still holds.
 
+*Amendment (Architecture milestone A1, 2026-10-06, #362, R159) — the touchpoints become app-owned files; the
+platform's composition files are identical in every repo.* The measured list above was right about *what* a slice
+edits and wrong about *where*: every member was a platform-owned file (`Program.cs`, `AppDbContext`, the `handled`
+set in `ArchitectureTests`, the harness), so each platform change to them was a hand merge downstream (measured on
+2026-10-05: vuelto `Program.cs` +80 lines, `AppDbContext` +20, `ArchitectureTests` +53; jigger-jot `Program.cs` +31
+and a seeder registered in the platform's `ServiceCollectionExtensions`). The seam: `src/Api/AppComposition.cs`
+(`AddAppServices` / `MapAppEndpoints` — the one file outside `Features/` that may name a slice, R8 as amended);
+`IStartupTask` (`Core/Abstractions`) for work that needs the schema, run by `Program.cs` after `Migrate()`; the
+app's half of the context in `AppDbContext.App.cs` (partial class, `OnAppModelCreating` hook);
+`tests/Api.Tests/App/AppAllowlists.cs` for every allowlist the gates read (`EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`,
+`EveryUserKeyedEntity_IsWiredIntoAccountErasure`, the outbound-HTTP, controller, type-name, tenant-id and
+data-protection sets); `AppTestComposition.cs` for the harness's contributors and the integration host's pins;
+`RulesEnforcement.App.cs` for the manifest's per-app `Pending`/`NotHere`; `tests/Ui.Tests/App/TestHttpHandler.App.cs`
+for the UI stub. `Program.cs` calls the two composition methods once and runs the startup tasks; nothing in it
+changes per app. The checklist in `WAYS_OF_WORKING.md` names these files and
+`AddASliceChecklist_NamesEveryArtifactAGateForces` still holds it to the gates (`EveryEntity_IsDocumentedInDataModel`,
+`EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`, `PostmanParityTests`); `CompositionFiles_AreFreeOfTheSampleSlice`
+proves the seam on the Notes sample: no platform composition file names it. Downstream, A2's manifest gate holds the
+same files identical to the platform's.
+
 **ADR-005 — Apple Sign In fits the agnostic provider model; implementation DEFERRED, web-first. (2026-06-24)**
 A third OAuth provider (Apple) was assessed against the provider-agnostic auth stack (ADR-002). The
 verdict: the **backend absorbs it with small, mechanical additions** — `.AddApple(...)` in

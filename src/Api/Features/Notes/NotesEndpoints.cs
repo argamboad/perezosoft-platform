@@ -5,7 +5,7 @@ namespace Perezosoft.Api.Features.Notes;
 
 /// <summary>
 /// 🗑️ DELETE-ME: sample feature endpoints. A vertical slice registers its own routes via
-/// <c>MapTenantFeatureGroup</c> (call <c>app.MapNotes()</c> in <c>Program.cs</c>) instead of a
+/// <c>MapTenantFeatureGroup</c> (call <c>app.MapNotes()</c> from <c>AppComposition.MapAppEndpoints</c>) instead of a
 /// controller — features are minimal-API groups, the platform stays controllers. The helper
 /// applies the shared tenant-API auth policy, so the slice never re-spells (or forgets) authz.
 /// </summary>
