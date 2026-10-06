@@ -10,14 +10,16 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 0.2 — A reproducible machine (6 files)
+## 0.2 — A reproducible machine (8 files)
 
 - `.env.example` — documented env contract (ADR-001); grows every config lesson
 - `.gitattributes`
 - `.gitignore`
 - `.gitleaks.toml` — secret-scanning gate — part of 'secrets never in the repo'
 - `docker-compose.yml` — Postgres 17 + Mailpit; grows in 2.3/8.2
+- `local-ports.props` — the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
+- `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
 ## 1.1 — Solution, projects & supply chain (17 files)
 
@@ -1321,4 +1323,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1154 tracked files · 788 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1156 tracked files · 790 built in lessons · 366 bucketed · 0 unmapped

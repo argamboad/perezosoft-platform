@@ -112,6 +112,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tools/android-emulator.ps1", "META", "editor tooling: boots an AVD on a fixed port for the VS Code Android profiles"),
     ("tools/publish-native.ps1", "META", "maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed"),
     ("tools/e2e.ps1", "3.6", "runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)"),
+    ("tools/ports.ps1", "0.2", "writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)"),
     ("tools/telemetry.ps1", "META", "maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)"),
 
     # ---- Part 0 ----
@@ -124,6 +125,7 @@ RULES: list[tuple[str, str, str]] = [
     # ---- Part 1 ----
     ("Perezosoft.slnx", "1.1", ""),
     ("Directory.Build.props", "1.1", "warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)"),
+    ("local-ports.props", "0.2", "the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)"),
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),

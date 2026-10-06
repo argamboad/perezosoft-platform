@@ -105,17 +105,18 @@ restore/build/tests. JiggerJot took API `7260`/`5338`, Web `7108`/`5269`, `DB_PO
 `MAIL_SMTP_PORT=1027`, `MAIL_UI_PORT=8027`, `APP_PORT=8280`; the platform sits on `7160`/`5238`,
 `7008`/`5169`, `5433`, `1025`/`8025`, `8080`.
 
-Where the app ports live: both `Properties/launchSettings.json`; `src/Api/appsettings.Development.json`
-(SMTP port, CORS origins, `Auth:AppBaseUrl`); `src/Web/wwwroot/appsettings.json` (`ApiBaseUrl`);
-`MauiProgram.cs` fallbacks and the `adb reverse` lines in the MAUI `.csproj`; `tests/E2E.Tests`
-(`E2ETestBase`, `Mailpit.cs`, `playwright.runsettings`, README); `tests/native-smoke-android/smoke.js`;
-`ci.yml` (the app URLs, and the **host** side of the Mailpit service mappings — `"1025:1025"` →
-`"1027:1025"`, container side unchanged); `docs/postman/*.local.postman_environment.json`;
-`.env.example` (`*_PORT` and the connection string); the docs. Leave `docker-compose.yml` alone —
-`.env` overrides its `${VAR:-default}` fallbacks — and, when doing a numeric replace, exclude vendored
-`wwwroot/lib` (Bootstrap uses `5169` as a timing constant), lockfiles, audit logs and any seed data.
-Compose already namespaces containers, network and the `db_data` volume by folder name, so no rename
-is needed there.
+The block is stated once, in **`local-ports.props`** (Arch A10). Edit the eight numbers there, then
+`pwsh tools/ports.ps1 -Apply`: it rewrites every file that cannot read MSBuild — both
+`Properties/launchSettings.json`, `src/Api/appsettings.Development.json` (SMTP port, CORS origins,
+`Auth:AppBaseUrl`), `src/Web/wwwroot/appsettings.json`, `docker-compose.yml`'s `${VAR:-default}` fallbacks,
+`.env.example` (`*_PORT` and the connection string), `tests/E2E.Tests/playwright.runsettings`, the Postman
+local environment and this app's row in the README table. Code (the API's dev fallback, `MauiProgram.cs`,
+the E2E defaults, the test harness) and the MAUI `adb reverse` read the props at build time, so nothing to
+edit there. Two sites stay by hand: `ci.yml` (the app URLs, and the **host** side of the Mailpit service
+mappings — `"1025:1025"` → `"1027:1025"`, container side unchanged) and the docs that quote ports
+(`QA_TEST_PLAN.md`, `MOBILE_TESTING.md`). `LocalPortsTests` then fails on anything that still disagrees,
+and on any port number written into code, tools or tests. Compose already namespaces containers, network and
+the `db_data` volume by folder name, so no rename is needed there.
 
 ## Phase 4 — First local run
 
