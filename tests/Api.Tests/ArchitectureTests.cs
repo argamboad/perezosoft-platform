@@ -10,6 +10,8 @@ using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Entities;
 using Perezosoft.Infrastructure.Persistence;
 
+using Perezosoft.Api.Tests.App;
+
 namespace Perezosoft.Api.Tests;
 
 /// <summary>
@@ -104,13 +106,13 @@ public class ArchitectureTests
         using var ctx = new AppDbContext(options, new TestCurrentTenant());
 
         var missing = ctx.Model.GetEntityTypes()
-            .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType))
+            .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType) || typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType)) // both markers (Arch A4)
             .Where(e => e.GetDeclaredQueryFilters().Count == 0)
             .Select(e => e.ClrType.Name)
             .ToList();
 
         Assert.True(missing.Count == 0,
-            $"ITenantScoped entities missing the global tenant query filter: {string.Join(", ", missing)}");
+            $"ITenantScoped / ISharedOrTenantScoped entities missing their global query filter: {string.Join(", ", missing)}");
     }
 
     [Fact]
@@ -128,6 +130,7 @@ public class ArchitectureTests
             nameof(UserMfa), nameof(MfaRecoveryCode),          // MfaUserDataContributor
             nameof(Notification), nameof(NotificationPreference), // NotificationUserDataContributor
         };
+        handled.UnionWith(AppAllowlists.ErasureHandled); // the app's slices (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -157,7 +160,6 @@ public class ArchitectureTests
         // did before LB-TEN-1 was fixed. Covers TenantId-carrying non-ITenantScoped entities too (WebhookDelivery).
         var handled = new HashSet<string>
         {
-            nameof(Note),                                   // NotesDataContributor
             nameof(AuditEvent),                             // AuditDataContributor
             nameof(Subscription),                           // BillingDataContributor
             nameof(ApiKey),                                 // ApiKeyDataContributor
@@ -166,6 +168,7 @@ public class ArchitectureTests
             nameof(TenantInvitation), nameof(TenantMembership),   // core teardown (WipeDataAsync)
             nameof(OutboxMessage),                          // OutboxDataContributor — the types that dissolve with their tenant
         };
+        handled.UnionWith(AppAllowlists.DissolutionHandled); // the app's slices (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -202,6 +205,8 @@ public class ArchitectureTests
         using var ctx = new AppDbContext(options, new TestCurrentTenant());
         var entities = ctx.Model.GetEntityTypes()
             .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType == typeof(Guid?))
+            .Where(e => !typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType)) // the shared-or-tenant shape has its own facets (below, Arch A4)
+            .Where(e => !AppAllowlists.LifecycleSpecExceptions.ContainsKey(e.ClrType.Name)) // pinned elsewhere, with a reason (Arch A1)
             .Select(e => e.ClrType.Name).ToList();
         Assert.Contains(nameof(OutboxMessage), entities); // probe alive
 
@@ -211,6 +216,32 @@ public class ArchitectureTests
             .ToList();
         Assert.True(missing.Count == 0,
             "nullable-TenantId entities missing a lifecycle test (name it <Entity>_Lifecycle_<Facet>_…): " + string.Join(", ", missing));
+    }
+
+    [Fact]
+    public void EverySharedOrTenantEntity_ShipsItsLifecycleSpec() // Arch A4 (#364), R145 as amended
+    {
+        // The R145 facets describe drained infrastructure whose rows are never exported; a shared-or-tenant table's
+        // tenant rows ARE exported and its shared rows belong to nobody, so it has facets of its own: what a dissolve
+        // removes and keeps (Dissolve), what the export carries (Export), who may write a shared row (SharedWrites), and
+        // that an account erasure leaves the tenant's rows (Erasure — the one that had no test anywhere before A4).
+        // Read on the TEST context so the platform's fixture (TestSharedWidget) keeps the probe alive.
+        string[] facets = ["Dissolve", "Export", "SharedWrites", "Erasure"];
+        var options = new DbContextOptionsBuilder<TestAppDbContext>()
+            .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
+            .Options;
+        using var ctx = new TestAppDbContext(options, new TestCurrentTenant());
+        var entities = ctx.Model.GetEntityTypes()
+            .Where(e => typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType))
+            .Select(e => e.ClrType.Name).ToList();
+        Assert.Contains(nameof(TestSharedWidget), entities); // probe alive
+
+        var tests = string.Join('\n', SourceFiles(Path.Combine(RepoRoot(), "tests")).Select(File.ReadAllText));
+        var missing = entities.SelectMany(e => facets.Select(f => $"{e}_SharedOrTenant_{f}_"))
+            .Where(prefix => !Regex.IsMatch(tests, $@"\b(?:Task|void)\s+{prefix}\w+\("))
+            .ToList();
+        Assert.True(missing.Count == 0,
+            "shared-or-tenant entities missing a lifecycle facet test (name it <Entity>_SharedOrTenant_<Facet>_…): " + string.Join(", ", missing));
     }
 
     [Fact]
@@ -253,6 +284,7 @@ public class ArchitectureTests
         // an explicit allowlist of by-convention exceptions, so a new tenant-relevant table can't quietly
         // rely on hand-written filtering.
         var allow = new HashSet<string> { nameof(TenantMembership), nameof(WebhookDelivery) };
+        allow.UnionWith(AppAllowlists.TenantIdByConvention); // the app's (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -267,6 +299,19 @@ public class ArchitectureTests
 
         Assert.True(offenders.Count == 0,
             $"Entities with a TenantId must implement ITenantScoped or be allowlisted: {string.Join(", ", offenders)}");
+
+        // The nullable sibling (Arch A4): a Guid? TenantId is either the shared-or-tenant shape (ISharedOrTenantScoped,
+        // with its filter and its four policies) or infrastructure that carries a tenant as context and ships the R145
+        // lifecycle spec instead — by name, so a new nullable column is a decision, not an accident.
+        var nullableByConvention = new HashSet<string> { nameof(OutboxMessage) }; // handler context on drained infrastructure (R145)
+        nullableByConvention.UnionWith(AppAllowlists.TenantIdByConvention);
+        var nullableOffenders = ctx.Model.GetEntityTypes()
+            .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType == typeof(Guid?))
+            .Where(e => !typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType) && !nullableByConvention.Contains(e.ClrType.Name))
+            .Select(e => e.ClrType.Name)
+            .ToList();
+        Assert.True(nullableOffenders.Count == 0,
+            $"Entities with a nullable TenantId must implement ISharedOrTenantScoped or be allowlisted as infrastructure: {string.Join(", ", nullableOffenders)}");
     }
 
     [Fact]
@@ -284,6 +329,7 @@ public class ArchitectureTests
             // switched on. Nothing tenant-scoped to protect — the client asks it before it has an identity.
             nameof(FeaturesController),
         };
+        allow.UnionWith(AppAllowlists.ControllersOutsideTheBases); // the app's (Arch A1)
 
         var offenders = typeof(TenantApiControllerBase).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ControllerBase).IsAssignableFrom(t))
@@ -417,8 +463,9 @@ public class ArchitectureTests
         var testsDir = Path.Combine(RepoRoot(), "tests");
         string[] banned = ["Features.Notes", "Set<Note>", "new Note", "EfRepository<Note>", "IRepository<Note>"];
 
-        // NotesSliceTests legitimately tests the sample; this file lists the banned patterns as literals.
-        var exempt = new HashSet<string> { "NotesSliceTests.cs", "ArchitectureTests.cs" };
+        // NotesSliceTests legitimately tests the sample; this file and the composition-seam gate in EnforcementGateTests
+        // (CompositionFiles_AreFreeOfTheSampleSlice, Arch A1) list the banned patterns as literals.
+        var exempt = new HashSet<string> { "NotesSliceTests.cs", "ArchitectureTests.cs", "EnforcementGateTests.cs" };
         var offenders = SourceFiles(testsDir)
             .Where(f => !exempt.Contains(Path.GetFileName(f)!))
             .Where(f => File.ReadAllText(f) is var t && Array.Exists(banned, t.Contains))
@@ -517,22 +564,56 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void OnlyProgram_ReferencesFeatureNamespaces_FromOutsideFeatures()
+    public void EveryEntity_HasOneWritingSlice() // Arch A8 (#367), R162
     {
-        // R8: the clean state is that composition happens in one place — only Program.cs wires the feature
-        // endpoints. Nothing else outside src/Api/Features/ may reach into Perezosoft.Api.Features.*.
+        // Slices were vertical at the HTTP layer only: every entity sits in Core and any slice could inject IRepository<T>
+        // for any of them, so nothing stopped a slice from writing another slice's rows (vuelto's Dashboard reads eleven
+        // slices' entities, which is its point; it must write none). Now each entity has ONE writing slice, declared in
+        // AppAllowlists.EntityWriters; other slices read it, or call a Core contract the owner implements. Platform
+        // entities are written by platform services, never by a slice. Reads are free (SliceWriteInspector decides).
+        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        var slices = Directory.Exists(featuresDir) ? Directory.GetDirectories(featuresDir).Select(d => Path.GetFileName(d)!).ToList() : [];
+        var writers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal); // entity → slices that write it
+        foreach (var slice in slices)
+            foreach (var file in SourceFiles(Path.Combine(featuresDir, slice)))
+                foreach (var (entity, _) in Architecture.SliceWriteInspector.Writes(File.ReadAllText(file)))
+                    (writers.TryGetValue(entity, out var set) ? set : writers[entity] = new HashSet<string>(StringComparer.Ordinal)).Add(slice);
+
+        var declared = AppAllowlists.EntityWriters;
+        var problems = new List<string>();
+        foreach (var (entity, set) in writers.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!declared.TryGetValue(entity, out var owner))
+                problems.Add($"{entity} is written by {string.Join(", ", set.Order())} but has no declared writer — declare it in AppAllowlists.EntityWriters, or write it through a Core contract the owner implements");
+            else foreach (var other in set.Where(s => s != owner).Order())
+                problems.Add($"{entity} is written by {other}, but its declared writer is {owner} — read it, or go through a Core contract");
+        }
+        foreach (var (entity, owner) in declared.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!slices.Contains(owner)) problems.Add($"{entity}: declared writer {owner} is not a slice under src/Api/Features/");
+            else if (!writers.TryGetValue(entity, out var set) || !set.Contains(owner)) problems.Add($"{entity}: declared writer {owner} writes it nowhere — drop the entry, or the owner lost its write");
+        }
+        Assert.True(problems.Count == 0, "one owning slice writes an entity (Arch A8):\n  " + string.Join("\n  ", problems));
+    }
+
+    [Fact]
+    public void OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures()
+    {
+        // R8, as amended by Arch A1 (R159): composition happens in one app-owned place — AppComposition.cs registers
+        // and maps the slices. Nothing else outside src/Api/Features/ may reach into Perezosoft.Api.Features.*, and
+        // Program.cs in particular names no slice, which is what lets it stay identical in every app.
         var apiDir = Path.Combine(RepoRoot(), "src", "Api");
         var featuresPath = $"{Path.DirectorySeparatorChar}Features{Path.DirectorySeparatorChar}";
 
         var offenders = SourceFiles(apiDir)
             .Where(f => !f.Contains(featuresPath))                     // scope: outside the Features tree
-            .Where(f => Path.GetFileName(f) != "Program.cs")           // Program.cs is the sanctioned composer
+            .Where(f => Path.GetFileName(f) != "AppComposition.cs")    // the app's composition file is the sanctioned composer
             .Where(f => File.ReadAllText(f).Contains("Perezosoft.Api.Features", StringComparison.Ordinal))
             .Select(Path.GetFileName)
             .ToList();
 
         Assert.True(offenders.Count == 0,
-            $"Only Program.cs may reference Perezosoft.Api.Features.* from outside Features/: {string.Join(", ", offenders)}");
+            $"Only AppComposition.cs may reference Perezosoft.Api.Features.* from outside Features/ (R8 as amended, Arch A1): {string.Join(", ", offenders)}");
     }
 
     [Fact]
@@ -563,6 +644,7 @@ public class ArchitectureTests
         // `*Models.cs`, plus the two named aggregations. Enforced as a source scan rather than the
         // Meziantou MA0048 analyzer, which would enable ~150 unrelated rules under warnings-as-error.
         var allow = new HashSet<string>(StringComparer.Ordinal) { "SettingsProvider", "WebhookService" };
+        allow.UnionWith(AppAllowlists.TypeNameExceptions); // the app's (Arch A1)
         var typeDecl = new Regex(
             @"\b(?:public|internal)\s+(?:sealed\s+|abstract\s+|static\s+|partial\s+|readonly\s+|ref\s+)*(?:class|record|interface|enum|struct)\s+([A-Za-z_][A-Za-z0-9_]*)",
             RegexOptions.Compiled);
@@ -573,6 +655,7 @@ public class ArchitectureTests
             if (file.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}")) continue;
             var name = Path.GetFileNameWithoutExtension(file);           // Foo.cs → Foo
             if (name.EndsWith(".xaml", StringComparison.Ordinal)) name = name[..^5]; // App.xaml.cs → App
+            if (name.EndsWith(".App", StringComparison.Ordinal)) name = name[..^4];   // AppDbContext.App.cs → the app's half of a partial class (Arch A1)
             if (name.EndsWith("Models", StringComparison.Ordinal) || allow.Contains(name)) continue;
 
             var types = typeDecl.Matches(File.ReadAllText(file))
@@ -609,10 +692,8 @@ public class ArchitectureTests
         // rationale saying why its destinations are not attacker-influenced. Registration-only files
         // (AddHttpClient with no send call) pass automatically. File-level granularity, matching the
         // other source scans in this class.
-        var allowlisted = new Dictionary<string, string>
-        {
-            // (none today — WebhookSender, the only dynamic-URL sender, injects the guard)
-        };
+        var allowlisted = new Dictionary<string, string>(AppAllowlists.OutboundHttpSenders); // the app's fixed-host senders (Arch A1)
+        // (the platform has none — WebhookSender, the only dynamic-URL sender, injects the guard)
 
         var send = new Regex(
             @"\.(SendAsync|PostAsync|PostAsJsonAsync|GetAsync|GetStringAsync|GetFromJsonAsync|GetByteArrayAsync|PutAsync|PutAsJsonAsync|PatchAsync|DeleteAsync)\s*\(");

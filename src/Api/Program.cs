@@ -7,7 +7,6 @@ using Perezosoft.Api;
 using Perezosoft.Api.Authentication;
 using Perezosoft.Api.Configuration;
 using Perezosoft.Api.Endpoints;
-using Perezosoft.Api.Features.Notes;
 using Perezosoft.Api.Observability;
 using Perezosoft.Api.Services;
 using Perezosoft.Core.Abstractions;
@@ -115,11 +114,10 @@ builder.Services.AddPlatformAdminServices(builder.Configuration);
 builder.Services.AddRbacServices();
 builder.Services.AddBillingServices();
 
-// 🗑️ DELETE-ME: sample feature slice (Features/Notes) — the reference for how a vertical
-// slice wires up: a handler + a tenant-data contributor, with endpoints mapped below. Kept inline
-// here (not in ServiceRegistrationExtensions) because only Program.cs may reference Features.* (R8).
-builder.Services.AddScoped<NotesHandler>();
-builder.Services.AddScoped<ITenantDataContributor, NotesDataContributor>();
+// The app's half of composition (Arch A1, R159): every slice's services, registered in AppComposition.cs — the
+// one file outside Features/ that may name a slice (R8 as amended). This file is identical in the platform and
+// every app; a slice never edits it.
+builder.Services.AddAppServices(builder.Configuration);
 
 // Caches + session (LinkTokenService uses IMemoryCache; session backed by distributed cache).
 builder.Services.AddMemoryCache();
@@ -229,6 +227,15 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// App startup tasks (Arch A1, IStartupTask): work that needs the schema and must precede the first request — a
+// curated catalog seed, an app-owned backfill — registered in AppComposition, run here in registration order in
+// one fresh scope (no ambient tenant). The platform registers none; the loop is the seam.
+using (var scope = app.Services.CreateScope())
+{
+    foreach (var task in scope.ServiceProvider.GetServices<IStartupTask>())
+        await task.RunAsync(app.Lifetime.ApplicationStopping);
+}
+
 // RLS posture guard (ADR-020, config-gated; prod activation enables it): refuse to start if the
 // runtime connection would silently bypass row-level security. Fresh scope — the migrate scope's
 // context may have been repointed at the migrator connection above.
@@ -294,7 +301,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // HTTPS redirect is a production concern. In Development we deliberately skip it so the
-// Android emulator can talk cleartext HTTP to the host (http://10.0.2.2:5238) without the
+// Android emulator can talk cleartext HTTP to the host (10.0.2.2, the API's http port) without the
 // request being 307'd to a port/cert it can't reach. Native auth uses body tokens (no
 // cookies), so none of the web client's HTTPS/SameSite requirements apply to that leg.
 if (!app.Environment.IsDevelopment())
@@ -325,16 +332,20 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check 
 // Deployed build identity (DEPLOY-3). Anonymous; returns the commit this instance is running, from the
 // platform's env (Render sets RENDER_GIT_COMMIT) or an explicit APP_BUILD_COMMIT, else "unknown". The
 // post-deploy smoke polls this to wait for the NEW build to actually be live before asserting — the old
-// instance keeps serving during a build, so health alone can't tell old from new.
+// instance keeps serving during a build, so health alone can't tell old from new. `platform` is the
+// perezosoft-platform commit this build is synced to (Arch A2: platform-stamp.json, copied beside the
+// binaries; "platform" on the platform itself).
+var platformCommit = PlatformStamp.ReadCommit(Path.Combine(AppContext.BaseDirectory, "platform-stamp.json"));
 app.MapGet("/api/version", () => Results.Ok(new
 {
     commit = Environment.GetEnvironmentVariable("APP_BUILD_COMMIT")
              ?? Environment.GetEnvironmentVariable("RENDER_GIT_COMMIT")
              ?? "unknown",
+    platform = platformCommit,
 })).AllowAnonymous().WithTags("Platform");
 
-// 🗑️ DELETE-ME: sample feature slice endpoints (remove with Features/Notes).
-app.MapNotes();
+// The app's endpoint groups (Arch A1): AppComposition.MapAppEndpoints, each through MapTenantFeatureGroup (R6).
+app.MapAppEndpoints();
 // Billing is a platform controller (BillingController) — auto-mapped by MapControllers above.
 
 // PUBAPI (ADR-015): map key management + the public routes only when enabled — off ⇒ they don't exist.

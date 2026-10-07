@@ -10,14 +10,16 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 0.2 — A reproducible machine (6 files)
+## 0.2 — A reproducible machine (8 files)
 
 - `.env.example` — documented env contract (ADR-001); grows every config lesson
 - `.gitattributes`
 - `.gitignore`
 - `.gitleaks.toml` — secret-scanning gate — part of 'secrets never in the repo'
 - `docker-compose.yml` — Postgres 17 + Mailpit; grows in 2.3/8.2
+- `local-ports.props` — the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
+- `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
 ## 1.1 — Solution, projects & supply chain (17 files)
 
@@ -48,10 +50,12 @@
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 
-## 1.3 — Database & the test container (12 files)
+## 1.3 — Database & the test container (14 files)
 
 - `src/Api/AppDbContextFactory.cs` — design-time factory for dotnet ef
+- `src/Infrastructure/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
 - `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
+- `tests/Api.Tests/App/AppTestComposition.cs` — the app's half of the test chassis: its contributors and host pins (Arch A1)
 - `tests/Api.Tests/AppDbContextFactoryTests.cs`
 - `tests/Api.Tests/Infrastructure/CapturingLogger.cs` — the one log double the suite shares
 - `tests/Api.Tests/Infrastructure/Concurrently.cs` — the shared concurrency runner (v4 T54, R7)
@@ -63,7 +67,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (13 files)
+## 1.4 — Configuration & the options pattern (14 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -77,6 +81,7 @@
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
 - `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
+- `tests/Api.Tests/RulesEnforcement.App.cs` — the app's half of the manifest: per-rule Pending/NotHere overrides (Arch A1)
 - `tests/Api.Tests/RulesEnforcement.cs` — the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)
 
 ## 1.5 — The error envelope (1 files)
@@ -171,16 +176,19 @@
 - `tests/Api.Tests/Integration/AuthProvidersEndpointTests.cs`
 - `tests/Api.Tests/ProviderEmailTrustTests.cs`
 
-## 2.6 — Tenancy I — the global query filter (reads) (10 files)
+## 2.6 — Tenancy I — the global query filter (reads) (13 files)
 
 - `src/Api/Services/HttpCurrentTenant.cs` — tenant_id claim -> request scope
 - `src/Core/Abstractions/ICurrentTenant.cs`
+- `src/Core/Entities/ISharedOrTenantScoped.cs` — the sibling of ITenantScoped: rows shared (null) or one tenant's — second filter, write rule, four RLS policies (Arch A4)
 - `src/Core/Entities/ITenantScoped.cs` — the marker the filter keys off
 - `tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs` — an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)
 - `tests/Api.Tests/Architecture/TenantHatchGuard.cs` — polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)
 - `tests/Api.Tests/Architecture/TenantHatchGuardTests.cs`
 - `tests/Api.Tests/HttpCurrentTenantTests.cs`
 - `tests/Api.Tests/Infrastructure/TwoTenants.cs` — the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)
+- `tests/Api.Tests/Rls/SharedOrTenantRlsTests.cs` — the four command-scoped policies as the runtime role sees them (Arch A4)
+- `tests/Api.Tests/Tenancy/SharedOrTenantTests.cs` — the shared-or-tenant shape at the EF level, on the TestSharedWidget fixture (Arch A4)
 - `tests/Api.Tests/TenantInvariantTests.cs` — every ITenantScoped entity filtered or allowlisted (R2)
 - `tests/Api.Tests/TenantScopeFilterTests.cs` — the leak-then-fix test
 
@@ -231,29 +239,34 @@
 - `src/Infrastructure/Repositories/EfUnitOfWork.cs`
 - `tests/Api.Tests/RepositoryScopingTests.cs`
 
-## 3.2 — Anatomy of a vertical slice (Notes) (10 files)
+## 3.2 — Anatomy of a vertical slice (Notes) (12 files)
 
+- `src/Api/AppComposition.cs` — the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)
 - `src/Api/Configuration/AuthPolicies.cs`
 - `src/Api/Endpoints/FeatureEndpointExtensions.cs` — MapTenantFeatureGroup (R6)
 - `src/Api/Features/Notes/NotesDataContributor.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
+- `src/Core/Abstractions/IStartupTask.cs` — work that needs the schema, run by Program.cs after Migrate(); registered in AppComposition (Arch A1)
 - `src/Core/Entities/Note.cs`
 - `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
-## 3.3 — Injected clocks & the architecture tests (6 files)
+## 3.3 — Injected clocks & the architecture tests (9 files)
 
 - `src/Api/Endpoints/RouteTableGuard.cs` — boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)
+- `tests/Api.Tests/App/AppAllowlists.cs` — the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)
 - `tests/Api.Tests/Architecture/RoutePrefixInspector.cs` — route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
 - `tests/Api.Tests/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
+- `tests/Api.Tests/Architecture/SliceWriteInspector.cs` — which entities a slice writes: the matcher behind the one-writer gate (Arch A8)
+- `tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs` — self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (132 files)
+## 3.4 — The web client & auth UI (133 files)
 
 - `src/Shared.Ui/App.razor`
 - `src/Shared.Ui/Auth/AccessTokenState.cs` — the token in memory and its clock (split out of AuthService, v4 T57)
@@ -359,6 +372,7 @@
 - `tests/Api.Tests/JsLogicTests.cs` — runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
 - `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/App/TestHttpHandler.App.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BearerScopedHandlerTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BillingGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -873,7 +887,7 @@
 - `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTestSetup.cs` — backstop + migration-parity + posture-guard tests
 
-## 9.1 — Make it yours (rebrand & de-sample) (6 files)
+## 9.1 — Make it yours (rebrand & de-sample) (15 files)
 
 - `docs/brand/android_adaptive_foreground_432.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/app_store_icon_1024.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
@@ -881,6 +895,15 @@
 - `docs/brand/linkedin_banner_1128x191.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
+- `platform-ownership.json` — which files are the platform's, which an app adapts, which are the app's (Arch A2)
+- `platform-schema.json` — the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
+- `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
+- `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
+- `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
+- `tests/Api.Tests/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
+- `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
+- `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
+- `tools/port-platform.ps1` — ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)
 
 ## A.1 — Appendix — MAUI shells & parity (43 files)
 
@@ -946,7 +969,7 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (60 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (62 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Core/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1000,6 +1023,8 @@
 - `src/Infrastructure/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1321,4 +1346,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1154 tracked files · 788 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1179 tracked files · 811 built in lessons · 368 bucketed · 0 unmapped

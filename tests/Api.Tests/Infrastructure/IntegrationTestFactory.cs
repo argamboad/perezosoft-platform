@@ -47,6 +47,7 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         // Must be present when Program reads Jwt:Secret at CreateBuilder time (before Build) — env vars
         // are a CreateBuilder config source; the WebApplicationFactory config hooks run too late.
         Environment.SetEnvironmentVariable("Jwt__Secret", TestJwtSecret);
+        App.AppTestComposition.PinEnvironment(); // the app's own process-level pins (Arch A1)
     }
 
     public async Task InitializeAsync()
@@ -110,6 +111,9 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             // across the auth-flow tests. This keeps the limiter active but non-colliding — the limiter
             // itself is tested in isolation by RateLimitingTests.
             services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, UniqueClientIpStartupFilter>();
+
+            // The app's own swaps, after the platform's (Arch A1).
+            App.AppTestComposition.ConfigureTestServices(services);
         });
     }
 

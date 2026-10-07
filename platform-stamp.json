@@ -1,0 +1,13 @@
+{
+  "$comment": [
+    "Which platform commit this repo is synced to (Arch A2, R160). On the platform itself the commit is null: it IS the",
+    "platform, and the downstream gate (PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted) does not apply here.",
+    "Downstream, tools/port-platform.ps1 writes this file together with tests/Api.Tests/App/platform-manifest.json: the",
+    "commit the files were merged from, the date, and the brand map the gate uses to compare a renamed file with the",
+    "platform's (platform token -> this repo's token). /api/version reports the commit as `platform`."
+  ],
+  "platform": "argamboad/perezosoft-platform",
+  "commit": null,
+  "date": null,
+  "brand": { "Perezosoft": "Perezosoft", "perezosoft": "perezosoft" }
+}
