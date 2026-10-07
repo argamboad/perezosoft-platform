@@ -139,6 +139,24 @@ manifest without a listed reason, and `/api/version` reports the platform commit
 holds your migrated database to `platform-schema.json` for the platform's tables (Arch A5): if a port brings a platform
 migration, your regenerated copy of it must build the same columns, constraints, indexes and policies.
 
+### Removing the Notes sample (touches no platform migration)
+
+The sample is a removable unit (Arch A6): its code, and its two migrations (`AddNotesSample`, which creates the table,
+and `NotesSampleRlsPolicy`, its RLS policy). No platform migration names it, so removing it is an ordinary app change:
+
+1. Delete the code: `src/Api/Features/Notes/`, `src/Core/Entities/Note.cs`,
+   `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`, `tests/Api.Tests/NotesSliceTests.cs`; the
+   `Notes` lines in `src/Api/AppComposition.cs`, the `DbSet<Note>` in `AppDbContext.App.cs`, the `nameof(Note)` entry
+   in `tests/Api.Tests/App/AppAllowlists.cs`, the `Notes_*` strings in both resx files, the Notes folder of the Postman
+   collection and its `noteId` variable, and the `/notes` page and nav entry in `Shared.Ui`.
+2. Drop the table with an **app migration**: `dotnet ef migrations add RemoveNotesSample --project src/Infrastructure
+   --startup-project src/Api` scaffolds the `DropTable("Notes")` from the model change and regenerates the snapshot.
+   Say "Data loss on Down: the sample's rows" in its summary (the migrations gate asks for it).
+3. Leave `AddNotesSample` and `NotesSampleRlsPolicy` in place as history. **Never delete or edit a platform
+   migration**: a repo that deleted `AddNotesSample` had to edit `RlsTenancyBackstop` too, and its platform
+   migrations diverged from upstream for good. `PlatformMigrations_DoNotNameTheSample` holds the platform side of
+   this: no platform migration may name the sample's table.
+
 ## Phase 4 — First local run
 
 ```bash
@@ -201,7 +219,7 @@ The rhythm, per `docs/WAYS_OF_WORKING.md`:
 2. Each slice = one branch + one PR off `develop`, test-first (the failing test precedes the
    code), end-to-end (API + UI + tests), leaving the app working.
 3. Copy **`src/Api/Features/Notes`** as the reference slice shape; **delete the Notes sample**
-   when your first real feature lands.
+   when your first real feature lands — the recipe is below ("Removing the Notes sample").
 4. CI gates every PR; once Phase 7 is done, a manual GitHub *Run workflow* with `deploy=staging` deploys
    `develop` to staging (ADR-031).
 

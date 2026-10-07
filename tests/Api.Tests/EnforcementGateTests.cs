@@ -822,6 +822,31 @@ public class EnforcementGateTests
     }
 
     [Fact]
+    public void PlatformMigrations_DoNotNameTheSample() // Arch A6 (#366), R9 as amended
+    {
+        // The sample's table used to be created by one platform migration and named by another (RlsTenancyBackstop's
+        // frozen list), so removing the sample meant editing platform history — vuelto did, and its platform migrations
+        // diverged from upstream. Now the sample's unit is its own two migrations (class `sample` in the ownership map),
+        // and every other migration is held free of it. The snapshot is the app's (class `adapts`) and is not scanned.
+        var root = RepoRoot();
+        var rules = Architecture.PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
+        // Designer files are the model snapshot at that point in the chain (generated, and the snapshot is the app's), so only
+        // the migrations' own operations are read, with comment lines dropped: the question is what the SQL names.
+        var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Infrastructure", "Persistence", "Migrations"), "*.cs")
+            .Where(f => !f.EndsWith("ModelSnapshot.cs", StringComparison.Ordinal) && !f.EndsWith(".Designer.cs", StringComparison.Ordinal))
+            .Select(f => (Rel: Path.GetRelativePath(root, f).Replace('\\', '/'),
+                          Text: string.Join('\n', File.ReadLines(f).Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)))))
+            .ToList();
+        var sample = migrations.Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) == Architecture.PlatformOwnership.Class.Sample).Select(m => m.Rel).ToList();
+        Assert.True(sample.Count >= 2, "probe: the sample's own migrations (AddNotesSample, NotesSampleRlsPolicy) are classed `sample`");
+        var offenders = migrations
+            .Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) != Architecture.PlatformOwnership.Class.Sample)
+            .Where(m => Regex.IsMatch(m.Text, @"""\bNotes\b"""))
+            .Select(m => m.Rel).ToList();
+        Assert.True(offenders.Count == 0, "a platform migration names the sample's table — the sample must stay removable without editing platform history (Arch A6): " + string.Join(", ", offenders));
+    }
+
+    [Fact]
     public void CompositionFiles_AreFreeOfTheSampleSlice() // Arch A1 (#362), R159
     {
         // The seam, proven on the one app the platform carries: the Notes sample. Before A1 the sample was registered in

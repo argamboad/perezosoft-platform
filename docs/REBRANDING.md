@@ -187,7 +187,9 @@ These describe the *platform*, not your app, and carry the old brand in ways a t
 - **`README.md`** — rewrite for the app (what it is, how to run it, where things are, provenance).
 - `docs/OVERVIEW.md`, `docs/STATUS.md`, `docs/ROADMAP.md`, `docs/PLATFORM_BACKLOG.md`, `docs/stories/*`,
   `docs/audits/*` — platform history; they rename mechanically and may stay as reference.
-- The **`Notes` sample slice** goes when the first real feature lands (`WAYS_OF_WORKING.md`).
+- The **`Notes` sample slice** goes when the first real feature lands — `NEW_APP_GUIDE.md`, "Removing the Notes
+  sample": its code and an app migration that drops the table; its two migrations stay as history, no platform
+  migration is edited (Arch A6).
 
 ## Rasters
 `docs/brand/build_assets.py` regenerates **every** PNG in §3, `favicon.ico` and the store/marketing set

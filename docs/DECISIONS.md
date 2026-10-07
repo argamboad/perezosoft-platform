@@ -1333,6 +1333,16 @@ migrated database with it for those tables (an app's own tables are not listed a
 same test is the file's currency check: a new or dropped platform table fails it until the file is regenerated
 (`PLATFORM_SCHEMA_WRITE=1 dotnet test --filter PlatformSchemaTests`). The sample's table is not a platform table.
 
+*Amendment (Architecture milestone A6, 2026-10-07, #366) — the Notes sample is its own removable unit.* Its table was
+created by one platform migration (`AddNotesSample`) and named by another (`RlsTenancyBackstop`'s frozen list), so
+removing the sample meant editing platform history: vuelto deleted the first and edited the second, and its platform
+migrations diverged from upstream for good; jigger-jot never removed it. Now `RlsTenancyBackstop` no longer names
+`Notes` (a database that ran it before is unchanged; a fresh one gets the policy from the sample's own
+`NotesSampleRlsPolicy` migration, idempotently), both sample migrations are class `sample` in the ownership map, and
+`PlatformMigrations_DoNotNameTheSample` keeps every other migration free of it (R9 amended). Removing the sample is an
+app change: delete its code, drop its table with an app migration, leave the two sample migrations as history
+(`NEW_APP_GUIDE.md`, "Removing the Notes sample").
+
 **ADR-020 — Tenancy defense-in-depth: Postgres row-level security as a second, DB-level wall under the EF query filter. (2026-07-06; IMPLEMENTED — see the addenda. Header fixed 2026-07-27, v3 T57: it still read "DEFERRED" long after the backstop merged)**
 Tenant isolation is currently enforced entirely in the application layer: the ADR-003 global query
 filter, the write-side interceptor (V2-B2), and the arch-test bans. One missed seam in a future

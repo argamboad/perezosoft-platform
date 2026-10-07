@@ -15,6 +15,8 @@
     { "glob": "src/Core/Entities/Note.cs", "class": "sample" },
     { "glob": "src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs", "class": "sample" },
     { "glob": "tests/Api.Tests/NotesSliceTests.cs", "class": "sample" },
+    { "glob": "src/Infrastructure/Persistence/Migrations/*_AddNotesSample.*", "class": "sample" },
+    { "glob": "src/Infrastructure/Persistence/Migrations/*_NotesSampleRlsPolicy.*", "class": "sample" },
 
     { "glob": "src/Api/Features/**", "class": "app" },
     { "glob": "src/Api/AppComposition.cs", "class": "app" },

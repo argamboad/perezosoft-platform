@@ -117,7 +117,8 @@ TR-3), so a new entity is reset automatically — the old "add the table to the 
 dead for two audits before the measurement caught it.
 
 **Reference:** `src/Api/Features/Notes` is a complete, working example (marked "🗑️ DELETE-ME").
-Copy its shape; delete it when you ship your first real feature.
+Copy its shape; delete it when you ship your first real feature — by the recipe in `docs/NEW_APP_GUIDE.md`
+("Removing the Notes sample"): an app migration drops the table, no platform migration is touched (Arch A6).
 
 ## User stories
 
