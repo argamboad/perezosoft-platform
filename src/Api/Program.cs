@@ -332,12 +332,16 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check 
 // Deployed build identity (DEPLOY-3). Anonymous; returns the commit this instance is running, from the
 // platform's env (Render sets RENDER_GIT_COMMIT) or an explicit APP_BUILD_COMMIT, else "unknown". The
 // post-deploy smoke polls this to wait for the NEW build to actually be live before asserting — the old
-// instance keeps serving during a build, so health alone can't tell old from new.
+// instance keeps serving during a build, so health alone can't tell old from new. `platform` is the
+// perezosoft-platform commit this build is synced to (Arch A2: platform-stamp.json, copied beside the
+// binaries; "platform" on the platform itself).
+var platformCommit = PlatformStamp.ReadCommit(Path.Combine(AppContext.BaseDirectory, "platform-stamp.json"));
 app.MapGet("/api/version", () => Results.Ok(new
 {
     commit = Environment.GetEnvironmentVariable("APP_BUILD_COMMIT")
              ?? Environment.GetEnvironmentVariable("RENDER_GIT_COMMIT")
              ?? "unknown",
+    platform = platformCommit,
 })).AllowAnonymous().WithTags("Platform");
 
 // The app's endpoint groups (Arch A1): AppComposition.MapAppEndpoints, each through MapTenantFeatureGroup (R6).

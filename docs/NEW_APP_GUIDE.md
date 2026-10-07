@@ -118,6 +118,25 @@ mappings — `"1025:1025"` → `"1027:1025"`, container side unchanged) and the 
 and on any port number written into code, tools or tests. Compose already namespaces containers, network and
 the `db_data` volume by folder name, so no rename is needed there.
 
+### Phase 3b → the platform boundary: stamp, manifest, ownership (Arch A2)
+
+Your repo is a clone of a platform commit, and it should say so. `platform-stamp.json` names that commit and the
+brand map (`Perezosoft` → your brand, `perezosoft` → its lowercase); `platform-ownership.json` says which files are
+the platform's (`platform`: keep them identical, or list a divergence with a reason in
+`tests/Api.Tests/App/PlatformDivergences.json`), which you are expected to edit (`adapts`: the UI, the journeys, the
+config, the docs) and which are yours (`app`: `src/Api/Features/**`, `AppComposition.cs`, `AppDbContext.App.cs`,
+`tests/Api.Tests/App/**`, `RulesEnforcement.App.cs`). After the rebrand, run the port once against the platform
+checkout you cloned from, at that same commit, to write the manifest and the stamp:
+
+```bash
+pwsh tools/port-platform.ps1 -Platform ../perezosoft-platform -To <the commit you cloned> -Apply
+```
+
+From then on **porting a platform change is one command**: `pwsh tools/port-platform.ps1 -Platform ../perezosoft-platform`
+(dry run; prints added / clean / CONFLICT / deleted upstream), then the same with `-Apply`, resolve any `<<<<<<<`
+markers, build, run the tests. `PlatformOwnershipTests` fails on a platform file that differs from the stamped
+manifest without a listed reason, and `/api/version` reports the platform commit beside your own.
+
 ## Phase 4 — First local run
 
 ```bash

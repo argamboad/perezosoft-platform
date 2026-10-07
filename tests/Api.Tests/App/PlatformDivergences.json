@@ -1,0 +1,10 @@
+{
+  "$comment": [
+    "Platform-class files this repo deliberately changed (Arch A2, R160), path -> reason. The downstream gate",
+    "(PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted) fails on a platform file that differs from the stamped",
+    "manifest unless it is listed here, and fails on an entry whose file is identical again, so the list cannot rot.",
+    "Paths are this repo's (brand-renamed). Empty on the platform."
+  ],
+  "divergences": {
+  }
+}

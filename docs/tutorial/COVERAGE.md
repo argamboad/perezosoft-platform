@@ -882,7 +882,7 @@
 - `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTestSetup.cs` — backstop + migration-parity + posture-guard tests
 
-## 9.1 — Make it yours (rebrand & de-sample) (6 files)
+## 9.1 — Make it yours (rebrand & de-sample) (13 files)
 
 - `docs/brand/android_adaptive_foreground_432.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/app_store_icon_1024.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
@@ -890,6 +890,13 @@
 - `docs/brand/linkedin_banner_1128x191.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
+- `platform-ownership.json` — which files are the platform's, which an app adapts, which are the app's (Arch A2)
+- `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
+- `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
+- `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
+- `tests/Api.Tests/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
+- `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
+- `tools/port-platform.ps1` — ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)
 
 ## A.1 — Appendix — MAUI shells & parity (43 files)
 
@@ -1330,4 +1337,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1163 tracked files · 797 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1170 tracked files · 804 built in lessons · 366 bucketed · 0 unmapped

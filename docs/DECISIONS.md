@@ -1303,6 +1303,26 @@ only change alongside a re-encryption migration. The Render service keeps the na
 (Render treats the name as service identity; renaming would mint a new service + URL and churn the
 OAuth consoles for zero functional gain — fold into a future console-touching change if desired).
 
+*Amendment (Architecture milestone A2, 2026-10-07, #363, R160) — clone-and-rebrand ships with an ownership map, a
+stamp and a port tool; "extend, never modify" has a gate.* The boundary audit of 2026-10-05 measured vuelto at 142
+changed platform files (19 backend) and jigger-jot at 144 (30 backend) with nothing saying which of them *may* differ.
+Now `platform-ownership.json` (ordered globs, first match wins) classes every tracked file — **platform** (identical
+modulo the brand tokens; downstream, a change needs a reason in `tests/Api.Tests/App/PlatformDivergences.json`),
+**adapts** (platform origin, the app is expected to edit: its UI per #368, its journeys, its config, its docs; drift
+is reported, never failed), **app** (the slices and the Arch A1 seams; never ported) and **sample** (the DELETE-ME
+Notes slice) — and `OwnershipMap_ClassifiesEveryTrackedFile` fails the platform's own build on a file with no class.
+Downstream, `pwsh tools/port-platform.ps1 -Platform <checkout> -To <commit> -Apply` three-way-merges every platform and
+adapts file from the stamped commit to the target (brand renamed in content and path; `git merge-file --diff3`,
+markers left for a human; app files never touched), then writes `tests/Api.Tests/App/platform-manifest.json` (the
+brand-normalised SHA-256 of every platform and adapts file at the target) and `platform-stamp.json` (the commit, the
+date, the brand map). `PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted` holds the repo to them, and an allowlist
+entry whose file is identical again fails too, so the list cannot rot. The manifest is derived data, generated
+downstream, never committed in the platform (which carries a null stamp). `/api/version` reports the platform commit
+beside the app's own. The hash is computed in PowerShell by the tool and in C# by the gate;
+`PortTool_MergesPlatformAndAdaptsFiles_AndWritesTheManifestTheGateAccepts` runs the tool against two scratch repos
+and pins the two equal. The NuGet-packages door (`PLATFORM_BACKLOG.md` §10) stays open: the map is also the list of
+what such packages would contain.
+
 **ADR-020 — Tenancy defense-in-depth: Postgres row-level security as a second, DB-level wall under the EF query filter. (2026-07-06; IMPLEMENTED — see the addenda. Header fixed 2026-07-27, v3 T57: it still read "DEFERRED" long after the backstop merged)**
 Tenant isolation is currently enforced entirely in the application layer: the ADR-003 global query
 filter, the write-side interceptor (V2-B2), and the arch-test bans. One missed seam in a future

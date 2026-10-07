@@ -34,6 +34,15 @@
   -->
   <Import Project="$(MSBuildThisFileDirectory)local-ports.props" />
 
+  <!--
+    The platform stamp travels with the API (Arch A2, R160): platform-stamp.json is copied beside the binaries of the
+    *.Api project (and so into the published container), where /api/version reads the platform commit this build is
+    synced to. The test host reads the same copy.
+  -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Api'))">
+    <Content Include="$(MSBuildThisFileDirectory)platform-stamp.json" Link="platform-stamp.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <Target Name="GenerateLocalPorts" BeforeTargets="BeforeCompile;CoreCompile" Condition="'$(GenerateLocalPorts)' == 'true'">
     <PropertyGroup>
       <_LocalPortsFile>$(IntermediateOutputPath)LocalPorts.g.cs</_LocalPortsFile>

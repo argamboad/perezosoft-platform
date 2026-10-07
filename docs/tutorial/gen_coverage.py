@@ -113,6 +113,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tools/publish-native.ps1", "META", "maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed"),
     ("tools/e2e.ps1", "3.6", "runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)"),
     ("tools/ports.ps1", "0.2", "writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)"),
+    ("tools/port-platform.ps1", "9.1", "ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)"),
     ("tools/telemetry.ps1", "META", "maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)"),
 
     # ---- Part 0 ----
@@ -126,6 +127,12 @@ RULES: list[tuple[str, str, str]] = [
     ("Perezosoft.slnx", "1.1", ""),
     ("Directory.Build.props", "1.1", "warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)"),
     ("local-ports.props", "0.2", "the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)"),
+    ("platform-ownership.json", "9.1", "which files are the platform's, which an app adapts, which are the app's (Arch A2)"),
+    ("platform-stamp.json", "9.1", "the platform commit this repo is synced to; null on the platform (Arch A2)"),
+    ("src/Api/PlatformStamp.cs", "9.1", "reads the stamp beside the binaries for /api/version (Arch A2)"),
+    ("tests/Api.Tests/App/PlatformDivergences.json", "9.1", "the app's allowlisted changes to platform files, with reasons (Arch A2)"),
+    ("tests/Api.Tests/PlatformOwnershipTests.cs", "9.1", "the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)"),
+    ("tests/Api.Tests/Architecture/PlatformOwnership.cs", "9.1", "the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)"),
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
