@@ -71,7 +71,10 @@ app (UI components go in the Shared.Ui RCL).
 recipe and logged every existing file it had to touch (ADV-P4-17). Each step names the gate that fails
 CI when it is skipped, and `EnforcementGateTests.AddASliceChecklist_NamesEveryArtifactAGateForces`
 (R158) holds this list to those gates, so a new gate cannot force an edit the checklist never mentions.
-1. **Entity** → `src/Core/Entities/<Entity>.cs`, implementing `ITenantScoped`. A slice **cannot declare
+1. **Entity** → `src/Core/Entities/<Entity>.cs`, implementing `ITenantScoped` — or `ISharedOrTenantScoped` when
+   its rows are either shared (`TenantId` null) or one tenant's (Arch A4; then step 3 uses
+   `RlsDdl.SharedOrTenantStatementsFor`, and the four `<Entity>_SharedOrTenant_*` facet tests replace the canary
+   entry of step 5). A slice **cannot declare
    its own `Permission`**: the enum and `RolePermissions` live in Core (ADR-009's coarse capabilities) —
    reuse one, or add it to Core in its own commit.
 2. **DbSet + config** → add the `DbSet<>` to `src/Infrastructure/Persistence/AppDbContext.App.cs` (the app's half of

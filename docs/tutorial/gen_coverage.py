@@ -281,6 +281,9 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Controllers/HouseholdInvitationsController.cs", "2.9", ""),
     ("src/Api/Services/TenantDissolutionService.cs", "2.9", "contributor fan-out"),
     ("src/Core/Abstractions/ITenantDataContributor.cs", "2.9", "the seam GDPR later extends"),
+    ("src/Core/Entities/ISharedOrTenantScoped.cs", "2.6", "the sibling of ITenantScoped: rows shared (null) or one tenant's — second filter, write rule, four RLS policies (Arch A4)"),
+    ("tests/Api.Tests/Tenancy/SharedOrTenantTests.cs", "2.6", "the shared-or-tenant shape at the EF level, on the TestSharedWidget fixture (Arch A4)"),
+    ("tests/Api.Tests/Rls/SharedOrTenantRlsTests.cs", "2.6", "the four command-scoped policies as the runtime role sees them (Arch A4)"),
     ("tests/Api.Tests/WipeDataTests.cs", "2.9", ""),
 
     # ---- Part 3 ----

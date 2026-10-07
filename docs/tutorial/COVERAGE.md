@@ -176,16 +176,19 @@
 - `tests/Api.Tests/Integration/AuthProvidersEndpointTests.cs`
 - `tests/Api.Tests/ProviderEmailTrustTests.cs`
 
-## 2.6 — Tenancy I — the global query filter (reads) (10 files)
+## 2.6 — Tenancy I — the global query filter (reads) (13 files)
 
 - `src/Api/Services/HttpCurrentTenant.cs` — tenant_id claim -> request scope
 - `src/Core/Abstractions/ICurrentTenant.cs`
+- `src/Core/Entities/ISharedOrTenantScoped.cs` — the sibling of ITenantScoped: rows shared (null) or one tenant's — second filter, write rule, four RLS policies (Arch A4)
 - `src/Core/Entities/ITenantScoped.cs` — the marker the filter keys off
 - `tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs` — an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)
 - `tests/Api.Tests/Architecture/TenantHatchGuard.cs` — polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)
 - `tests/Api.Tests/Architecture/TenantHatchGuardTests.cs`
 - `tests/Api.Tests/HttpCurrentTenantTests.cs`
 - `tests/Api.Tests/Infrastructure/TwoTenants.cs` — the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)
+- `tests/Api.Tests/Rls/SharedOrTenantRlsTests.cs` — the four command-scoped policies as the runtime role sees them (Arch A4)
+- `tests/Api.Tests/Tenancy/SharedOrTenantTests.cs` — the shared-or-tenant shape at the EF level, on the TestSharedWidget fixture (Arch A4)
 - `tests/Api.Tests/TenantInvariantTests.cs` — every ITenantScoped entity filtered or allowlisted (R2)
 - `tests/Api.Tests/TenantScopeFilterTests.cs` — the leak-then-fix test
 
@@ -1337,4 +1340,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1170 tracked files · 804 built in lessons · 366 bucketed · 0 unmapped
+**Totals:** 1173 tracked files · 807 built in lessons · 366 bucketed · 0 unmapped

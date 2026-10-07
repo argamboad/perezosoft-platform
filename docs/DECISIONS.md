@@ -1391,6 +1391,22 @@ provisioning with a bites-test; dissolve/erasure under a foreign entered tenant 
 all-or-nothing; and the slice recipe is now documented + enforced end-to-end (the hand-written
 policy step in `WAYS_OF_WORKING.md` + the PR-template checkbox + the honest gate — v3 T52/T57).
 
+*Amendment (Architecture milestone A4, 2026-10-07, #364) — the shared-or-tenant shape is a platform seam.* jigger-jot
+needed rows that are either shared (a curated catalog, `TenantId` null) or one household's, and built it by editing
+two platform files (JJ-031: a second query filter in `AppDbContext`, a second policy family in `RlsDdl`). The
+capability is generic, so it moves upstream as `ISharedOrTenantScoped` (`Core/Entities`), the deliberate sibling of
+`ITenantScoped`: a second global filter (`TenantId == null || TenantId == CurrentTenantId`; shared rows only when
+no tenant is current), a write rule in `TenantStampingInterceptor` (no stamping — the writer sets `TenantId`; under a
+tenant, a shared row or another tenant's row is refused), and FOUR command-scoped RLS policies
+(`RlsDdl.SharedOrTenantStatementsFor`): SELECT admits shared and own, INSERT/UPDATE/DELETE admit own only, so a tenant
+cannot delete the catalog even past the EF filter, and writing a shared row needs the bypass GUC of a tenant-less
+context. Gates: both markers under the filter gate; a nullable `TenantId` is this shape or allowlisted infrastructure
+(R2 amended); the migration-parity gate asks every such table for ENABLE + FORCE and all four policies by name; and
+each such entity ships four lifecycle facets — `Dissolve`, `Export`, `SharedWrites`, `Erasure` — in place of the R145
+infrastructure facets (R145 amended). The platform owns no such table: the shape is proven on the `TestSharedWidget`
+fixture (`SharedOrTenantTests`, `SharedOrTenantRlsTests`), and jigger-jot's catalog returns its two files to the
+platform's text when it syncs.
+
 **ADR-021 — Admin back-office writes: narrow, enumerated, audited mutations (amends ADR-014's "read-only" posture). (2026-07-09)**
 ADR-014 point 2 declared admin **read-only over tenant data** ("inspect, don't mutate"), with the
 ADMIN-3 announcement as the one sanctioned write (per-user notification rows via the normal fan-out).

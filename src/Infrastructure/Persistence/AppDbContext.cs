@@ -115,6 +115,15 @@ public partial class AppDbContext : DbContext, IDataProtectionKeyContext
                 ApplyTenantFilterMethod
                     .MakeGenericMethod(entityType.ClrType)
                     .Invoke(this, [builder]);
+
+            // The shared-or-tenant shape (Arch A4, ISharedOrTenantScoped): rows that are EITHER shared (TenantId
+            // null) OR one tenant's. ITenantScoped cannot express them — its TenantId is non-nullable and its filter
+            // would hide every shared row — so they get this parallel filter. Deliberately in the same loop, so the
+            // two are read as a pair and a reader cannot take "not ITenantScoped" to mean "not filtered".
+            if (typeof(ISharedOrTenantScoped).IsAssignableFrom(entityType.ClrType))
+                ApplySharedOrTenantFilterMethod
+                    .MakeGenericMethod(entityType.ClrType)
+                    .Invoke(this, [builder]);
         }
 
         // The app's model rules, if it has any (Arch A1): AppDbContext.App.cs implements the partial method.
@@ -131,4 +140,18 @@ public partial class AppDbContext : DbContext, IDataProtectionKeyContext
 
     private void ApplyTenantFilter<TEntity>(ModelBuilder builder) where TEntity : class, ITenantScoped
         => builder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+
+    private static readonly MethodInfo ApplySharedOrTenantFilterMethod =
+        typeof(AppDbContext).GetMethod(nameof(ApplySharedOrTenantFilter),
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    /// <summary>
+    /// A tenant sees the shared rows plus its own, and nothing of anyone else's. Mirrored by the four command-scoped
+    /// RLS policies (<see cref="RlsDdl.SharedOrTenantStatementsFor(string, string)"/>) — change the two together or
+    /// the database and the app disagree about what is visible. With no tenant current (<see cref="CurrentTenantId"/>
+    /// is <see cref="Guid.Empty"/>: a system or seed context) this admits exactly the shared rows, which is what
+    /// seeding a catalog needs and why it is not written as a fail-closed comparison.
+    /// </summary>
+    private void ApplySharedOrTenantFilter<TEntity>(ModelBuilder builder) where TEntity : class, ISharedOrTenantScoped
+        => builder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == null || e.TenantId == CurrentTenantId);
 }

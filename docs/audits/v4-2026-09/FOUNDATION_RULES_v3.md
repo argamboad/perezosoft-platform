@@ -5,6 +5,7 @@
 > v2.0 historical layer.
 > **Range.** R1–R35 (v1.0, `docs/audits/v2-2026-07/FOUNDATION_RULES.md`) and R36–R76 + R80 (v2.0,
 > `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md`) carry forward **unchanged except for the amendments in §1**.
+> **Amended 2026-10-07 by Arch A4 (#364):** R2 and R145 extended to the shared-or-tenant shape (`ISharedOrTenantScoped`, §1).
 > **Amended 2026-10-06 by Arch A1 (#362):** the Architecture milestone adds **R159–R160** as finals (R159 the composition seam, R160 the ownership map and stamp, both §10); R8 amended (§1).
 > **Amended 2026-10-06 by Arch A12 (#371):** R149 admits a component that takes its test id as a parameter, with literal callers.
 > **Amended 2026-10-02 by ADR-031:** R80 and R138 retired with `.forgejo/` (GitHub is the only forge again,
@@ -41,6 +42,8 @@ check does not exist; the mechanism text below is the intent, the manifest is th
 | R75 [machine] | "…covers C# reads (`IConfiguration`, `GetEnvironmentVariable`, flat indexers — R95, `SectionName` consts — R153); deploy-time YAML keys are a DEPLOYMENT §10 review item (R100)"; the QA run-log clause is **unverified on Forgejo** until the `guard=ran/skipped` marker lands (C18). |
 | R80 [retired] | Retired 2026-10-02 (ADR-031): `.forgejo/` was removed, so there is no second workflow copy to hold together. |
 | R15 | Clock-injection scan widened to `src/Shared.Ui` (**R148**). |
+| R2 [machine] | "…an entity carrying a `TenantId` implements `ITenantScoped`, **or `ISharedOrTenantScoped` when its rows are either shared (null) or one tenant's (Arch A4, 2026-10-07)**, or is allowlisted by name; a nullable `TenantId` is one of the two or allowlisted infrastructure." Gate: `EveryEntityWithATenantId_IsScopedOrAllowlisted`, `EveryTenantScopedEntity_HasAGlobalQueryFilter` (both markers). |
+| R145 [machine] | A shared-or-tenant entity ships its own four facets instead — `<Entity>_SharedOrTenant_{Dissolve,Export,SharedWrites,Erasure}_*` (`EverySharedOrTenantEntity_ShipsItsLifecycleSpec`) — and its four command-scoped RLS policies by migration (`EverySharedOrTenantTable_HasForcedRlsAndAllFourPolicies_AfterMigrations`); Arch A4, 2026-10-07. |
 | R8 [machine] | "Only **`src/Api/AppComposition.cs`** references `Perezosoft.Api.Features.*` from outside `src/Api/Features/`" — the composition seam (**R159**, Arch A1, 2026-10-06); `Program.cs` names no slice. |
 
 ## 2. Auth / session (Critical/High)

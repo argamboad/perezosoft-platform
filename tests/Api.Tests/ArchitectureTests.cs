@@ -106,13 +106,13 @@ public class ArchitectureTests
         using var ctx = new AppDbContext(options, new TestCurrentTenant());
 
         var missing = ctx.Model.GetEntityTypes()
-            .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType))
+            .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType) || typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType)) // both markers (Arch A4)
             .Where(e => e.GetDeclaredQueryFilters().Count == 0)
             .Select(e => e.ClrType.Name)
             .ToList();
 
         Assert.True(missing.Count == 0,
-            $"ITenantScoped entities missing the global tenant query filter: {string.Join(", ", missing)}");
+            $"ITenantScoped / ISharedOrTenantScoped entities missing their global query filter: {string.Join(", ", missing)}");
     }
 
     [Fact]
@@ -205,6 +205,7 @@ public class ArchitectureTests
         using var ctx = new AppDbContext(options, new TestCurrentTenant());
         var entities = ctx.Model.GetEntityTypes()
             .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType == typeof(Guid?))
+            .Where(e => !typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType)) // the shared-or-tenant shape has its own facets (below, Arch A4)
             .Where(e => !AppAllowlists.LifecycleSpecExceptions.ContainsKey(e.ClrType.Name)) // pinned elsewhere, with a reason (Arch A1)
             .Select(e => e.ClrType.Name).ToList();
         Assert.Contains(nameof(OutboxMessage), entities); // probe alive
@@ -215,6 +216,32 @@ public class ArchitectureTests
             .ToList();
         Assert.True(missing.Count == 0,
             "nullable-TenantId entities missing a lifecycle test (name it <Entity>_Lifecycle_<Facet>_…): " + string.Join(", ", missing));
+    }
+
+    [Fact]
+    public void EverySharedOrTenantEntity_ShipsItsLifecycleSpec() // Arch A4 (#364), R145 as amended
+    {
+        // The R145 facets describe drained infrastructure whose rows are never exported; a shared-or-tenant table's
+        // tenant rows ARE exported and its shared rows belong to nobody, so it has facets of its own: what a dissolve
+        // removes and keeps (Dissolve), what the export carries (Export), who may write a shared row (SharedWrites), and
+        // that an account erasure leaves the tenant's rows (Erasure — the one that had no test anywhere before A4).
+        // Read on the TEST context so the platform's fixture (TestSharedWidget) keeps the probe alive.
+        string[] facets = ["Dissolve", "Export", "SharedWrites", "Erasure"];
+        var options = new DbContextOptionsBuilder<TestAppDbContext>()
+            .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
+            .Options;
+        using var ctx = new TestAppDbContext(options, new TestCurrentTenant());
+        var entities = ctx.Model.GetEntityTypes()
+            .Where(e => typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType))
+            .Select(e => e.ClrType.Name).ToList();
+        Assert.Contains(nameof(TestSharedWidget), entities); // probe alive
+
+        var tests = string.Join('\n', SourceFiles(Path.Combine(RepoRoot(), "tests")).Select(File.ReadAllText));
+        var missing = entities.SelectMany(e => facets.Select(f => $"{e}_SharedOrTenant_{f}_"))
+            .Where(prefix => !Regex.IsMatch(tests, $@"\b(?:Task|void)\s+{prefix}\w+\("))
+            .ToList();
+        Assert.True(missing.Count == 0,
+            "shared-or-tenant entities missing a lifecycle facet test (name it <Entity>_SharedOrTenant_<Facet>_…): " + string.Join(", ", missing));
     }
 
     [Fact]
@@ -272,6 +299,19 @@ public class ArchitectureTests
 
         Assert.True(offenders.Count == 0,
             $"Entities with a TenantId must implement ITenantScoped or be allowlisted: {string.Join(", ", offenders)}");
+
+        // The nullable sibling (Arch A4): a Guid? TenantId is either the shared-or-tenant shape (ISharedOrTenantScoped,
+        // with its filter and its four policies) or infrastructure that carries a tenant as context and ships the R145
+        // lifecycle spec instead — by name, so a new nullable column is a decision, not an accident.
+        var nullableByConvention = new HashSet<string> { nameof(OutboxMessage) }; // handler context on drained infrastructure (R145)
+        nullableByConvention.UnionWith(AppAllowlists.TenantIdByConvention);
+        var nullableOffenders = ctx.Model.GetEntityTypes()
+            .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType == typeof(Guid?))
+            .Where(e => !typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType) && !nullableByConvention.Contains(e.ClrType.Name))
+            .Select(e => e.ClrType.Name)
+            .ToList();
+        Assert.True(nullableOffenders.Count == 0,
+            $"Entities with a nullable TenantId must implement ISharedOrTenantScoped or be allowlisted as infrastructure: {string.Join(", ", nullableOffenders)}");
     }
 
     [Fact]
