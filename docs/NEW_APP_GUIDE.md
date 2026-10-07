@@ -135,7 +135,9 @@ pwsh tools/port-platform.ps1 -Platform ../perezosoft-platform -To <the commit yo
 From then on **porting a platform change is one command**: `pwsh tools/port-platform.ps1 -Platform ../perezosoft-platform`
 (dry run; prints added / clean / CONFLICT / deleted upstream), then the same with `-Apply`, resolve any `<<<<<<<`
 markers, build, run the tests. `PlatformOwnershipTests` fails on a platform file that differs from the stamped
-manifest without a listed reason, and `/api/version` reports the platform commit beside your own.
+manifest without a listed reason, and `/api/version` reports the platform commit beside your own. `PlatformSchemaTests`
+holds your migrated database to `platform-schema.json` for the platform's tables (Arch A5): if a port brings a platform
+migration, your regenerated copy of it must build the same columns, constraints, indexes and policies.
 
 ## Phase 4 — First local run
 

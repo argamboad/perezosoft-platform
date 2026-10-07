@@ -117,5 +117,6 @@ public static partial class RulesEnforcement
         new("R159", ["OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures", "CompositionFiles_AreFreeOfTheSampleSlice"]),
         new("R160", ["OwnershipMap_ClassifiesEveryTrackedFile", "PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted", "PlatformStamp_MatchesTheManifest",
                     "PortTool_MergesPlatformAndAdaptsFiles_AndWritesTheManifestTheGateAccepts"]),
+        new("R161", ["MigratedDatabase_MatchesThePlatformSchema"]),
     ];
 }

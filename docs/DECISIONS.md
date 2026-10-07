@@ -1323,6 +1323,16 @@ beside the app's own. The hash is computed in PowerShell by the tool and in C# b
 and pins the two equal. The NuGet-packages door (`PLATFORM_BACKLOG.md` §10) stays open: the map is also the list of
 what such packages would contain.
 
+*Amendment (Architecture milestone A5, 2026-10-07, #365, R161) — a schema parity gate for the platform's tables.*
+Platform migrations are regenerated per app, so the same change carries a different migration id in each repo and
+nothing proved an app's platform tables equalled the platform's. Decided: a gate only (a separate migration history for
+platform tables belongs with packaging, `PLATFORM_BACKLOG.md` §10). The platform publishes `platform-schema.json` — the
+columns, constraints, indexes and RLS policies of its tables as Postgres reports them, extracted from the database the
+real migrations build, never from the model — and `MigratedDatabase_MatchesThePlatformSchema` compares every repo's
+migrated database with it for those tables (an app's own tables are not listed and not checked). On the platform the
+same test is the file's currency check: a new or dropped platform table fails it until the file is regenerated
+(`PLATFORM_SCHEMA_WRITE=1 dotnet test --filter PlatformSchemaTests`). The sample's table is not a platform table.
+
 **ADR-020 — Tenancy defense-in-depth: Postgres row-level security as a second, DB-level wall under the EF query filter. (2026-07-06; IMPLEMENTED — see the addenda. Header fixed 2026-07-27, v3 T57: it still read "DEFERRED" long after the backstop merged)**
 Tenant isolation is currently enforced entirely in the application layer: the ADR-003 global query
 filter, the write-side interceptor (V2-B2), and the arch-test bans. One missed seam in a future

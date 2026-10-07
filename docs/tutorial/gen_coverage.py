@@ -129,6 +129,8 @@ RULES: list[tuple[str, str, str]] = [
     ("local-ports.props", "0.2", "the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)"),
     ("platform-ownership.json", "9.1", "which files are the platform's, which an app adapts, which are the app's (Arch A2)"),
     ("platform-stamp.json", "9.1", "the platform commit this repo is synced to; null on the platform (Arch A2)"),
+    ("platform-schema.json", "9.1", "the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)"),
+    ("tests/Api.Tests/PlatformSchemaTests.cs", "9.1", "the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)"),
     ("src/Api/PlatformStamp.cs", "9.1", "reads the stamp beside the binaries for /api/version (Arch A2)"),
     ("tests/Api.Tests/App/PlatformDivergences.json", "9.1", "the app's allowlisted changes to platform files, with reasons (Arch A2)"),
     ("tests/Api.Tests/PlatformOwnershipTests.cs", "9.1", "the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)"),

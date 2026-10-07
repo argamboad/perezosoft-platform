@@ -69,6 +69,7 @@
     { "glob": "docs/**", "class": "adapts" },
 
     { "glob": "platform-ownership.json", "class": "platform" },
+    { "glob": "platform-schema.json", "class": "platform" },
     { "glob": ".config/**", "class": "platform" },
     { "glob": "docker/**", "class": "platform" },
     { "glob": ".vscode/**", "class": "adapts" },
