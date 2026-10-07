@@ -254,7 +254,7 @@
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
-## 3.3 — Injected clocks & the architecture tests (7 files)
+## 3.3 — Injected clocks & the architecture tests (9 files)
 
 - `src/Api/Endpoints/RouteTableGuard.cs` — boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)
 - `tests/Api.Tests/App/AppAllowlists.cs` — the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)
@@ -262,6 +262,8 @@
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
 - `tests/Api.Tests/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
+- `tests/Api.Tests/Architecture/SliceWriteInspector.cs` — which entities a slice writes: the matcher behind the one-writer gate (Arch A8)
+- `tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs` — self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
 ## 3.4 — The web client & auth UI (133 files)
@@ -1344,4 +1346,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1177 tracked files · 809 built in lessons · 368 bucketed · 0 unmapped
+**Totals:** 1179 tracked files · 811 built in lessons · 368 bucketed · 0 unmapped

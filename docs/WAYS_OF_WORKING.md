@@ -97,16 +97,20 @@ CI when it is skipped, and `EnforcementGateTests.AddASliceChecklist_NamesEveryAr
    half of composition — behind the slice's `Enabled` setting. Only `AppComposition.cs` may reference
    `Features.*` (R8 as amended by R159, `OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures`);
    `Program.cs` is the platform's, calls those two methods once, and is never edited for a slice.
-7. **Contributor** → register the `ITenantDataContributor` (all four members) in the same `AddAppServices`, and
+7. **Writer** → the slice that owns the entity is the only one that writes it (Arch A8, R162): add
+   `[nameof(<Entity>)] = "<Slice>"` to `EntityWriters` in `tests/Api.Tests/App/AppAllowlists.cs`. Another slice
+   reads it (`Query()`), or calls a Core contract the owner implements — never its repository's writing members.
+   Gate: `EveryEntity_HasOneWritingSlice`.
+8. **Contributor** → register the `ITenantDataContributor` (all four members) in the same `AddAppServices`, and
    add it to `AppTestComposition.Contributors` (`tests/Api.Tests/App/`) so the accept-and-dissolve tests consult
    it as production does. Work that must run after migrations (a catalog seed) is an `IStartupTask`, registered
    there too; `Program.cs` runs every registered task after `Migrate()`.
-8. **Postman** → a numbered folder in `docs/postman/Perezosoft.postman_collection.json` with one request
+9. **Postman** → a numbered folder in `docs/postman/Perezosoft.postman_collection.json` with one request
    per endpoint (ADR-023). Gate: `PostmanParityTests` — it sees the slice's routes only while the slice is
    switched ON in the harness, so turn it on there before trusting a green run.
-9. **`.env.example`** → the slice's `<Feature>__Enabled=false` line (and any other key it reads) in the
+10. **`.env.example`** → the slice's `<Feature>__Enabled=false` line (and any other key it reads) in the
    CONFIGURATION REFERENCE block. Gate: `ConfigKeys_ReadInCode_AreDocumented`.
-10. **UI** → nav entry + component in the Shared.Ui RCL, and the resx (`.resx`) strings (EN/ES).
+11. **UI** → nav entry + component in the Shared.Ui RCL, and the resx (`.resx`) strings (EN/ES).
     **Namespace your keys per feature** (`Notes_Title`, `Notes_Empty`, …) — `AppStrings.resx` is one
     shared file, and unprefixed keys (`Title`, `Empty`) collide across slices (v3 audit / Phase-4 obs).
     Gate: `ResourceParityTests` fails on a key without a `<Feature>_` prefix, declared twice, or missing

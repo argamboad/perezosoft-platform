@@ -796,6 +796,7 @@ public class EnforcementGateTests
             ("docs/DATA_MODEL.md", "EveryEntity_IsDocumentedInDataModel"),
             ("AppAllowlists", "EveryTenantOwnedEntity_IsWiredIntoTenantDissolution"),
             ("AppComposition.cs", "OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures"),
+            ("EntityWriters", "EveryEntity_HasOneWritingSlice"),
             ("docs/postman/Perezosoft.postman_collection.json", "PostmanParityTests"),
             (".env.example", "ConfigKeys_ReadInCode_AreDocumented"),
             (".resx", "ResourceParityTests"),

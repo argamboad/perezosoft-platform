@@ -7,7 +7,7 @@
 > `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md`) carry forward **unchanged except for the amendments in §1**.
 > **Amended 2026-10-07 by Arch A6 (#366):** R9 extended — no platform migration names the sample (§1).
 > **Amended 2026-10-07 by Arch A4 (#364):** R2 and R145 extended to the shared-or-tenant shape (`ISharedOrTenantScoped`, §1).
-> **Amended 2026-10-06 by Arch A1 (#362):** the Architecture milestone adds **R159–R161** as finals (R159 the composition seam, R160 the ownership map and stamp, R161 the schema parity gate, all §10); R8 amended (§1).
+> **Amended 2026-10-06 by Arch A1 (#362):** the Architecture milestone adds **R159–R162** as finals (R159 the composition seam, R160 the ownership map and stamp, R161 the schema parity gate, R162 the entity writer, all §10); R8 amended (§1).
 > **Amended 2026-10-06 by Arch A12 (#371):** R149 admits a component that takes its test id as a parameter, with literal callers.
 > **Amended 2026-10-02 by ADR-031:** R80 and R138 retired with `.forgejo/` (GitHub is the only forge again,
 > ADR-030); R98, R137 and R139 now speak of the one workflow; R98 no longer asks for branch protection (a private
@@ -143,6 +143,7 @@ check does not exist; the mechanism text below is the intent, the manifest is th
 ## 10. Architecture · horizontal platform, vertical apps (2026-10)
 - **R159 [machine]** — A slice is composed from app-owned files (`src/Api/AppComposition.cs`, `AppDbContext.App.cs`, `tests/Api.Tests/App/**`, `RulesEnforcement.App.cs`, `tests/Ui.Tests/App/**`); no platform composition file names a slice or an app type, so `Program.cs`, `AppDbContext.cs`, the architecture gates and the test chassis are identical in the platform and its apps. — Arch A1 (#362): `OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures`, `CompositionFiles_AreFreeOfTheSampleSlice`; downstream, A2's manifest gate.
 - **R161 [machine]** — The platform publishes the shape its migrations build for its tables (`platform-schema.json`: columns, constraints, indexes, RLS policies, as Postgres reports them, extracted from the migrated database); every repo's migrated database matches it for those tables. — Arch A5 (#365): `MigratedDatabase_MatchesThePlatformSchema` (on the platform also the file's currency check; regenerate with `PLATFORM_SCHEMA_WRITE=1`).
+- **R162 [machine]** — One owning slice writes an entity, declared in `AppAllowlists.EntityWriters`; every other slice reads it or goes through a Core contract the owner implements; platform entities are written by platform services, never by a slice. — Arch A8 (#367): `EveryEntity_HasOneWritingSlice` (`SliceWriteInspector` with its self-test).
 - **R160 [machine]** — Every tracked file has an ownership class in `platform-ownership.json` (platform / adapts / app / sample); downstream, a `platform` file matches the manifest of the stamped platform commit (`tests/Api.Tests/App/platform-manifest.json`, written by `tools/port-platform.ps1`) or is listed in `PlatformDivergences.json` with a reason; a port updates the stamp and the manifest together; `/api/version` reports the platform commit. — Arch A2 (#363): `OwnershipMap_ClassifiesEveryTrackedFile`, `PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted`, `PlatformStamp_MatchesTheManifest`, `PortTool_MergesPlatformAndAdaptsFiles_AndWritesTheManifestTheGateAccepts`.
 
 ## Standing TDD mandate (review, carried from R7/CONTRIBUTING, restated with v4 evidence)
@@ -155,5 +156,5 @@ reconciled in the same PR (R114/R115); run log append-only.
 
 ---
 *R1–R35 (v1.0) + R36–R76, R80 (v2.0, amended §1) + R81–R158 minus {R94, R156} (v4) = FOUNDATION_RULES v3.0;
-+ R159–R161 (Architecture A1, A2 and A5, 2026-10-06/07).
++ R159–R162 (Architecture A1, A2, A5 and A8, 2026-10-06/07).
 Retired numbers: R77, R78, R79, R80, R94, R138, R156.*

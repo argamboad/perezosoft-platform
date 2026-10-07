@@ -48,6 +48,13 @@ internal static partial class AppAllowlists
     {
     };
 
+    /// <summary>Which slice may WRITE each entity (Arch A8, R162): entity → the folder under <c>src/Api/Features/</c> that owns it.
+    /// Other slices read it, or go through a Core contract the owner implements (<c>EveryEntity_HasOneWritingSlice</c>).</summary>
+    public static readonly IReadOnlyDictionary<string, string> EntityWriters = new Dictionary<string, string>
+    {
+        [nameof(Note)] = "Notes", // 🗑️ DELETE-ME with the sample slice
+    };
+
     /// <summary>Source files that aggregate several small types and so do not declare one named for the file (<c>SourceFile_DeclaresATypeMatchingItsName</c>).</summary>
     public static readonly IReadOnlySet<string> TypeNameExceptions = new HashSet<string>
     {

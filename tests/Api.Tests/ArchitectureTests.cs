@@ -564,6 +564,39 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void EveryEntity_HasOneWritingSlice() // Arch A8 (#367), R162
+    {
+        // Slices were vertical at the HTTP layer only: every entity sits in Core and any slice could inject IRepository<T>
+        // for any of them, so nothing stopped a slice from writing another slice's rows (vuelto's Dashboard reads eleven
+        // slices' entities, which is its point; it must write none). Now each entity has ONE writing slice, declared in
+        // AppAllowlists.EntityWriters; other slices read it, or call a Core contract the owner implements. Platform
+        // entities are written by platform services, never by a slice. Reads are free (SliceWriteInspector decides).
+        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        var slices = Directory.Exists(featuresDir) ? Directory.GetDirectories(featuresDir).Select(d => Path.GetFileName(d)!).ToList() : [];
+        var writers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal); // entity → slices that write it
+        foreach (var slice in slices)
+            foreach (var file in SourceFiles(Path.Combine(featuresDir, slice)))
+                foreach (var (entity, _) in Architecture.SliceWriteInspector.Writes(File.ReadAllText(file)))
+                    (writers.TryGetValue(entity, out var set) ? set : writers[entity] = new HashSet<string>(StringComparer.Ordinal)).Add(slice);
+
+        var declared = AppAllowlists.EntityWriters;
+        var problems = new List<string>();
+        foreach (var (entity, set) in writers.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!declared.TryGetValue(entity, out var owner))
+                problems.Add($"{entity} is written by {string.Join(", ", set.Order())} but has no declared writer — declare it in AppAllowlists.EntityWriters, or write it through a Core contract the owner implements");
+            else foreach (var other in set.Where(s => s != owner).Order())
+                problems.Add($"{entity} is written by {other}, but its declared writer is {owner} — read it, or go through a Core contract");
+        }
+        foreach (var (entity, owner) in declared.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!slices.Contains(owner)) problems.Add($"{entity}: declared writer {owner} is not a slice under src/Api/Features/");
+            else if (!writers.TryGetValue(entity, out var set) || !set.Contains(owner)) problems.Add($"{entity}: declared writer {owner} writes it nowhere — drop the entry, or the owner lost its write");
+        }
+        Assert.True(problems.Count == 0, "one owning slice writes an entity (Arch A8):\n  " + string.Join("\n  ", problems));
+    }
+
+    [Fact]
     public void OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures()
     {
         // R8, as amended by Arch A1 (R159): composition happens in one app-owned place — AppComposition.cs registers

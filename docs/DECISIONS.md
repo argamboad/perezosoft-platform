@@ -442,6 +442,18 @@ changes per app. The checklist in `WAYS_OF_WORKING.md` names these files and
 proves the seam on the Notes sample: no platform composition file names it. Downstream, A2's manifest gate holds the
 same files identical to the platform's.
 
+*Amendment (Architecture milestone A8, 2026-10-07, #367, R162) — one owning slice writes an entity.* Slices were
+vertical at the HTTP layer only: every entity sits in `Core/Entities`, any slice can inject `IRepository<T>` for any
+of them, and the R7 gate checks namespaces, not data. Measured: vuelto's Dashboard handler injects eleven other slices'
+repositories and Reports nine — reading is their point — and nothing stopped either from writing. Decided (owner): each
+entity has ONE writing slice, declared in `AppAllowlists.EntityWriters` (entity → slice folder); every other slice
+reads it, or calls a Core contract the owner implements (vuelto's `ITransactionService` is the model: the Ledger slice
+owns `Transaction`, the review queue creates one through the contract). Platform entities are written by platform
+services, never by a slice. `EveryEntity_HasOneWritingSlice` holds it: `SliceWriteInspector` reads each slice's
+sources for writing members (`AddAsync`, `Add`, `Update`, `Remove`, their range forms, and `ExecuteDelete/UpdateAsync`
+chained from a query) on an injected repository; a write without a declared writer, a write by a slice other than the
+declared one, and a declaration nobody writes through all fail. Reads are free. The checklist gains a step (7, Writer).
+
 **ADR-005 — Apple Sign In fits the agnostic provider model; implementation DEFERRED, web-first. (2026-06-24)**
 A third OAuth provider (Apple) was assessed against the provider-agnostic auth stack (ADR-002). The
 verdict: the **backend absorbs it with small, mechanical additions** — `.AddApple(...)` in

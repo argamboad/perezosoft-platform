@@ -118,5 +118,6 @@ public static partial class RulesEnforcement
         new("R160", ["OwnershipMap_ClassifiesEveryTrackedFile", "PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted", "PlatformStamp_MatchesTheManifest",
                     "PortTool_MergesPlatformAndAdaptsFiles_AndWritesTheManifestTheGateAccepts"]),
         new("R161", ["MigratedDatabase_MatchesThePlatformSchema"]),
+        new("R162", ["EveryEntity_HasOneWritingSlice", "SliceWriteInspectorTests"]),
     ];
 }

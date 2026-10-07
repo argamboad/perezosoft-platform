@@ -303,6 +303,8 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/FeatureAuthorizationTests.cs", "3.2", ""),
     ("tests/Api.Tests/ArchitectureTests.cs", "3.3", "born here; gains a rule per part (R5/R6/R15…)"),
     ("tests/Api.Tests/App/AppAllowlists.cs", "3.3", "the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)"),
+    ("tests/Api.Tests/Architecture/SliceWriteInspector.cs", "3.3", "which entities a slice writes: the matcher behind the one-writer gate (Arch A8)"),
+    ("tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs", "3.3", "self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)"),
     ("tests/Ui.Tests/SystemBarThemeSyncTests.cs", "A.1", "the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)"),
     ("tests/Ui.Tests/*", "3.4", "bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test"),
     ("src/Web/Program.cs", "3.4", ""),
