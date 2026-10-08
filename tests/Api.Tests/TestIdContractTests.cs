@@ -97,7 +97,23 @@ public class TestIdContractTests
         var a = TestIdContract.Analyze(razor, ["""[data-testid=dash-breakdown] [data-testid=dash-breakdown-switch] [data-testid=dash-breakdown-switch-option]"""]);
 
         Assert.Equal(["dash-breakdown", "dash-breakdown-switch", "dash-breakdown-switch-option"], a.Declared.Order());
+        Assert.Empty(TestIdContract.Analyze(razor, ["""[data-testid=dash-breakdown-switch-option]"""]).Unused); // the panel is used through its switch
         Assert.Empty(a.NonLiteralCallers); Assert.Empty(a.UncalledParameterised); Assert.Empty(a.Unused); Assert.Empty(a.Missing);
+    }
+
+    [Fact]
+    public void ACaller_IsUsed_WhenAnyOfItsPartsIs()
+    {
+        // A page shows a money and its test reads the primary figure: the money's other parts exist but owe no test.
+        var razor = new Dictionary<string, string>
+        {
+            ["AmountField.razor"] = AmountField,
+            ["Expense.razor"] = """<AmountField TestId="expense-amount" /> <AmountField TestId="tip-amount" />""",
+        };
+        var a = TestIdContract.Analyze(razor, ["""GetByTestId("expense-amount-input")"""]);
+
+        Assert.Equal(["tip-amount"], a.Unused); // no part of the second caller is used
+        Assert.Empty(a.Missing);
     }
 
     [Fact]
@@ -112,7 +128,7 @@ public class TestIdContractTests
             cut.Find("[data-testid=amt]"); cut.Find("[data-testid=amt-input]"); cut.Find("[data-testid=amt-currency]");
             """]);
 
-        Assert.Equal(["amt", "amt-currency", "amt-input"], a.Declared.Order());
+        Assert.Empty(a.Declared); // a component test's literal is its own: it never makes the page owe a test
         Assert.Empty(a.UncalledParameterised); Assert.Empty(a.Missing); Assert.Empty(a.Unused);
     }
 
@@ -208,7 +224,7 @@ internal static class TestIdContract
     private static readonly Regex Attribute = new(@"data-testid=""(@\(\$""[^""]*""\)|[^""]*)""", RegexOptions.Compiled);
     // The shapes a parameterised component may use: the parameter itself, or the parameter with a literal suffix.
     private static readonly Regex Parameterised = new(@"^(?:@TestId|@\(\$""\{TestId\}(-[A-Za-z0-9_-]+)?""\))$", RegexOptions.Compiled);
-    private static readonly Regex TestIdParameter = new(@"\[Parameter\][^;{}]*?\bstring\??\s+TestId\b", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex TestIdParameter = new(@"\[Parameter\b[^\]]*\][^;{}]*?\bstring\??\s+TestId\b", RegexOptions.Compiled | RegexOptions.Singleline);
 
     public static Analysis Analyze(IReadOnlyDictionary<string, string> razorByFile, IEnumerable<string> consumerTexts)
     {
@@ -238,6 +254,7 @@ internal static class TestIdContract
         // ids are the parent's callers' literals with that suffix, followed to a fixed point.
         var nonLiteralCallers = new List<string>();
         var bases = suffixesByComponent.Keys.ToDictionary(c => c, _ => new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
+        var testBases = suffixesByComponent.Keys.ToDictionary(c => c, _ => new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
         var derived = new List<(string Parent, string Child, string Suffix)>();
         foreach (var component in suffixesByComponent.Keys)
         {
@@ -258,20 +275,35 @@ internal static class TestIdContract
             var rendered = new Regex(@"<" + Regex.Escape(component) + @">\s*\((?:(?!;).)*?\.Add\(\s*\w+\s*=>\s*\w+\.TestId\s*,\s*""([A-Za-z0-9_-]+)""", RegexOptions.Singleline);
             foreach (var text in consumers)
                 foreach (Match m in rendered.Matches(text))
-                    bases[component].Add(m.Groups[1].Value);
+                    testBases[component].Add(m.Groups[1].Value);
         }
         for (var grew = true; grew;)
         {
             grew = false;
             foreach (var (parent, child, suffix) in derived)
-                foreach (var b in bases[parent].ToList())
-                    grew |= bases[child].Add(b + suffix);
+            {
+                foreach (var b in bases[parent].ToList()) grew |= bases[child].Add(b + suffix);
+                foreach (var b in testBases[parent].ToList()) grew |= testBases[child].Add(b + suffix);
+            }
         }
-        var called = new HashSet<string>(bases.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key), StringComparer.Ordinal);
+        var called = new HashSet<string>(suffixesByComponent.Keys.Where(c => bases[c].Count + testBases[c].Count > 0), StringComparer.Ordinal);
+        // The ids a page names are its literal ids and each caller's base; a component's suffixed parts exist with every
+        // caller, but a caller counts as used when any of its ids is (a page tests a money, not every money's second line).
+        var literalIds = new HashSet<string>(declared, StringComparer.Ordinal);
+        var callerParts = new Dictionary<string, List<string>>(StringComparer.Ordinal); // a caller's base → all its ids
+        var testIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (component, suffixes) in suffixesByComponent)
+        {
             foreach (var b in bases[component])
+            {
+                var parts = suffixes.Distinct().Select(s => b + s).ToList();
+                declared.UnionWith(parts);
+                (callerParts.TryGetValue(b, out var all) ? all : callerParts[b] = []).AddRange(parts);
+            }
+            foreach (var b in testBases[component])
                 foreach (var suffix in suffixes.Distinct())
-                    declared.Add(b + suffix);
+                    testIds.Add(b + suffix);
+        }
         var uncalled = suffixesByComponent.Keys.Where(c => !called.Contains(c)).Select(c => c + ".razor").ToList();
 
         var used = new HashSet<string>(StringComparer.Ordinal);
@@ -281,7 +313,13 @@ internal static class TestIdContract
             foreach (Match m in Regex.Matches(text, @"(?i:GetByTestId|TestId)\(\s*\$?['""]([A-Za-z0-9_-]+)['""]")) used.Add(m.Groups[1].Value); // GetByTestId("x") / getByTestId('x')
         }
 
-        return new Analysis(declared, used, computed, nonLiteralCallers, uncalled,
-            declared.Except(used).Order().ToList(), used.Except(declared).Order().ToList());
+        // A caller whose base is also a page literal (or another caller's part) is judged by its parts as well.
+        var unused = literalIds.Where(id => !used.Contains(id) && !(callerParts.TryGetValue(id, out var parts) && parts.Any(used.Contains)))
+            // ...and by the ids it passes on to a child (dash-breakdown → dash-breakdown-switch-option).
+            .Concat(callerParts.Where(kv => !literalIds.Contains(kv.Key) && !kv.Value.Any(used.Contains)
+                                            && !used.Any(u => u.StartsWith(kv.Key + "-", StringComparison.Ordinal))).Select(kv => kv.Key))
+            .Distinct().Order().ToList();
+        var missing = used.Where(id => !declared.Contains(id) && !testIds.Contains(id)).Order().ToList();
+        return new Analysis(declared, used, computed, nonLiteralCallers, uncalled, unused, missing);
     }
 }
