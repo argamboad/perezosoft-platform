@@ -84,6 +84,23 @@ public class TestIdContractTests
     }
 
     [Fact]
+    public void AParameterisedParent_PassesItsIdOn_ToAParameterisedChild()
+    {
+        // BreakdownPanel (TestId="dash-breakdown") renders <SegmentedSwitch TestId="@($"{TestId}-switch")" />: the switch's
+        // ids are the panel's callers' literals with "-switch", then the switch's own suffixes.
+        var razor = new Dictionary<string, string>
+        {
+            ["Switch.razor"] = """<div data-testid="@TestId"><button data-testid="@($"{TestId}-option")"></button></div> @code { [Parameter] public string TestId { get; set; } = ""; }""",
+            ["Panel.razor"] = """<section data-testid="@TestId"><Switch TestId="@($"{TestId}-switch")" /></section> @code { [Parameter] public string TestId { get; set; } = ""; }""",
+            ["Dashboard.razor"] = """<Panel TestId="dash-breakdown" />""",
+        };
+        var a = TestIdContract.Analyze(razor, ["""[data-testid=dash-breakdown] [data-testid=dash-breakdown-switch] [data-testid=dash-breakdown-switch-option]"""]);
+
+        Assert.Equal(["dash-breakdown", "dash-breakdown-switch", "dash-breakdown-switch-option"], a.Declared.Order());
+        Assert.Empty(a.NonLiteralCallers); Assert.Empty(a.UncalledParameterised); Assert.Empty(a.Unused); Assert.Empty(a.Missing);
+    }
+
+    [Fact]
     public void AComponentTestsLiteral_IsACallerToo()
     {
         // vuelto's and jigger-jot's component tests render a parameterised component with their own id; those ids exist.
@@ -215,10 +232,14 @@ internal static class TestIdContract
             }
         }
 
-        // A parameterised component's ids are its callers' literals, one per suffix.
+        // A parameterised component's ids are its callers' literals, one per suffix. A caller is a literal TestId in markup,
+        // a component test rendering it with a literal (Render<Money>(ps => ps.Add(p => p.TestId, "m"))), or another
+        // parameterised component passing on its own id (TestId="@TestId" or "@($"{TestId}-switch")"): then the child's
+        // ids are the parent's callers' literals with that suffix, followed to a fixed point.
         var nonLiteralCallers = new List<string>();
-        var called = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (component, suffixes) in suffixesByComponent)
+        var bases = suffixesByComponent.Keys.ToDictionary(c => c, _ => new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
+        var derived = new List<(string Parent, string Child, string Suffix)>();
+        foreach (var component in suffixesByComponent.Keys)
         {
             // A caller's value carries its own quotes when it is computed (@($"line-{i}")), so match that shape first.
             var usage = new Regex(@"<" + Regex.Escape(component) + @"\b[^>]*?\sTestId=""(@\(\$""[^""]*""\)|[^""]*)""", RegexOptions.Singleline);
@@ -226,23 +247,31 @@ internal static class TestIdContract
                 foreach (Match m in usage.Matches(text))
                 {
                     var literal = m.Groups[1].Value;
-                    if (literal.Contains('@')) { nonLiteralCallers.Add($"{file} → {component} TestId=\"{literal}\""); continue; }
-                    called.Add(component);
-                    foreach (var suffix in suffixes.Distinct()) declared.Add(literal + suffix);
+                    if (!literal.Contains('@')) { bases[component].Add(literal); continue; }
+                    var parent = Path.GetFileNameWithoutExtension(file);
+                    var passOn = Parameterised.Match(literal);
+                    if (passOn.Success && suffixesByComponent.ContainsKey(parent))
+                        derived.Add((parent, component, passOn.Groups[1].Success ? passOn.Groups[1].Value : ""));
+                    else
+                        nonLiteralCallers.Add($"{file} → {component} TestId=\"{literal}\"");
                 }
-        }
-        // A component test renders the component with a literal id (Render<Money>(ps => ps.Add(p => p.TestId, "m"))): that
-        // literal is a caller too, so the ids it produces exist and the component is called.
-        foreach (var (component, suffixes) in suffixesByComponent)
-        {
             var rendered = new Regex(@"<" + Regex.Escape(component) + @">\s*\((?:(?!;).)*?\.Add\(\s*\w+\s*=>\s*\w+\.TestId\s*,\s*""([A-Za-z0-9_-]+)""", RegexOptions.Singleline);
             foreach (var text in consumers)
                 foreach (Match m in rendered.Matches(text))
-                {
-                    called.Add(component);
-                    foreach (var suffix in suffixes.Distinct()) declared.Add(m.Groups[1].Value + suffix);
-                }
+                    bases[component].Add(m.Groups[1].Value);
         }
+        for (var grew = true; grew;)
+        {
+            grew = false;
+            foreach (var (parent, child, suffix) in derived)
+                foreach (var b in bases[parent].ToList())
+                    grew |= bases[child].Add(b + suffix);
+        }
+        var called = new HashSet<string>(bases.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key), StringComparer.Ordinal);
+        foreach (var (component, suffixes) in suffixesByComponent)
+            foreach (var b in bases[component])
+                foreach (var suffix in suffixes.Distinct())
+                    declared.Add(b + suffix);
         var uncalled = suffixesByComponent.Keys.Where(c => !called.Contains(c)).Select(c => c + ".razor").ToList();
 
         var used = new HashSet<string>(StringComparer.Ordinal);
