@@ -711,6 +711,7 @@ public class EnforcementGateTests
             Assert.True(entry.Checks.Length > 0 || pending is not null || !string.IsNullOrWhiteSpace(notHere),
                 $"{entry.Rule}: no check, no pending issue, and no reason it does not apply here");
             if (pending is { } p) Assert.Matches(@"[\w.-]+#\d+", p); // the issue that owes it (repo#n), so it is visible
+            if (!string.IsNullOrWhiteSpace(over?.NotHere)) continue; // its subject is not in this repo, nor need its checks be
             foreach (var check in entry.Checks)
             {
                 var ok = check.StartsWith("ci:", StringComparison.Ordinal) ? steps.Contains(check[3..]) : symbols.Contains(check);
