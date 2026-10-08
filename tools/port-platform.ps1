@@ -80,8 +80,14 @@ $target = Git-Text $Platform @('rev-parse', '--verify', "$To^{commit}")
 if (-not $target) { throw "'$To' is not a commit in $Platform" }
 if ($from -and $from -eq $target) { Write-Host "Already at platform $target. Nothing to port."; exit 0 }
 
+# The platform repo's own name ("perezosoft-platform") carries the brand token but is a name, not the brand: it is kept,
+# or every file that names the platform would read "<app>-platform" downstream.
+$keepName = ([string]$stamp['platform']).Split('/')[-1]
 function Rebrand([string]$text) {
+    $guard = [string][char]0xE000
+    if ($keepName) { $text = $text.Replace($keepName, $guard) }
     foreach ($k in ($brand.Keys | Sort-Object { $_.Length } -Descending)) { $text = $text.Replace($k, [string]$brand[$k]) }
+    if ($keepName) { $text = $text.Replace($guard, $keepName) }
     return $text
 }
 
@@ -149,7 +155,10 @@ try {
         if ($class -eq 'app') { continue }
         $theirs = Git-Bytes $Platform "${target}:$path"
         if ($class -in @('platform', 'adapts')) {
-            $manifest.Add([ordered]@{ path = $path; class = $class; hash = (Normalized-Hash $theirs $platformTokens) })
+            # Hashed as this repo holds it: the platform's text after the rename, normalised with this repo's tokens. The
+            # platform's own text normalised with the platform's tokens could never match where it already names this app.
+            $asHeld = if (Is-Binary $theirs) { $theirs } else { [System.Text.Encoding]::UTF8.GetBytes((Rebrand (Decode $theirs))) }
+            $manifest.Add([ordered]@{ path = $path; class = $class; hash = (Normalized-Hash $asHeld $appTokens) })
         }
         if ($class -eq 'sample') { continue }
         $local = Rebrand $path

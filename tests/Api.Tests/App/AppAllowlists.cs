@@ -55,6 +55,23 @@ internal static partial class AppAllowlists
         [nameof(Note)] = "Notes", // 🗑️ DELETE-ME with the sample slice
     };
 
+    /// <summary>Files that enter a tenant whose id comes from a row already read from the table, with where it comes from
+    /// (<c>EnterTenant_WithARequestSuppliedTenantId_ChecksTheTenantExists</c>).</summary>
+    public static readonly IReadOnlyDictionary<string, string> EnterTenantRowSupplied = new Dictionary<string, string>
+    {
+    };
+
+    /// <summary>The app's resx files and their shipped translation (<c>ResourceParityTests</c>): neutral → translated.</summary>
+    public static readonly IReadOnlyDictionary<string, string> ResxPairs = new Dictionary<string, string>
+    {
+    };
+
+    /// <summary>The app's own preference writes, each refused from an impersonation session
+    /// (<c>PrefWrites_UnderImpersonation_Return403</c>): PUT route → a valid body.</summary>
+    public static readonly IReadOnlyDictionary<string, string> ImpersonationGuardedWrites = new Dictionary<string, string>
+    {
+    };
+
     /// <summary>Source files that aggregate several small types and so do not declare one named for the file (<c>SourceFile_DeclaresATypeMatchingItsName</c>).</summary>
     public static readonly IReadOnlySet<string> TypeNameExceptions = new HashSet<string>
     {

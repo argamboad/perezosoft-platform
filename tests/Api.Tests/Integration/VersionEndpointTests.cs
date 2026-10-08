@@ -25,7 +25,9 @@ public class VersionEndpointTests(IntegrationTestFactory factory)
         var body = await res.Content.ReadFromJsonAsync<VersionResponse>();
         Assert.NotNull(body);
         Assert.False(string.IsNullOrWhiteSpace(body!.Commit)); // "unknown" in tests, a SHA when deployed
-        Assert.Equal("platform", body.Platform);                 // the stamp's commit is null here: this IS the platform
+        // "platform" where the stamp's commit is null (this IS the platform), the stamped SHA in a downstream app.
+        Assert.Equal(PlatformStamp.ReadCommit(Path.Combine(AppContext.BaseDirectory, "platform-stamp.json")), body.Platform);
+        Assert.NotEqual("unknown", body.Platform); // the stamp travels with the API
     }
 
     private sealed record VersionResponse([property: JsonPropertyName("commit")] string Commit, [property: JsonPropertyName("platform")] string Platform);
