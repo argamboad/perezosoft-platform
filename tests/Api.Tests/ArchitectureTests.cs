@@ -81,6 +81,8 @@ public class ArchitectureTests
             ["TenantInvitationService.cs"] = "the invitation row's TenantId, read from the table",
         };
 
+        foreach (var (file, reason) in AppAllowlists.EnterTenantRowSupplied) rowSupplied[file] = reason; // the app's (Arch A1)
+
         var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure") };
         var sites = dirs.SelectMany(d => SourceFiles(d)).Where(f => File.ReadAllText(f).Contains("EnterTenant(")).Select(Path.GetFileName).ToList();
         Assert.Contains("BillingWebhookHandler.cs", sites); // probe alive
@@ -575,9 +577,25 @@ public class ArchitectureTests
         var slices = Directory.Exists(featuresDir) ? Directory.GetDirectories(featuresDir).Select(d => Path.GetFileName(d)!).ToList() : [];
         var writers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal); // entity → slices that write it
         foreach (var slice in slices)
-            foreach (var file in SourceFiles(Path.Combine(featuresDir, slice)))
-                foreach (var (entity, _) in Architecture.SliceWriteInspector.Writes(File.ReadAllText(file)))
-                    (writers.TryGetValue(entity, out var set) ? set : writers[entity] = new HashSet<string>(StringComparer.Ordinal)).Add(slice);
+        {
+            var texts = SourceFiles(Path.Combine(featuresDir, slice)).Select(File.ReadAllText).ToList();
+            // A generic base (class CatalogHandler<TEntry>) writes its type parameter; the entities are the type arguments
+            // its concrete subclasses in the slice pass (: CatalogHandler<Bank>(...)).
+            var typeArgs = texts.SelectMany(t => Regex.Matches(t, @":\s*(?<base>\w+)<(?<arg>\w+)>"))
+                .GroupBy(m => m.Groups["base"].Value, m => m.Groups["arg"].Value)
+                .ToDictionary(g => g.Key, g => g.Distinct().ToList());
+            foreach (var text in texts)
+            {
+                var generic = Regex.Matches(text, @"\bclass\s+(?<name>\w+)<(?<param>\w+)>")
+                    .ToDictionary(m => m.Groups["param"].Value, m => m.Groups["name"].Value);
+                foreach (var (written, _) in Architecture.SliceWriteInspector.Writes(text))
+                {
+                    var entities = generic.TryGetValue(written, out var baseName) && typeArgs.TryGetValue(baseName, out var args) ? args : [written];
+                    foreach (var entity in entities)
+                        (writers.TryGetValue(entity, out var set) ? set : writers[entity] = new HashSet<string>(StringComparer.Ordinal)).Add(slice);
+                }
+            }
+        }
 
         var declared = AppAllowlists.EntityWriters;
         var problems = new List<string>();

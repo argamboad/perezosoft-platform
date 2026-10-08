@@ -613,7 +613,7 @@ public class EnforcementGateTests
         var claudeMd = File.ReadAllText(Path.Combine(root, "CLAUDE.md"));
 
         // Folders mapped as ONE row: their files come and go (a new run log, a new lesson) without a map edit.
-        string[] folderRows = ["docs/tutorial/", "docs/qa-runs/", "docs/postman/"];
+        string[] folderRows = [.. new[] { "docs/tutorial/", "docs/qa-runs/", "docs/postman/" }.Where(row => Directory.Exists(Path.Combine(root, row)))]; // a downstream app has no course
         var missingRows = folderRows.Where(row => !claudeMd.Contains($"| `{row}` |", StringComparison.Ordinal)).ToList();
         Assert.True(missingRows.Count == 0, $"CLAUDE.md doc map has no row for: {string.Join(", ", missingRows)}");
 
@@ -640,6 +640,8 @@ public class EnforcementGateTests
     [Fact]
     public void ClaudeMd_CarriesTheCourseReconcileRule() // R118
     {
+        // The course lives in perezosoft-platform; a downstream app has no docs/tutorial (its R114/R115/R118 say NotHere).
+        if (!Directory.Exists(Path.Combine(RepoRoot(), "docs", "tutorial"))) return;
         // The habit that keeps the course true — a lesson is reconciled in the PR that changes the code it
         // quotes — lived only in the maintainer's memory, so a clone lost it.
         var claudeMd = File.ReadAllText(Path.Combine(RepoRoot(), "CLAUDE.md")).ReplaceLineEndings("\n");
@@ -826,20 +828,27 @@ public class EnforcementGateTests
     public void PlatformMigrations_DoNotNameTheSample() // Arch A6 (#366), R9 as amended
     {
         // The sample's table used to be created by one platform migration and named by another (RlsTenancyBackstop's
-        // frozen list), so removing the sample meant editing platform history — vuelto did, and its platform migrations
+        // frozen list), so removing the sample meant editing platform history — perezosoft did, and its platform migrations
         // diverged from upstream. Now the sample's unit is its own two migrations (class `sample` in the ownership map),
         // and every other migration is held free of it. The snapshot is the app's (class `adapts`) and is not scanned.
         var root = RepoRoot();
         var rules = Architecture.PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         // Designer files are the model snapshot at that point in the chain (generated, and the snapshot is the app's), so only
         // the migrations' own operations are read, with comment lines dropped: the question is what the SQL names.
+        // Downstream, the platform's migrations are the ones its manifest lists; the app's own may name a Notes column.
+        var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
+        var platformPaths = File.Exists(manifestPath)
+            ? Architecture.PlatformOwnership.ParseManifest(File.ReadAllText(manifestPath)).Entries.Select(e => e.Path).ToHashSet(StringComparer.Ordinal)
+            : null;
         var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Infrastructure", "Persistence", "Migrations"), "*.cs")
             .Where(f => !f.EndsWith("ModelSnapshot.cs", StringComparison.Ordinal) && !f.EndsWith(".Designer.cs", StringComparison.Ordinal))
             .Select(f => (Rel: Path.GetRelativePath(root, f).Replace('\\', '/'),
                           Text: string.Join('\n', File.ReadLines(f).Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)))))
+            .Where(m => platformPaths is null || platformPaths.Contains(m.Rel))
             .ToList();
         var sample = migrations.Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) == Architecture.PlatformOwnership.Class.Sample).Select(m => m.Rel).ToList();
-        Assert.True(sample.Count >= 2, "probe: the sample's own migrations (AddNotesSample, NotesSampleRlsPolicy) are classed `sample`");
+        if (Directory.Exists(Path.Combine(root, "src", "Api", "Features", "Notes"))) // an app that removed the sample keeps none of its migrations
+            Assert.True(sample.Count >= 2, "probe: the sample's own migrations (AddNotesSample, NotesSampleRlsPolicy) are classed `sample`");
         var offenders = migrations
             .Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) != Architecture.PlatformOwnership.Class.Sample)
             .Where(m => Regex.IsMatch(m.Text, @"""\bNotes\b"""))
@@ -879,6 +888,8 @@ public class EnforcementGateTests
     [InlineData(".github/workflows/ci.yml")]
     public void CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts(string workflow) // v4 audit TR-19/TR-12 (T61), R114/R115
     {
+        // The course lives in perezosoft-platform; a downstream app has no docs/tutorial (its R114/R115/R118 say NotHere).
+        if (!Directory.Exists(Path.Combine(RepoRoot(), "docs", "tutorial"))) return;
         // gen_coverage.py only ran when someone remembered to; the map claimed 901 files and 0 unmapped while the
         // generator found 903 and 1, and lessons quoted code the repo no longer had. The qa-artifacts job — which
         // never gates on the changes classifier, so a docs-only push runs it — checks both on every push.

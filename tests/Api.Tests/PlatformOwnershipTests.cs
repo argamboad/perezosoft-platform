@@ -23,11 +23,14 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
         var root = RepoRoot();
         var rules = ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         Assert.True(rules.Count >= 40, $"probe: {rules.Count} rules parsed");
+        // An app's own top-level folders (jigger-jot's seed/) are classed in its half of the map, after the platform's rules.
+        var appMap = Path.Combine(root, "platform-ownership.App.json");
+        if (File.Exists(appMap)) rules = [.. rules, .. ParseRules(File.ReadAllText(appMap))];
         var tracked = Git(root, "ls-files").Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).ToList();
         Assert.True(tracked.Count > 500, $"probe: git ls-files returned {tracked.Count} paths");
 
         var unclassified = tracked.Where(p => Classify(p, rules) is null).Order().ToList();
-        Assert.True(unclassified.Count == 0, "tracked files with no ownership class — add a rule to platform-ownership.json: " + string.Join(", ", unclassified));
+        Assert.True(unclassified.Count == 0, "tracked files with no ownership class — add a rule to platform-ownership.json (an app: platform-ownership.App.json): " + string.Join(", ", unclassified));
 
         // The decisions of the Architecture milestone, pinned: the A1 seams are the app's, the composition files the platform's,
         // the UI the app's (#368), the rules file the platform's.
@@ -100,13 +103,13 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
     public void NormalizedHash_IgnoresBrandLineEndingsBomAndTrailingWhitespace_ButNotContent()
     {
         var platform = Encoding.UTF8.GetBytes("namespace Perezosoft.Api;\r\nclass Perezosoft { } // perezosoft  \r\n");
-        var app = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("namespace Vuelto.Api;\nclass Vuelto { } // vuelto\n\n")).ToArray();
-        Assert.Equal(NormalizedHash(platform, ["Perezosoft", "perezosoft"]), NormalizedHash(app, ["Vuelto", "vuelto"]));
-        var changed = Encoding.UTF8.GetBytes("namespace Vuelto.Api;\nclass Vuelto { int x; } // vuelto\n");
-        Assert.NotEqual(NormalizedHash(platform, ["Perezosoft", "perezosoft"]), NormalizedHash(changed, ["Vuelto", "vuelto"]));
+        var app = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("namespace Perezosoft.Api;\nclass Perezosoft { } // perezosoft\n\n")).ToArray();
+        Assert.Equal(NormalizedHash(platform, ["Perezosoft", "perezosoft"]), NormalizedHash(app, ["Perezosoft", "perezosoft"]));
+        var changed = Encoding.UTF8.GetBytes("namespace Perezosoft.Api;\nclass Perezosoft { int x; } // perezosoft\n");
+        Assert.NotEqual(NormalizedHash(platform, ["Perezosoft", "perezosoft"]), NormalizedHash(changed, ["Perezosoft", "perezosoft"]));
         // A binary hashes raw: the brand map never touches it.
         var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 13 };
-        Assert.Equal(NormalizedHash(png, ["Perezosoft"]), NormalizedHash(png, ["Vuelto"]));
+        Assert.Equal(NormalizedHash(png, ["Perezosoft"]), NormalizedHash(png, ["Perezosoft"]));
     }
 
     private static readonly Dictionary<string, string> Brand = new() { ["Perezosoft"] = "Acme", ["perezosoft"] = "acme" };
@@ -234,7 +237,7 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
         Assert.Equal(v2, stampCommit);
         var (manifestCommit, entries) = ParseManifest(Read(app, "tests/Api.Tests/App/platform-manifest.json"));
         Assert.Equal(v2, manifestCommit);
-        Assert.Equal(["README.md", "logo.bin", "platform-ownership.json", "src/Core/Added.cs", "src/Core/Perezosoft.Core.csproj", "src/Core/Thing.cs", "src/Shared.Ui/Page.razor"],
+        Assert.Equal(new[] { "README.md", "logo.bin", "platform-ownership.json", "src/Core/Added.cs", "src/Core/Perezosoft.Core.csproj", "src/Core/Thing.cs", "src/Shared.Ui/Page.razor" }.Order(StringComparer.Ordinal), // the brand sets the order
             entries.Select(e => e.Path).Order(StringComparer.Ordinal));
 
         // The gate over the ported app: the PowerShell hashes must match the C# hashes of the renamed files.

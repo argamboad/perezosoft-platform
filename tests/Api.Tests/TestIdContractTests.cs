@@ -84,6 +84,22 @@ public class TestIdContractTests
     }
 
     [Fact]
+    public void AComponentTestsLiteral_IsACallerToo()
+    {
+        // vuelto's and jigger-jot's component tests render a parameterised component with their own id; those ids exist.
+        var razor = new Dictionary<string, string> { ["AmountField.razor"] = AmountField };
+        var a = TestIdContract.Analyze(razor, ["""
+            var cut = Render<AmountField>(ps => ps
+                .Add(p => p.Value, 5m)
+                .Add(p => p.TestId, "amt"));
+            cut.Find("[data-testid=amt]"); cut.Find("[data-testid=amt-input]"); cut.Find("[data-testid=amt-currency]");
+            """]);
+
+        Assert.Equal(["amt", "amt-currency", "amt-input"], a.Declared.Order());
+        Assert.Empty(a.UncalledParameterised); Assert.Empty(a.Missing); Assert.Empty(a.Unused);
+    }
+
+    [Fact]
     public void AComputedId_IsRefused_EvenInsideAParameterisedComponent()
     {
         var razor = new Dictionary<string, string>
@@ -179,6 +195,7 @@ internal static class TestIdContract
 
     public static Analysis Analyze(IReadOnlyDictionary<string, string> razorByFile, IEnumerable<string> consumerTexts)
     {
+        var consumers = consumerTexts.ToList();
         var declared = new HashSet<string>(StringComparer.Ordinal);
         var computed = new List<string>();
         var suffixesByComponent = new Dictionary<string, List<string>>(StringComparer.Ordinal); // component name → "" and "-input" …
@@ -214,10 +231,22 @@ internal static class TestIdContract
                     foreach (var suffix in suffixes.Distinct()) declared.Add(literal + suffix);
                 }
         }
+        // A component test renders the component with a literal id (Render<Money>(ps => ps.Add(p => p.TestId, "m"))): that
+        // literal is a caller too, so the ids it produces exist and the component is called.
+        foreach (var (component, suffixes) in suffixesByComponent)
+        {
+            var rendered = new Regex(@"<" + Regex.Escape(component) + @">\s*\((?:(?!;).)*?\.Add\(\s*\w+\s*=>\s*\w+\.TestId\s*,\s*""([A-Za-z0-9_-]+)""", RegexOptions.Singleline);
+            foreach (var text in consumers)
+                foreach (Match m in rendered.Matches(text))
+                {
+                    called.Add(component);
+                    foreach (var suffix in suffixes.Distinct()) declared.Add(m.Groups[1].Value + suffix);
+                }
+        }
         var uncalled = suffixesByComponent.Keys.Where(c => !called.Contains(c)).Select(c => c + ".razor").ToList();
 
         var used = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var text in consumerTexts)
+        foreach (var text in consumers)
         {
             foreach (Match m in Regex.Matches(text, @"data-testid=\\?['""]?([A-Za-z0-9_-]+)")) used.Add(m.Groups[1].Value);      // [data-testid=x] / ='x' / =\"x\"
             foreach (Match m in Regex.Matches(text, @"(?i:GetByTestId|TestId)\(\s*\$?['""]([A-Za-z0-9_-]+)['""]")) used.Add(m.Groups[1].Value); // GetByTestId("x") / getByTestId('x')

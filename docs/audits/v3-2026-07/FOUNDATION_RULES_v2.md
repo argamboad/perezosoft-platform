@@ -16,8 +16,8 @@
 > withdrawn — LOCALCI-1 is superseded by LOCALCI-4, and the intent of the R79 reservation lives on as R114 — and the
 > numbers are never reused; the `R77-cand`/`R79-cand` labels in the rule text below are Phase-1 candidate ids, not
 > final rules, and `docs/stories/localci.md` uses R77/R78 for the (unbuilt) LOCALCI-1/2 tests, which would take fresh
-> numbers if built. The binding file is now **`docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md`** (R1–R35, R36–R76 +
-> R80, R81–R158 minus the retired R94 and R156); this file remains as the v2.0 historical layer.
+> numbers if built. The binding file is now **`docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md`** (R1–R35, R36–R76,
+> R81–R158 minus the retired R94, R138 and R156 — R80 itself was retired on 2026-10-02 by ADR-031); this file remains as the v2.0 historical layer.
 
 Each rule: **[machine]** (arch test / analyzer / CI gate) or **[review]** · category · enforcement mechanism
 · the candidate ID(s) and finding(s) it subsumes.
@@ -178,7 +178,7 @@ Each rule: **[machine]** (arch test / analyzer / CI gate) or **[review]** · cat
 - **R76 [machine]** — The `Notes` exemplar models the shared `ErrorResponse` shape; `new { error … }`
   anonymous error objects are banned in `Features/**`; the R3 machine half (outbound-to-user-URL requests
   route through `IOutboundUrlGuard`) lands. *(R71/R76-cand; TR-5, S0-G4.)*
-- **R80 [machine]** — The Forgejo pipeline (`.forgejo/workflows/`) is a held copy of the GitHub one: same
+- **R80 [retired 2026-10-02, ADR-031]** — `.forgejo/` was removed with the CI rebuild. Was: The Forgejo pipeline (`.forgejo/workflows/`) is a held copy of the GitHub one: same
   jobs, same `runs-on` labels (port-binding Linux jobs excepted: `ubuntu-host-ports`), same pins, same change classifier (plus its own path); Apple jobs wait for
   `vars.CI_MACOS_RUNNER`; native smokes run only from the `smokes` dispatch input or the schedule; deploys run
   only from the `deploy` dispatch input, behind every gate and every selected smoke, and fast-forward

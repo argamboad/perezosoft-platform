@@ -150,10 +150,10 @@ public class DocAndConfigSyncTests
         // TimeSpan constant in Core or the client's auth code whose name says it bounds something.
         var root = RepoRoot();
         var envExample = File.ReadAllText(Path.Combine(root, ".env.example")).ReplaceLineEndings("\n");
-        var start = envExample.IndexOf("Not configurable (compiled-in constants", StringComparison.Ordinal);
-        Assert.True(start >= 0, ".env.example no longer has its 'Not configurable (compiled-in constants' block");
-        var end = envExample.IndexOf("\n\n", start, StringComparison.Ordinal);
-        var block = end < 0 ? envExample[start..] : envExample[start..end];
+        // The platform's block sits in the shared skeleton; an app lists its own limits in a second block below it.
+        var blocks = Regex.Matches(envExample, @"# ── Not configurable \(.*?(?=\n\n|\z)", RegexOptions.Singleline);
+        Assert.True(blocks.Count >= 1, ".env.example no longer has a 'Not configurable (…)' block");
+        var block = string.Join("\n", blocks.Select(m => m.Value));
 
         var limits = new[] { Path.Combine(root, "src", "Core"), Path.Combine(root, "src", "Shared.Ui", "Auth") }
             .SelectMany(SourceFiles)
