@@ -622,7 +622,14 @@ public class EnforcementGateTests
         Assert.DoesNotMatch(@"(?im)^\s*#\s*syntax\s*=", File.ReadAllText(Path.Combine(root, "Dockerfile")));
 
         // Testcontainers' own Ryuk reaper is a Docker Hub image too; CI turns it off (a runner is thrown away anyway).
-        Assert.Matches(@"TESTCONTAINERS_RYUK_DISABLED:\s*""true""", File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml")));
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        Assert.Matches(@"TESTCONTAINERS_RYUK_DISABLED:\s*""true""", ci);
+
+        // And the mirror has a limit of its own: sixty fixtures pulling at once answered `toomanyrequests: Rate
+        // exceeded` (2026-10-09). The job pulls each test image once, before the tests, so the fixtures find it
+        // locally; the images named here are the ones the fixtures use.
+        foreach (var pulled in new[] { "public.ecr.aws/docker/library/postgres:17.11", "ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z" })
+            Assert.Contains(pulled, ci.Split("- name: Test (Core + Api + Ui)")[0]);
 
         void Check(string reference, string where)
         {

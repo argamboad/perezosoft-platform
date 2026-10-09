@@ -80,6 +80,21 @@ jobs:
           dotnet build src/Web/Perezosoft.Web.csproj -c Release --no-restore
           dotnet build tests/E2E.Tests/Perezosoft.E2E.Tests.csproj -c Release --no-restore
 
+      # The test images, pulled ONCE before the tests. Every Testcontainers fixture (some sixty test classes,
+      # in parallel) asks Docker for its image; when the image is not there yet each ask is a registry pull,
+      # and on 2026-10-09 Amazon's mirror answered the burst with `toomanyrequests: Rate exceeded` and the
+      # Api tests failed by the dozen. Pulled here, the fixtures find the image locally and no registry is
+      # asked. Three attempts, so a registry hiccup does not fail the job before a test has run.
+      - name: Pull the test images once
+        run: |
+          for image in public.ecr.aws/docker/library/postgres:17.11 ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z; do
+            for attempt in 1 2 3; do
+              docker pull --quiet "$image" && break
+              [ "$attempt" = 3 ] && { echo "::error::could not pull $image"; exit 1; }
+              sleep 20
+            done
+          done
+
       # Unit + integration tests. Api.Tests includes the architecture invariants (B9-1) and the
       # migration-drift guard (B6-2); both spin up Postgres via Testcontainers (Docker is
       # available on ubuntu-latest). E2E.Tests need the full running stack and aren't run here.
