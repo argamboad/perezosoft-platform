@@ -63,7 +63,7 @@ internal sealed class NativeSignIn(
     }
 
     /// <summary>Runs the platform browser flow and exchanges the returned one-time code for tokens.</summary>
-    public async Task<SignInResult> SignInWithOAuthAsync(string provider)
+    public async Task<SignInResult> SignInWithOAuthAsync(string provider, CancellationToken cancellationToken = default)
     {
         if (oauth is null)
         {
@@ -72,7 +72,7 @@ internal sealed class NativeSignIn(
         }
         try
         {
-            var result = await RunResumableBrowserFlowAsync(provider, linkToken: null);
+            var result = await RunResumableBrowserFlowAsync(provider, linkToken: null, cancellationToken);
             var code = result is not null && result.TryGetValue("code", out var c) ? c : null;
             if (string.IsNullOrEmpty(code))
                 return SignInResult.Failed;
@@ -190,13 +190,13 @@ internal sealed class NativeSignIn(
     /// The marker is cleared the moment the flow returns to this process — from here on
     /// the normal in-memory path owns the result.
     /// </summary>
-    private async Task<IReadOnlyDictionary<string, string>?> RunResumableBrowserFlowAsync(string provider, string? linkToken)
+    private async Task<IReadOnlyDictionary<string, string>?> RunResumableBrowserFlowAsync(string provider, string? linkToken, CancellationToken cancellationToken = default)
     {
         resumeStore?.SetInFlight(new OAuthFlowMarker(provider, linkToken, time.GetUtcNow()));
         FlowInFlightInProcess = true;
         try
         {
-            return await oauth!.RunBrowserFlowAsync(provider, linkToken);
+            return await oauth!.RunBrowserFlowAsync(provider, linkToken, cancellationToken);
         }
         finally
         {

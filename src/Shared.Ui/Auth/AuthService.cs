@@ -300,7 +300,7 @@ public class AuthService
     /// Completes native OAuth: runs the platform browser flow, exchanges the returned
     /// one-time code for tokens, and stores them. Web hosts sign in by full-page navigation and never call this.
     /// </summary>
-    public Task<SignInResult> SignInWithOAuthAsync(string provider) => _native.SignInWithOAuthAsync(provider);
+    public Task<SignInResult> SignInWithOAuthAsync(string provider, CancellationToken cancellationToken = default) => _native.SignInWithOAuthAsync(provider, cancellationToken);
 
     /// <inheritdoc cref="NativeSignIn.LinkProviderAsync"/>
     public Task<string?> LinkProviderAsync(string provider, string linkToken) => _native.LinkProviderAsync(provider, linkToken);
