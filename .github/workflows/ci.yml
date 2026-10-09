@@ -85,6 +85,10 @@ jobs:
       # available on ubuntu-latest). E2E.Tests need the full running stack and aren't run here.
       # --no-restore: the locked-mode restore already ran.
       - name: Test (Core + Api + Ui)
+        env:
+          # Testcontainers' Ryuk reaper is a Docker Hub image, and a hosted runner pulls anonymously into Docker
+          # Hub's rate limit. It only cleans up containers a crashed run leaves behind; this runner is thrown away.
+          TESTCONTAINERS_RYUK_DISABLED: "true"
         run: |
           dotnet test tests/Core.Tests/Perezosoft.Core.Tests.csproj -c Release --no-restore
           dotnet test tests/Api.Tests/Perezosoft.Api.Tests.csproj -c Release --no-restore
@@ -844,7 +848,7 @@ jobs:
     timeout-minutes: 45
     services:
       db:
-        image: postgres:17.11
+        image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
         env:
           POSTGRES_DB: smoke
           POSTGRES_USER: smoke
@@ -853,7 +857,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U smoke -d smoke" --health-interval 5s --health-timeout 5s --health-retries 15
       mail:
-        image: axllent/mailpit:v1.30.4 # pinned, not :latest — reproducible mail trap (v3 DEP-9); keep == the Windows-leg MailpitVersion
+        image: ghcr.io/axllent/mailpit:v1.30.4 # from Mailpit's own registry, not Docker Hub (anonymous pull limit); pinned, not :latest — reproducible mail trap (v3 DEP-9); keep == the Windows-leg MailpitVersion
         ports: ["1025:1025", "8025:8025"]
     steps:
       - uses: actions/checkout@v5
@@ -1018,7 +1022,7 @@ jobs:
     timeout-minutes: 40
     services:
       db:
-        image: postgres:17.11
+        image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
         env:
           POSTGRES_DB: e2e
           POSTGRES_USER: e2e
@@ -1027,7 +1031,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U e2e -d e2e" --health-interval 5s --health-timeout 5s --health-retries 15
       mail:
-        image: axllent/mailpit:v1.30.4 # pinned, not :latest — reproducible mail trap (v3 DEP-9); keep == the Windows-leg MailpitVersion
+        image: ghcr.io/axllent/mailpit:v1.30.4 # from Mailpit's own registry, not Docker Hub (anonymous pull limit); pinned, not :latest — reproducible mail trap (v3 DEP-9); keep == the Windows-leg MailpitVersion
         ports: ["1025:1025", "8025:8025"]
     steps:
       - uses: actions/checkout@v5
