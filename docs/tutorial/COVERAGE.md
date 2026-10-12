@@ -67,7 +67,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (11 files)
+## 1.4 — Configuration & the options pattern (12 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -78,6 +78,7 @@
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
 - `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)
 - `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
+- `tests/Api.Tests/DocsAreTrueTests.cs` — every fact that compares a document with the code: DATA_MODEL, config keys, ARCHITECTURE/FLOWS, Postman descriptions, QA count, course gate (Pkg 1.2)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, QA-count sync, CI-classifier and image-pin gates (v3 T60: R61/R68/R75)
 - `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
 
@@ -417,7 +418,7 @@
 
 - `tests/Api.Tests/E2E/BlazorBootTests.cs` — the boot decision driven by a scripted page — the audit's six cases (v4 T55)
 - `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
-- `tests/Api.Tests/TestIdContractTests.cs` — the test-id contract (every data-testid is used, every used id exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)
+- `tests/Api.Tests/TestIdContractTests.cs` — the test-id contract (every id a test or QA case references exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)
 - `tests/E2E.Tests/AuthFlowTests.cs`
 - `tests/E2E.Tests/BlazorBoot.cs` — the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)
 - `tests/E2E.Tests/BlazorBootCore.cs` — the boot helper's decision, Playwright-free (v4 T55, R109)
@@ -1342,4 +1343,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1175 tracked files · 807 built in lessons · 368 bucketed · 0 unmapped
+**Totals:** 1176 tracked files · 808 built in lessons · 368 bucketed · 0 unmapped
