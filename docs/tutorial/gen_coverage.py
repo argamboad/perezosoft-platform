@@ -15,6 +15,8 @@ Run from the repo root:  python docs/tutorial/gen_coverage.py
                   stale quote. A block the reader writes and the repo does not keep is headed
                   `// path (yours)`.
   --orphans       files the map assigns to a lesson whose text never names them (informational)
+  --quoted-files  every repo file a lesson quotes, one per line: CI's classifier runs the course check
+                  only when the course or one of these changes (Pkg 1.4). Reads no git.
 """
 from __future__ import annotations
 
@@ -140,9 +142,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
     ("tests/Api.Tests/CiWorkflowTests.cs", "8.3", "the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)"),
     ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),
-    ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)"),
-    ("tests/Api.Tests/RulesEnforcement.cs", "1.4", "the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)"),
-    ("tests/Api.Tests/RulesEnforcement.App.cs", "1.4", "the app's half of the manifest: per-rule Pending/NotHere overrides (Arch A1)"),
+    ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, QA-count sync, CI-classifier and image-pin gates (v3 T60: R61/R68/R75)"),
     ("*/Perezosoft.*.csproj", "1.1", "created here; PackageReferences added as lessons need them"),
     ("src/Api/Properties/launchSettings.json", "1.1", ""),
     ("src/Maui/Properties/launchSettings.json", "A.1", ""),
@@ -173,7 +173,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Configuration/SettingsRegistration.cs", "1.4", "the one blessed Bind+ValidateOnStart pattern (R22)"),
     ("src/Api/Configuration/ServiceRegistrationExtensions.cs", "1.4", "grows as services appear"),
     ("src/Infrastructure/ServiceCollectionExtensions.cs", "1.4", "grows as infra appears"),
-    ("tests/Api.Tests/DocAndConfigSyncTests.cs", "1.4", "config keys must exist in .env.example + appsettings (R20)"),
+    ("tests/Api.Tests/DocsAreTrueTests.cs", "1.4", "every fact that compares a document with the code: DATA_MODEL, config keys, ARCHITECTURE/FLOWS, Postman descriptions, QA count, course gate (Pkg 1.2)"),
     ("src/Api/LocalDotEnv.cs", "1.4", "the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)"),
     ("tests/Api.Tests/LocalDotEnvTests.cs", "1.4", "opt-out set, single load site, skip + walk-up behaviour"),
     ("src/Api/Services/ErrorResponse.cs", "1.5", "shared envelope; never ex.Message (R16/R18)"),
@@ -494,7 +494,6 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Integration/NotificationClearScopeTests.cs", "7.2", "bulk-clear requires an explicit scope (v3 LB-UI-10)"),
     ("tests/Api.Tests/Integration/ContributorRegistrationTests.cs", "6.3", "every declared contributor resolves from the app DI (v3 TB-TEN-11)"),
     ("tests/Api.Tests/Integration/PostmanParityTests.cs", "8.3", "every mapped /api endpoint documented in the canonical collection (v3 TR-6)"),
-    ("tests/Api.Tests/PostmanParityDescriptionTests.cs", "8.3", "each request's description names the error codes its action returns, the signup refusal and the billing gate key (v4 T63, R83/R119)"),
     ("src/Api/Models/NotificationModels.cs", "7.2", ""),
     ("src/Shared.Ui/Components/NotificationBell.razor", "7.2", ""),
     ("src/Shared.Ui/Components/NotificationPrefsCard.razor", "7.2", ""),
@@ -593,7 +592,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/ToolsScriptsTests.cs", "A.1", "the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)"),
     ("tests/Api.Tests/NativeShellGateTests.cs", "A.1", "Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)"),
     ("tests/native-smoke-android/*", "A.1", "Android playwright-core smoke harness"),
-    ("tests/Api.Tests/TestIdContractTests.cs", "3.6", "the test-id contract (every data-testid is used, every used id exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)"),
+    ("tests/Api.Tests/TestIdContractTests.cs", "3.6", "the test-id contract (every id a test or QA case references exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)"),
     ("tests/Ui.Tests/Pages/*", "3.4", "the page tests: every branch of Household, Login, Join, Billing, the header and the admin console on the bUnit chassis, plus the per-page floor (v4 T56)"),
     ("tests/js-logic/*", "3.4", "the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)"),
     ("tests/Api.Tests/JsLogicTests.cs", "3.4", "runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)"),
@@ -729,6 +728,14 @@ def check_quotes(root: Path) -> int:
     return 1 if stale else 0
 
 
+def quoted_files(root: Path) -> int:
+    """The repo files the lessons quote: a change must touch one of them (or the course) for the quote check to matter."""
+    paths = {path for lesson in (root / LESSONS_DIR).glob("*.md")
+             for path, note, _ in quoted_blocks(lesson.read_text(encoding="utf-8")) if not note.startswith("(yours")}
+    print("\n".join(sorted(paths)))
+    return 0
+
+
 def orphans(root: Path, by_lesson: dict[str, list[tuple[str, str]]]) -> int:
     """Files a lesson is credited with but never names — not a failure, a reading list for the next reconcile."""
     count = 0
@@ -752,7 +759,9 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     if "--check-quotes" in sys.argv:
         return check_quotes(root)
-    check = "--check" in sys.argv
+    if "--quoted-files" in sys.argv:
+        return quoted_files(root)
+    check ="--check" in sys.argv
     files = subprocess.run(
         ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=True
     ).stdout.splitlines()

@@ -67,7 +67,7 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (14 files)
+## 1.4 — Configuration & the options pattern (12 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
@@ -78,11 +78,9 @@
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
 - `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)
 - `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
-- `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
-- `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
+- `tests/Api.Tests/DocsAreTrueTests.cs` — every fact that compares a document with the code: DATA_MODEL, config keys, ARCHITECTURE/FLOWS, Postman descriptions, QA count, course gate (Pkg 1.2)
+- `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, QA-count sync, CI-classifier and image-pin gates (v3 T60: R61/R68/R75)
 - `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
-- `tests/Api.Tests/RulesEnforcement.App.cs` — the app's half of the manifest: per-rule Pending/NotHere overrides (Arch A1)
-- `tests/Api.Tests/RulesEnforcement.cs` — the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)
 
 ## 1.5 — The error envelope (1 files)
 
@@ -420,7 +418,7 @@
 
 - `tests/Api.Tests/E2E/BlazorBootTests.cs` — the boot decision driven by a scripted page — the audit's six cases (v4 T55)
 - `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
-- `tests/Api.Tests/TestIdContractTests.cs` — the test-id contract (every data-testid is used, every used id exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)
+- `tests/Api.Tests/TestIdContractTests.cs` — the test-id contract (every id a test or QA case references exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)
 - `tests/E2E.Tests/AuthFlowTests.cs`
 - `tests/E2E.Tests/BlazorBoot.cs` — the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)
 - `tests/E2E.Tests/BlazorBootCore.cs` — the boot helper's decision, Playwright-free (v4 T55, R109)
@@ -740,7 +738,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (125 files)
+## 8.3 — The deploy pipeline & CI gates (137 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -749,13 +747,25 @@
 - `tests/Api.Tests/CiWorkflowTests.cs` — the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
-- `tests/Api.Tests/PostmanParityDescriptionTests.cs` — each request's description names the error codes its action returns, the signup refusal and the billing gate key (v4 T63, R83/R119)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/files/added.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-only/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-only/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-only/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -1088,7 +1098,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (255 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (259 files)
 
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
@@ -1326,6 +1336,10 @@
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `tests/E2E.Tests/README.md` — docs
 - `tests/E2E.Tests/journey-seconds.tsv` — CI tuning data: measured seconds per journey so the e2e shards are dealt evenly (Env L28)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/files/docs/tutorial/lessons/1.1-fixture.md` — docs
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/files/docs/tutorial/lessons/1.1-fixture.md` — docs
+- `tests/ci-logic/cases/changes-classifier/course-only/files/docs/tutorial/lessons/1.1-fixture.md` — docs
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/files/docs/tutorial/lessons/1.1-fixture.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/base.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/head.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/executed-row-rewritten/files/base.md` — docs
@@ -1346,4 +1360,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1179 tracked files · 811 built in lessons · 368 bucketed · 0 unmapped
+**Totals:** 1193 tracked files · 821 built in lessons · 372 bucketed · 0 unmapped
