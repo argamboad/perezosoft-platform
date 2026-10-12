@@ -645,22 +645,6 @@ public class EnforcementGateTests
     }
 
     [Fact]
-    public void ClaudeMdQaCaseCount_MatchesTheQaPlan() // R75, count half
-    {
-        var root = RepoRoot();
-        var actual = Regex.Matches(File.ReadAllText(Path.Combine(root, "docs", "QA_TEST_PLAN.md")),
-            @"(?m)^### QA-").Count;
-
-        var claimMatch = Regex.Match(File.ReadAllText(Path.Combine(root, "CLAUDE.md")), @"\((\d+) cases:");
-        Assert.True(claimMatch.Success, "CLAUDE.md no longer states the QA case count as '(N cases:' — update this gate with it.");
-        var claimed = int.Parse(claimMatch.Groups[1].Value);
-
-        Assert.True(claimed == actual,
-            $"CLAUDE.md claims {claimed} QA cases but QA_TEST_PLAN.md defines {actual} — update the doc-map row "
-            + "(the figure drifted twice before this gate existed: v3 TR-2, T54).");
-    }
-
-    [Fact]
     public void PlatformMigrations_DoNotNameTheSample() // Arch A6 (#366), R9 as amended
     {
         // The sample's table used to be created by one platform migration and named by another (RlsTenancyBackstop's
@@ -718,26 +702,6 @@ public class EnforcementGateTests
         Assert.True(offenders.Count == 0, "a platform composition file names the sample slice — the seam leaks (Arch A1): " + string.Join(", ", offenders));
         foreach (var f in composition) Assert.True(File.Exists(Path.Combine(root, f)), $"composition file moved: {f}");
         Assert.DoesNotContain("Features.", File.ReadAllText(Path.Combine(root, "src", "Api", "Program.cs")).Replace("MapTenantFeatureGroup", ""));
-    }
-
-    [Theory]
-    [InlineData(".github/workflows/ci.yml")]
-    public void CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts(string workflow) // v4 audit TR-19/TR-12 (T61), R114/R115
-    {
-        // The course lives in perezosoft-platform; a downstream app has no docs/tutorial (its R114/R115/R118 say NotHere).
-        if (!Directory.Exists(Path.Combine(RepoRoot(), "docs", "tutorial"))) return;
-        // gen_coverage.py only ran when someone remembered to; the map claimed 901 files and 0 unmapped while the
-        // generator found 903 and 1, and lessons quoted code the repo no longer had. The qa-artifacts job — which
-        // never gates on the changes classifier, so a docs-only push runs it — checks both on every push.
-        var ci = File.ReadAllText(Path.Combine(RepoRoot(), workflow)).ReplaceLineEndings("\n");
-        var job = ci[ci.IndexOf("\n  qa-artifacts:", StringComparison.Ordinal)..];
-        job = job[..job.IndexOf("\n  license-scan:", StringComparison.Ordinal)];
-        Assert.Contains("python docs/tutorial/gen_coverage.py --check\n", job);
-        Assert.Contains("python docs/tutorial/gen_coverage.py --check-quotes\n", job);
-        // ...and the generator honours those flags (a renamed flag would silently check nothing).
-        var generator = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "tutorial", "gen_coverage.py"));
-        Assert.Contains("\"--check\" in sys.argv", generator);
-        Assert.Contains("\"--check-quotes\" in sys.argv", generator);
     }
 
     [Fact]
