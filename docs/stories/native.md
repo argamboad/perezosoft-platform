@@ -2,8 +2,12 @@
 
 > One file per epic. Brings the **MAUI Blazor Hybrid** clients (Android, Windows, **iOS, macOS**) to
 > **full parity** with web: every feature verified working on native, WebView-specific gaps closed, the
-> native build + UI tested in CI, and **signed, shippable artifacts**. Design decision + accepted costs
-> in **ADR-018**. Stories use Gherkin acceptance criteria. **Status: 📝 PLANNED (full-parity scope).**
+> native build + UI tested in CI. Design decision + accepted costs in **ADR-018**. Stories use Gherkin
+> acceptance criteria. **Status: ✅ EPIC COMPLETE (2026-07-14) — the NATIVE-6 Android + Windows
+> device pass came back green, closing the last platform slice.** (NATIVE-12 landed after as a
+> QA-finding hardening slice, PR #172; its QA-AND-15 on-device drill is the open device item.)
+> **Scope change (ADR-024, 2026-07-14):** signed artifacts + store submission (Wave 4, NATIVE-8..11)
+> are **downstream-app work**, kept below as reference only.
 
 **Epic key:** `NATIVE`
 
@@ -12,14 +16,15 @@
 is already native (OTP, OAuth via system browser, MFA step-up MFA-4, secure-storage tokens). So this epic
 is **mostly verification + native-glue + CI/distribution plumbing, not rebuilding features.** The work is:
 (1) guard the native build, (2) close the handful of places a WebView differs from a browser, (3) verify
-the full feature surface on every platform, (4) test it automatically, (5) ship signed artifacts.
+the full feature surface on every platform, (4) test it automatically. ((5) shipping signed artifacts
+was the original fifth step — moved downstream per ADR-024; Wave 4 below is now reference material.)
 
-**Prerequisites (external — these are the real cost of "everything", per ADR-018):**
-- A **macOS CI runner** (GitHub-hosted `macos-latest`) — required to build/test/sign **iOS + macCatalyst**.
-- An **Apple Developer account** ($99/yr) — iOS/macOS signing certs + provisioning profiles.
-- **Signing material as repo secrets** (never committed): Android keystore, Windows code-sign cert, Apple
-  cert + profile (base64-encoded). Loaded at build time, same discipline as `.env` (ADR-001).
+**Prerequisites (external — the platform's real costs, per ADR-018):**
+- A **macOS CI runner** (GitHub-hosted `macos-latest`) — required to build/test **iOS + macCatalyst**.
 - Android SDK + the `.NET maui` workloads on the runners.
+- ~~An Apple Developer account ($99/yr) + signing material as repo secrets~~ — **downstream-release
+  prerequisites now (ADR-024)**; each app brings its own identity (Android keystore, Windows/MSIX
+  publisher, Apple certs + profiles — base64 in *its* repo secrets, ADR-001 discipline).
 
 **Current baseline:** targets `net10.0-android` + `net10.0-windows`; not built in CI; QA covers 13
 auth-focused desktop/Android cases (`QA-DSK-01..07`, `QA-AND-01..06`). See `docs/MOBILE_TESTING.md`.
@@ -355,9 +360,43 @@ Scenario: Native smoke runs on every push
 
 ---
 
-## Wave 4 — Distribution (signed, shippable artifacts)
+## Wave 4 — Distribution (signed, shippable artifacts) — ⤵ MOVED DOWNSTREAM (ADR-024, 2026-07-14)
+
+> **NATIVE-8..11 are no longer platform slices.** ADR-024 resolved the ADR-018 NATIVE-8 gate:
+> signing identity (keystore / Apple certs / MSIX publisher) is inherently per-app, so signed
+> artifacts and store listings are downstream-app deliverables. Those four sections are kept as the
+> **downstream reference** — the scoped knowledge a new app's first native release needs; the
+> actionable checklist lives in `docs/NEW_APP_GUIDE.md` Phase 9. The epic closes at NATIVE-6
+> (verification). NATIVE-12 below is unaffected — a platform hardening slice, merged (PR #172).
+
+> **Release builds require `-p:ApiBaseUrl=` (v3 audit NAT-3).** A Release build of `src/Maui` fails
+> unless a real API base URL is supplied — the localhost fallback + `PEREZOSOFT_API_BASE_URL` override
+> and the Android cleartext-traffic exception are **Debug-only**, so a by-the-book signed AAB can never
+> ship pointing at (and sending credentials in plaintext to) device-localhost. Every signing command in
+> this wave must pass e.g. `-p:ApiBaseUrl=https://api.yourapp.com`; it's compiled in via AssemblyMetadata
+> and read back by `MauiProgram`. Debug/CI (native-build, native-smoke) are unaffected.
 
 ### NATIVE-8 — Android: signed AAB/APK in CI
+
+> **2026-09-28 — the Release guards, and a Release leg in CI (v4 audit T50 — NAT-13/14/18, LB-NAT-1/2;
+> R103/R141).** The three Release-only checks moved from the csproj into `src/Maui/ReleaseGuards.targets`
+> under one condition (`!= 'Debug'`): `ApiBaseUrl` trimmed, `https://`, origin-only; the APK signed through
+> `apksigner` with the store key or a debug keystore found on any host (error when none — no more silent
+> v1-only route on a Mac); the HTTPS-only network config. A workload-free MSBuild probe
+> (`EnforcementGateTests.ReleaseGuards_RefuseBadInputs_AndPassGoodOnes`) runs a table of good and bad inputs.
+> `native-release-android` (a device leg since ADR-031: *Run workflow* → `devices` = android / all)
+> publishes Release with a throwaway store key, requires `Verified using
+> v2/v3`, and proves an `ApiBaseUrl`-less Release build fails. `tools/publish-native.ps1` throws unless
+> apksigner verified the APK and finds the SDK through `ANDROID_HOME`. The real signing key stays
+> downstream (ADR-024).
+
+> **2026-10-03 — what shipped since this audit and was not written here (v4 audit T53).** The Android
+> status bar follows the page's theme (`ISystemBarTheme` + `SystemBarThemeSync`, fed by `theme.js`'s watcher);
+> the bfcache guard (`bfcache-guard.js`) is loaded by both hosts and is a no-op in the WebView; a Release APK is
+> signed through `apksigner` (v2+v3) behind `ReleaseGuards.targets`, and app data is no longer backed up off
+> the device. `theme.js` now defines `window.appTheme` before it registers any listener and falls back to
+> `addListener`, so an old WebView without `MediaQueryList.addEventListener` still applies the saved theme;
+> `unwatch` clears only the watcher that asks. `tests/js-logic/` runs the three bootstraps with `node --test`.
 
 **Context / notes (decisions scoped 2026-07-07):** the keystore IS the app's identity — updates only
 install over the same signature, so losing it is unrecoverable and it never enters git (base64 →
@@ -430,6 +469,72 @@ Signing** (NATIVE-8's keystore becomes the upload key) and let the **MS Store si
 
 **DoD:** upload step wired (guarded/off by default) or the manual submission path documented per store.
 
+### NATIVE-12 — Survive process death during the OAuth browser round-trip (Android)
+
+**Status: ✅ Implemented** (`feat/native-oauth-resilience`). `AuthService` now brackets the browser
+flow with a persisted `IOAuthResumeStore` marker (MAUI `Preferences` on Android/iOS/macCatalyst;
+Windows' loopback flow needs none), `WebAuthenticatorCallbackActivity` stashes the redirect URI and
+relaunches `MainActivity` when the callback lands in a fresh process (marker set, no in-process
+flow), and `AuthService.TryCompletePendingOAuthAsync()` — called from MainLayout right after
+`InitializeAsync` — finishes the exchange on startup: sign-in through the existing
+`/api/auth/native/exchange` path (MFA challenge handed to Login), link outcomes routed to Settings'
+existing `linked`/`link_error` banners, stashes older than the 5-min code TTL failed with a
+friendly retry message. TDD: 14 red-first unit tests (`OAuthResumeTests`) pin the marker lifecycle,
+resume outcomes, and TTL guard; web is a structural no-op (no store registered). **Mechanism proven
+on the tablet emulator** with a scripted drill (playwright-core `_android`): tap Continue-with-Google
+→ Custom Tab foregrounds → `am kill` (process verified dead) → fire
+`perezosoft://auth?code=<invalid>` → the app cold-starts, **stays open**, runs the startup exchange,
+and lands on Login with the friendly OAuth error (pre-fix behavior: flash open + close, no UI); the
+standard Android smoke (boot + OTP + roster) passed after, so the warm path is unregressed. The
+real-consent variant (valid code → signed in) = QA-AND-15 in the NATIVE-6 device pass.
+
+**As a** native Android user signing in with Google/Microsoft
+**I want** the sign-in to complete even if Android kills the app while I'm on the provider's page
+**So that** the app doesn't flash open and close, silently losing my sign-in
+
+**Context / notes:** observed on the tablet emulator under memory pressure (2026-07-07):
+`WebAuthenticatorOAuthInitiator` awaits `WebAuthenticator.AuthenticateAsync`, whose pending state is
+in-memory only. If the OS kills the process during the provider round-trip, the
+`perezosoft://auth?code=…` redirect cold-starts a fresh process, `WebAuthenticatorCallbackActivity`
+finds no pending operation, and the one-time code is lost. The Custom-Tabs `<queries>` fix (a3bad29)
+shrinks the window but can't close it. Fix: (1) persist an "OAuth in flight" marker
+(`IOAuthResumeStore` → MAUI Preferences) around the browser flow; (2) on a cold-start callback
+(marker set, no in-process flow), stash the callback URI and relaunch `MainActivity`; (3) on startup,
+`AuthService.TryCompletePendingOAuthAsync()` parses the stashed query (`code`/`linked`/`error` — the
+`WebAuthenticatorResult.Properties` shape) and completes the exchange through the existing native
+login path. The one-time code's server TTL is 5 min (`NativeAuthCodeService`) — older stashes fail
+with a friendly retry message instead of a doomed exchange.
+
+```gherkin
+Scenario: Sign-in survives process death
+  Given I started a native Google sign-in and Android killed the app while I was on Google's page
+  When the provider redirects to perezosoft://auth?code=…
+  Then the app relaunches, exchanges the stashed code on startup, and I am signed in
+
+Scenario: MFA step-up after a resumed sign-in
+  Given my resumed code exchange answers mfa_required
+  When the app finishes starting
+  Then the Login screen opens directly on the MFA code prompt
+
+Scenario: Stale stash fails politely
+  Given the stashed callback is older than the one-time code TTL
+  When the app starts
+  Then no exchange is attempted and Login shows a "took too long — try again" message
+
+Scenario: Interrupted account-linking still reports its outcome
+  Given the round-trip was a provider link (linked/error callback) and the process died
+  When the app restarts
+  Then I land on Settings with the existing linked/link_error banner
+
+Scenario: Warm flow unchanged
+  Given the app process survived the round-trip
+  Then WebAuthenticator completes in-process exactly as before and no stash is consumed
+```
+
+**DoD:** unit tests for marker lifecycle, TTL expiry, resume exchange, MFA handoff, and link
+outcomes (red-first); warm-path E2E/smokes stay green; `NATIVE_PARITY.md` auth row updated;
+QA-AND-15 added for the on-device kill test (NATIVE-6).
+
 ---
 
 ## Slice plan (sequenced — guardrails first, distribution last)
@@ -442,19 +547,26 @@ Signing** (NATIVE-8's keystore becomes the upload key) and let the **MS Store si
    `IFileDownloadLauncher`; upload half N-A, no consumer yet), NATIVE-4 (G2 refresh-on-resume via
    `AppResumeNotifier` + G3 Android back handler). All six audit gaps closed; OS-chrome behaviors
    (share sheet, hardware back, real focus transitions) queue for the NATIVE-6 device pass.
-3. 🚧 **NATIVE-6** manual native QA pass — plan authored (117 cases incl. iOS/macCatalyst first-run
+3. ✅ **NATIVE-6** manual native QA pass — plan authored (117 cases incl. iOS/macCatalyst first-run
    smoke + §13c release checklist; G7 Apple-boot fix shipped alongside). **Apple column UNPINNED
    2026-07-06** — the maintainer ran §13b on a MacBook Air M1: QA-IOS-01/02/04 + QA-MAC-01/02 +
-   the OAuth leg of QA-MAC-03 PASS (two platform gaps found and fixed, PR #125); remaining:
-   QA-IOS-03 + rest of QA-MAC-03 spot-checks, then the Windows/Android device pass. **NATIVE-7 ✅
+   the OAuth leg of QA-MAC-03 PASS (two platform gaps found and fixed, PR #125). **NATIVE-7 ✅
    COMPLETE — smokes for all four platforms in CI:** Windows (WebView2-CDP `native-smoke-windows`),
    Android (`native-smoke-android`), and iOS-simulator + Mac Catalyst (`native-smoke-apple`,
    boot-to-login canaries in one macOS job, added 2026-07-06 once the QA pass validated the
-   runtimes).
-4. 📝 **NATIVE-8/9/10** signing + packaging per platform, then **NATIVE-11** submission (optional).
+   runtimes). **✅ NATIVE-6 PASSED 2026-07-14** — the maintainer completed the ENTIRE manual QA
+   process as the plan stood then (125 cases: web + all four native columns, incl. the leftover
+   §13b Apple spot-checks), no open findings (recipe kept in `STATUS.md` §3). **Epic NATIVE
+   COMPLETE.** (Post-pass additions — §14a re-run rows + QA-AND-15 — are the open device items.)
+4. ⤵ **NATIVE-8/9/10/11** signing + packaging + store submission — **moved downstream (ADR-024)**:
+   per-app work, executed by each downstream app at its first native release (checklist in
+   `NEW_APP_GUIDE.md` Phase 9; Wave 4 above is the reference). **The epic completes at NATIVE-6.**
+5. ✅ **NATIVE-12** (out-of-band hardening, 2026-07-07) — OAuth survives process death during the
+   browser round-trip; found on the tablet emulator during NATIVE-6 prep, fixed ahead of the device
+   pass so QA-AND-15 can verify it there.
 
 Each slice is an independent, mergeable PR (branch off develop; TDD/verification per slice). Waves gate:
-don't automate (7) or distribute (8–11) before the app is verified working (6).
+don't automate (7) before the app is verified working (6); distribution (8–11) is downstream-app work.
 
 **Known sharp edges (from ADR-018):**
 - **iOS/macOS need a Mac** — no macOS runner ⇒ NATIVE-1/7/10 can't cover Apple platforms; sequence Apple

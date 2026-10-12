@@ -32,13 +32,25 @@ public class Subscription : ITenantScoped
 
     /// <summary>
     /// When the provider emitted the most recently <em>applied</em> webhook event. The webhook handler
-    /// applies an incoming event only if it is strictly newer than this, so a redelivered/out-of-order
-    /// older event cannot clobber newer state (v2 audit LOGIC-B1). Null until the first event is applied.
+    /// rejects only events strictly OLDER than this (v3 audit LB-BILL-1 relaxed v2 LOGIC-B1's
+    /// strictly-newer rule: provider timestamps are whole-second, so two distinct same-second events
+    /// must both apply; exact redeliveries are deduped upstream by the inbox on EventId). Null until
+    /// the first event is applied.
     /// </summary>
     public DateTimeOffset? LastEventAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Whether a live provider (Stripe) subscription owns this projection — the guard that stops staff
+    /// comp/revert from fighting real money (ADR-006). Keyed on LIVENESS, not id-presence: a canceled
+    /// subscription keeps its <see cref="StripeSubscriptionId"/> forever, so an id alone would permanently
+    /// lock a churned tenant out of a goodwill comp / cleanup (v3 audit ADM-5). A terminal
+    /// <see cref="SubscriptionStatus.Canceled"/> is no longer provider-managed. Computed, never stored.
+    /// </summary>
+    public bool IsProviderManaged =>
+        StripeSubscriptionId is not null && Status != SubscriptionStatus.Canceled;
 }
 
 /// <summary>Status constants for <see cref="Subscription.Status"/> (mirrors the Stripe lifecycle).</summary>
@@ -48,4 +60,8 @@ public static class SubscriptionStatus
     public const string Trialing = "trialing";
     public const string PastDue = "past_due";
     public const string Canceled = "canceled";
+
+    /// <summary>Statuses under which the plan is actually granted (live). Dunning is a transition OUT of one
+    /// of these, so this is also what tells a cold-start `past_due`/`canceled` from a real lapse (LB-BILL-4).</summary>
+    public static bool IsGranting(string? status) => status is Active or Trialing;
 }

@@ -32,6 +32,15 @@ for non-owner). **API-only** (no UI button yet). Tests `tests/Api.Tests/Gdpr/Ten
 (bundle assembly + secret-exclusion + tenant-scoping via a capturing `IFileStorage`, owner 200 /
 non-owner 403, audit) + matrix (`RolePermissionsTests`).
 
+> **2026-07-15 — completeness fix (v3 audit LB-TEN-1).** Three `ITenantScoped` tables were wired into
+> neither dissolve nor export — `ApiKey`, `UsageCounter`, `WebhookSubscription` — plus `WebhookDelivery`
+> (a plain-`TenantId` table). With no FK to `Tenants` (ADR-003) nothing cascaded, so a dissolved tenant
+> orphaned hashed key credentials + encrypted webhook secrets, and the export silently omitted them. Fixed
+> by three new contributors (`ApiKeyDataContributor`, `WebhookDataContributor`, `UsageCounterDataContributor`,
+> secret-free export) + a tenant-axis canary `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` (the
+> mirror of the user-keyed erasure canary) so a new tenant-owned entity can't silently orphan again. Tests:
+> `tests/Api.Tests/Gdpr/TenantTeardownContributorTests.cs`.
+
 **As a** tenant owner
 **I want** to download an export of my tenant's data
 **So that** I can take it elsewhere or satisfy a data-portability request
@@ -93,7 +102,9 @@ members → `MustTransferFirst`; solo owner → dissolve (contributors wipe + co
 `account.erased` audited in the surviving tenant. Endpoint `DELETE /api/auth/me`
 (`?confirm_dissolve=true`) on `AuthController` → 204 / 400 / 409 / 401. Tests
 `tests/Api.Tests/Gdpr/AccountErasureTests.cs` (member keeps-tenant + audit, solo-owner confirm/dissolve,
-owner-with-members blocked, no-confirm erases nothing, unknown user).
+owner-with-members blocked, no-confirm erases nothing, unknown user). *2026-09-24 (v4 audit H7):* erasure also
+removes mail still queued for the user (`OutboxUserDataContributor`, matched on the recipient) — a notification
+is queued with no tenant, so no dissolve reaches it; finished outbox rows already carry no payload.
 
 **As a** user
 **I want** to delete my account and personal data

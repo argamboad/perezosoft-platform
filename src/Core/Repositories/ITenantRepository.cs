@@ -21,7 +21,19 @@ public interface ITenantRepository
     Task<Tenant?> GetByIdAsync(Guid tenantId, CancellationToken cancellationToken = default);
 
     /// <summary>The user's single membership (tenant + role), or null.</summary>
+    /// <summary>
+    /// The user's membership. DETERMINISTIC (oldest first) so a user who somehow holds more than one never
+    /// resolves against an arbitrary row (v3 audit LB-ADM-3). For an AUTHZ decision use the tenant-scoped
+    /// overload instead — the permission gate must resolve the membership for the caller's JWT tenant.
+    /// </summary>
     Task<TenantMembership?> GetMembershipAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The user's membership IN a specific tenant (the (user, tenant) pair is unique) — the deterministic
+    /// lookup authz uses so a permission decision is always keyed on the caller's JWT <c>tenant_id</c>,
+    /// never an arbitrary membership (v3 audit LB-ADM-3). Null when the user is not a member of that tenant.
+    /// </summary>
+    Task<TenantMembership?> GetMembershipAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default);
 
     Task<List<TenantMembership>> GetMembersAsync(Guid tenantId, CancellationToken cancellationToken = default);
 
@@ -38,10 +50,6 @@ public interface ITenantRepository
     /// Must be called inside an active <see cref="IUnitOfWork"/> transaction scope.
     /// </summary>
     Task<bool> TryTransferOwnershipAsync(Guid tenantId, Guid currentOwnerUserId, Guid targetUserId, CancellationToken cancellationToken = default);
-
-    /// <summary>Hard-deletes a tenant (cascades its data) — used when a solo
-    /// tenant-of-one is dissolved as its owner joins another.</summary>
-    Task DeleteTenantAsync(Guid tenantId, CancellationToken cancellationToken = default);
 
     /// <summary>The tenant's members joined to their user display info.</summary>
     Task<List<TenantMemberDetail>> GetMemberDetailsAsync(Guid tenantId, CancellationToken cancellationToken = default);

@@ -50,7 +50,18 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Common_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Plan_free" xml:space="preserve"><value>Free</value></data>
+  <data name="Plan_pro" xml:space="preserve"><value>Pro</value></data>
+  <data name="BillingStatus_none" xml:space="preserve"><value>No subscription</value></data>
+  <data name="BillingStatus_free" xml:space="preserve"><value>Free</value></data>
+  <data name="BillingStatus_active" xml:space="preserve"><value>Active</value></data>
+  <data name="BillingStatus_trialing" xml:space="preserve"><value>Trial</value></data>
+  <data name="BillingStatus_past_due" xml:space="preserve"><value>Past due</value></data>
+  <data name="BillingStatus_canceled" xml:space="preserve"><value>Canceled</value></data>
+  <data name="BillingStatus_incomplete" xml:space="preserve"><value>Incomplete</value></data>
+  <data name="BillingStatus_unpaid" xml:space="preserve"><value>Unpaid</value></data>
+  <data name="Pref_SyncFailed" xml:space="preserve"><value>Preference didn’t sync to your account — try again.</value></data>
   <data name="Theme_Label" xml:space="preserve"><value>Theme</value></data>
   <data name="Theme_System" xml:space="preserve"><value>Auto</value></data>
   <data name="Theme_Light" xml:space="preserve"><value>Light</value></data>
@@ -69,9 +80,11 @@
   <data name="Login_OtpPrompt" xml:space="preserve"><value>Enter the 6-digit code sent to {0}.</value></data>
   <data name="Login_VerifyCode" xml:space="preserve"><value>Verify code</value></data>
   <data name="Login_ErrSomethingWrong" xml:space="preserve"><value>Something went wrong. Please try again.</value></data>
+  <data name="Login_ErrSignupNotAllowed" xml:space="preserve"><value>This app is in private testing and isn't accepting new accounts yet. If someone invited you, ask them to send the invitation again.</value></data>
   <data name="Login_ErrExternalFailed" xml:space="preserve"><value>Sign-in with the external provider failed. Please try again.</value></data>
   <data name="Login_ErrEmailUnverified" xml:space="preserve"><value>Your provider hasn't verified this email address, so it can't be attached to an existing account.</value></data>
-  <data name="Login_ErrInvalidLink" xml:space="preserve"><value>This sign-in link has expired or was already used. Request a new one.</value></data>
+  <data name="Login_ErrInvalidLink" xml:space="preserve">
+<value>This sign-in link has expired or was already used. Request a new one.</value></data>
   <data name="Login_ErrCouldntSendLink" xml:space="preserve"><value>Couldn't send the link. Please try again.</value></data>
   <data name="Login_ErrCouldntSendCode" xml:space="preserve"><value>Couldn't send the code. Please try again.</value></data>
   <data name="Login_ErrCodeIncorrect" xml:space="preserve"><value>That code is incorrect or has expired.</value></data>
@@ -80,6 +93,7 @@
   <data name="Login_ErrTooManyRequests" xml:space="preserve"><value>Too many requests. Please wait a minute, then try again.</value></data>
   <data name="Login_ErrEnterCode" xml:space="preserve"><value>Enter the code from your email.</value></data>
   <data name="Login_ErrOAuthCancelled" xml:space="preserve"><value>Sign-in was cancelled or didn't complete. Please try again.</value></data>
+  <data name="Login_ErrOAuthResumeExpired" xml:space="preserve"><value>Your sign-in took too long to complete. Please try again.</value></data>
   <data name="Common_Loading" xml:space="preserve"><value>Loading…</value></data>
   <data name="Common_Working" xml:space="preserve"><value>Working…</value></data>
   <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
@@ -173,6 +187,7 @@
   <data name="Billing_Subtitle" xml:space="preserve"><value>Your plan, usage, and subscription.</value></data>
   <data name="Billing_CurrentPlan" xml:space="preserve"><value>Current plan</value></data>
   <data name="Billing_RenewsOn" xml:space="preserve"><value>Renews or ends on {0}.</value></data>
+  <data name="Billing_EndedOn" xml:space="preserve"><value>Your paid subscription ended on {0}. Upgrade any time to start a new one.</value></data>
   <data name="Billing_Seats" xml:space="preserve"><value>Seats</value></data>
   <data name="Billing_SeatsUsage" xml:space="preserve"><value>{0} of {1} used</value></data>
   <data name="Billing_Upgrade" xml:space="preserve"><value>Upgrade to Pro</value></data>
@@ -181,6 +196,8 @@
   <data name="Billing_ErrLoad" xml:space="preserve"><value>Couldn't load billing.</value></data>
   <data name="Billing_ErrCheckout" xml:space="preserve"><value>Couldn't start checkout.</value></data>
   <data name="Billing_ErrPortal" xml:space="preserve"><value>Couldn't open the billing portal.</value></data>
+  <data name="Billing_CheckoutSuccess" xml:space="preserve"><value>Payment received. Your plan updates as soon as the provider confirms it — usually within a few seconds.</value></data>
+  <data name="Billing_CheckoutCancelled" xml:space="preserve"><value>Checkout cancelled — nothing changed.</value></data>
   <data name="Nav_SignOut" xml:space="preserve"><value>Sign out</value></data>
   <data name="Home_WelcomeBack" xml:space="preserve"><value>Welcome back, {0}!</value></data>
   <data name="Home_SignedInTo" xml:space="preserve"><value>Signed in to the {0} household.</value></data>
@@ -206,6 +223,7 @@
   <data name="Join_ErrorTitle" xml:space="preserve"><value>Couldn't join</value></data>
   <data name="Join_FullTitle" xml:space="preserve"><value>This household is full</value></data>
   <data name="Join_FullBody" xml:space="preserve"><value>It has reached its plan's member limit. Ask the owner to upgrade their plan, then use your invitation again.</value></data>
+  <data name="Join_FullBodyNoBilling" xml:space="preserve"><value>It has reached its member limit. Ask the owner to free a seat, then use your invitation again.</value></data>
   <data name="Join_BackToHousehold" xml:space="preserve"><value>Back to household</value></data>
   <data name="Join_DefaultError" xml:space="preserve"><value>The invitation is invalid or has expired.</value></data>
   <data name="Settings_Preferences" xml:space="preserve"><value>Preferences</value></data>
@@ -273,6 +291,7 @@
   <data name="Household_ErrRename" xml:space="preserve"><value>Couldn't rename the household.</value></data>
   <data name="Household_ErrEmailAlreadyMember" xml:space="preserve"><value>That email is already a member.</value></data>
   <data name="Household_ErrSeatLimit" xml:space="preserve"><value>Your plan's seat limit is reached. Upgrade your plan to invite more members.</value></data>
+  <data name="Household_ErrSeatLimitNoBilling" xml:space="preserve"><value>Your household is full. Remove a member or revoke a pending invitation to free a seat.</value></data>
   <data name="Household_ErrSendInvite" xml:space="preserve"><value>Couldn't send the invitation.</value></data>
   <data name="Household_ErrRegenerate" xml:space="preserve"><value>Couldn't regenerate the token.</value></data>
   <data name="Household_StatusRevoked" xml:space="preserve"><value>Invitation revoked.</value></data>

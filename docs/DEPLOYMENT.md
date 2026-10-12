@@ -25,9 +25,11 @@ refresh cookie is first-party and **no CORS configuration is needed** (`Auth__Al
 empty). It listens on `$PORT` (Render provides it; defaults to 8080), migrates the database on boot, and
 exposes `/health` (liveness) + `/health/ready` (DB reachable).
 
-> **SDK pin:** the build image is pinned to `sdk:10.0.301` to match the committed `packages.lock.json`
-> files (the Blazor SDK injects patch-specific implicit packages). If you bump the SDK that regenerates
-> the lockfiles, bump the Dockerfile tag to match.
+> **SDK pin:** the SDK version lives in **`global.json`** (the single source of truth) — CI's
+> `setup-dotnet` reads it, and the Dockerfile build image (`sdk:10.0.401`) + runtime image
+> (`aspnet:10.0.11`) are pinned to match. The Blazor SDK injects patch-specific implicit packages, so a
+> float breaks `--locked-mode`. To bump the SDK, follow the bump-together playbook in `CLAUDE.md` (update
+> global.json → regenerate lockfiles → the two Dockerfile tags → the docs, in one PR).
 
 ### Verify the image locally (no cloud accounts needed)
 
@@ -64,8 +66,11 @@ Tear down with `docker compose --profile app down`.
 2. Copy the **Direct connection** string (the host **without** `-pooler`). That's the right default here:
    a single Render instance keeps its own Npgsql connection pool, and the app **polls** (no
    `LISTEN/NOTIFY`) and uses no server-side prepared statements, so it doesn't need PgBouncer. Keep
-   `SSL Mode=Require`. Shape:
-   `Host=<ep>.<region>.aws.neon.tech;Port=5432;Database=<db>;Username=<user>;Password=<pw>;SSL Mode=Require;Trust Server Certificate=true`.
+   `SSL Mode=VerifyFull`. Shape:
+   `Host=<ep>.<region>.aws.neon.tech;Port=5432;Database=<db>;Username=<user>;Password=<pw>;SSL Mode=VerifyFull`.
+   **Do not add `Trust Server Certificate=true`** — it encrypts but skips validating the certificate,
+   so it does not prove the server is Neon. Neon serves a publicly trusted certificate and the .NET
+   runtime image trusts it out of the box; `VerifyFull` is verified working (JiggerJot, 2026-09-09).
    *(Only switch to the pooled `-pooler` host if you later run many instances — Neon's pooler is
    transaction-mode PgBouncer, which this app is compatible with but doesn't require.)*
 3. This becomes `ConnectionStrings__DefaultConnection`. Migrations apply automatically on first boot.
@@ -90,14 +95,58 @@ Tear down with `docker compose --profile app down`.
 > the blueprint uses it. If you move to a host without that block, 587 is equally fine (the sender uses
 > `SecureSocketOptions.Auto`). A paid Render instance lifts the block too.
 
-## 3. Stripe (test mode) — REQUIRED
+## 3. Stripe (test mode) — REQUIRED ONLY IF YOU SELL SOMETHING
 
-The billing provider is **fail-closed**: in any non-Development environment the app **refuses to boot**
-without `Billing__Stripe__SecretKey` (the in-memory fake provider trusts an unsigned webhook and must
-never run in Production — GAP-1). For staging, use a **test-mode** secret key (`sk_test_…`) from the
-Stripe dashboard. You don't need working billing to sign in — this just satisfies the guard. (When you
-later wire real billing, add `Billing__Stripe__WebhookSecret` and point a Stripe webhook at
-`/api/billing/webhook`.)
+**Skip this whole section if you are publishing free.** Leave `Billing__Enabled` unset (its shipped
+default — GATES-1, ADR-027) and the billing surface does not exist: `/api/billing` and the provider
+webhook 404, the client renders no billing link, and every tenant is on the Free plan. No Stripe account
+is needed to deploy, and nothing in the app offers anyone an upgrade.
+
+With `Billing__Enabled=true` the provider is **fail-closed**: in any non-Development environment the app
+**refuses to boot** without `Billing__Stripe__SecretKey` (the in-memory fake provider trusts an unsigned
+webhook and must never back a reachable billing surface in Production — GAP-1). For staging, use a
+**test-mode** secret key (`sk_test_…`) from the Stripe dashboard. You don't need working billing to sign
+in — this just satisfies the guard.
+
+**Wiring real billing (still test mode) — the three ids, where each one hides:**
+
+1. **Price id** (`price_…`) → `Billing__Stripe__Prices__<plan>` (one per paid plan, e.g. `…__pro`).
+   In the dashboard (Test mode / your sandbox): **Billing → Product catalog** (in some layouts it is
+   under **More**; the search box finds "Product catalog" in any layout) → **+ Add product** → name
+   the plan, choose **Recurring** + the interval + the amount → save → in the product's **Pricing**
+   section, the price row's **⋯** menu → **Copy price ID**. Three look-alikes are NOT it: the
+   **`prod_…` product id** at the top of the page (a product can carry several prices — checkout needs
+   the one to charge), the price's **lookup key** (Stripe pre-fills it with two random words such as
+   `playful-rhythm`, and sending it yields `No such price: 'playful-rhythm'` with
+   `param: line_items[0][price]` in the request log), and the price **nickname**.
+2. **Webhook signing secret** (`whsec_…`) → `Billing__Stripe__WebhookSecret`. **Developers → Webhooks →
+   + Add endpoint**, URL `https://<your-host>/api/billing/webhook`, events **`customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`** (the handler reconciles subscription
+   objects; checkout and invoice events are ignored). The endpoint page shows every delivery with the
+   status code the app answered — your first place to look when a plan does not flip.
+3. **Secret key** (`sk_test_…`) → `Billing__Stripe__SecretKey` — already set by step §3 above. All three
+   must come from the **same** sandbox/account; a sandbox has its own keys, catalog and webhooks.
+
+Then rehearse: **Billing → Upgrade** lands on Stripe's hosted checkout; pay with test card
+`4242 4242 4242 4242` (any future expiry, any CVC) → the subscription event arrives → the Billing page
+shows the paid plan, active, with the portal button, and the owner gets the in-app + email "Subscription
+active" notice (the cancel / past-due notices are its mirror). For a payment **receipt** as well, turn on
+**Settings → Business → Customer emails → Successful payments** in Stripe — the app never sends
+receipts, Stripe does. `4000 0000 0000 0341` attaches but fails to charge
+(→ past due); the portal's cancel drops the plan back. A renewal months out needs a Stripe **test clock**,
+and a customer joins a clock only at creation — Checkout creates the customer itself, so rehearsing
+renewals means creating the customer under a clock first (not built in).
+
+Optionally set **`Billing__Stripe__ExpectLiveKey`** to fail closed on a key/mode mismatch (v3 DEP-10):
+`false` on staging (refuses to boot with an `sk_live_…` key that could make real charges), `true` on
+production (refuses to boot in test mode with an `sk_test_…` key). Unset skips the check.
+
+> **Security + cache headers (v3 DEP-2/DEP-3).** When `Hosting__ServeWebClient=true` (the deployed
+> single-origin container), the API adds `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` +
+> `Content-Security-Policy: frame-ancestors 'none'`, and `Referrer-Policy: strict-origin-when-cross-origin`
+> to every response, plus **HSTS** outside Development. The SPA shell is served `no-cache` (so a post-deploy
+> Blazor integrity mismatch can't pin a stale shell) and `/_framework` assets `immutable`. A fuller
+> resource CSP (script/style/connect) is deferred — it needs validation against the running Blazor WASM app.
 
 ## 4. Render (host, free)
 
@@ -128,6 +177,24 @@ Per provider:
    platform):
    - Google: `https://<host>/signin-google`
    - Microsoft: `https://<host>/signin-microsoft`
+
+   **The full list each registration must carry** — one Google client and one Microsoft registration per
+   app, and a missing URI is a silent OAuth failure on that host (the provider refuses the redirect, the
+   app never learns why). Local first, then this app's staging. The `http://localhost:5238` rows are the
+   Android emulator's (`adb reverse`, `MOBILE_TESTING.md` §5); `https://localhost:7160` is the API's own
+   HTTPS profile, which the web and desktop flows use.
+
+   | Host | Google (Credentials → OAuth client → Authorized redirect URIs) | Microsoft (App registrations → Authentication → Web → Redirect URIs) |
+   |---|---|---|
+   | local (web/desktop) | `https://localhost:7160/signin-google` | `https://localhost:7160/signin-microsoft` |
+   | local (Android emulator) | `http://localhost:5238/signin-google` | `http://localhost:5238/signin-microsoft` |
+   | staging | `https://template-staging.onrender.com/signin-google` | `https://template-staging.onrender.com/signin-microsoft` |
+
+   A downstream app has its own ports (README → Local ports) and its own staging host — the same three
+   rows with those values; an app that connects provider mailboxes adds its callback
+   (`/api/email/connections/callback`) on each host too. If staging uses a different client id than
+   local, the staging row goes on that client instead. Confirm the list in the console whenever a host
+   or a port changes; nothing in the repo can check it.
 3. Copy the client id + secret into Render: `Authentication__Google__ClientId` / `__ClientSecret` (and/or
    `Authentication__Microsoft__ClientId` / `__ClientSecret`).
 4. Microsoft only: the tenant authority defaults to **`consumers`** (personal accounts). For work/school
@@ -139,7 +206,11 @@ generated redirect URIs match what you register. Render redeploys on the env cha
 
 ## 6. Continuous deployment (DEPLOY-3, optional)
 
-By default you deploy by pushing to the branch Render tracks. To instead gate deploys on **green CI** and
+> **Deploys are manual (ADR-031).** Nothing deploys on a push or a merge: you run the `CI` workflow by hand
+> (Actions → CI → *Run workflow*) with **`deploy` = staging** on `develop` or **`deploy` = prod** on `main`.
+> That run re-runs every web gate on the branch and deploys only if they all pass.
+
+Render can also deploy on every push to the branch it tracks. To instead gate deploys on **green CI** and
 run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.yml`:
 
 1. In Render → your staging service → **Settings → Deploy Hook**, copy the hook URL, and **turn off
@@ -147,42 +218,77 @@ run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.y
 2. Repo → **Settings → Secrets and variables → Actions**:
    - Secret **`RENDER_DEPLOY_HOOK_STAGING`** = the deploy hook URL.
    - Variable **`STAGING_BASE_URL`** = `https://<app>-staging.onrender.com`.
-3. Now a push to `develop` that passes every CI gate triggers the deploy, **waits for the new build to
-   actually be live** (polls `/api/version` until it reports the pushed commit — the old instance keeps
+
+   > **Set them together — the hook without the base URL now FAILS the run** (v3 audit DEP-6). The hook is
+   > what fires the deploy; the base URL is what verifies it. Previously a hook-without-URL deployed for
+   > real and reported green having asserted nothing. Configure both, or neither.
+3. Now a *Run workflow* on `develop` with `deploy` = staging runs every web gate, triggers the deploy, **waits
+   for the new build to actually be live** (polls `/api/version` until it reports the pushed commit — the old instance keeps
    serving during Render's build), then smoke-tests the live URL (liveness/readiness, SPA shell +
    deep-link, `/api/*` → 404, `/api/auth/providers`). A red smoke fails the run. Until the secret +
-   variable exist, the `deploy-staging` job logs a notice and passes.
-4. **Prod** (when you have a prod service): create a **`production`** GitHub Environment (repo Settings →
-   Environments) with a **required reviewer**, and add secret **`RENDER_DEPLOY_HOOK_PROD`**. A push to
-   `main` then waits for your approval before deploying — keeping `main` deploy-only and deliberate.
+   variable exist, the `deploy-staging` job logs a notice and passes. **Two deploy runs in quick succession:**
+   Render builds the branch head, so the first one may never appear at `/api/version`; the smoke then
+   accepts a live commit that *contains* the expected one (GitHub compare API, `GH_TOKEN` is the
+   workflow token) and verifies that build instead — no spurious red, no unverified deploy.
+4. **Prod** (when you have a prod service) — a *Run workflow* on `main` with `deploy` = prod, behind every web
+   gate. Choosing it is the approval: a private repo on GitHub Free has no Environment reviewers (ADR-031),
+   and nothing deploys prod on a push (v3 audit DEP-7).
+   - Secret **`RENDER_DEPLOY_HOOK_PROD`** = the prod deploy hook URL.
+   - Variable **`PROD_BASE_URL`** = the prod service URL. Same pairing rule as staging: hook without base
+     URL fails the run rather than shipping unverified.
+
+   Prod then runs the **same** version-gated smoke as staging (they share
+   `.github/scripts/deploy-smoke.sh`, so the two cannot drift).
+
+   **Rolling back.** A *Run workflow* can only deploy the **tip** of the branch you pick — there is no "deploy
+   this older commit". Two ways back (v4 audit DEP-16): `git revert` the offending merge on `develop` (or
+   `main`) and run the deploy again, which keeps the smoke in the loop; or, faster and smoke-less, Render →
+   the service → *Events* → **Redeploy** on the previous build, then check `/api/version` yourself.
 5. **Postman workspace mirror** (optional, same graceful-skip pattern): secret **`POSTMAN_API_KEY`**
    (Postman → Settings → API keys) + variable **`POSTMAN_WORKSPACE_ID`** let the `postman-sync`
-   workflow push `docs/postman/**` to the Postman workspace on every `develop` change — see
-   `docs/postman/README.md`.
+   workflow push `docs/postman/**` to the Postman workspace whenever GitHub's `develop` moves, i.e. on
+   every merge (ADR-030) — see `docs/postman/README.md`.
 
 ---
 
 ## Environment variables (reference)
+
+**Where to put them, and what a change costs.** Anything with a `value:` in `render.yaml` is declared
+by the blueprint: edit it there and redeploy, because a blueprint sync can overwrite the same key typed
+into the dashboard. Anything marked `sync: false`, or absent from the file entirely, is dashboard-only
+and is left alone by a sync — that is where secrets live, and it is the right place for the signup
+green list if you would rather not commit people's addresses. Saving an environment change in the
+dashboard **restarts the service**, which is all that is needed: every gate and guard in this table is
+read at startup, so there is no cache to clear and no deploy to trigger.
+
+**Indexed keys** (`Signup__AllowedEmails__0`, `Admin__StaffEmails__0`, `Proxy__KnownNetworks__0`) are
+arrays. Number them from zero and keep them contiguous — one address per key, not a comma-separated
+list in `__0`.
 
 | Key | Required | Notes |
 |---|---|---|
 | `ASPNETCORE_ENVIRONMENT` | yes | `Production` (set by `render.yaml`) |
 | `ConnectionStrings__DefaultConnection` | yes | Neon **direct** endpoint, `SSL Mode=Require` |
 | `Jwt__Secret` | yes | ≥32 chars; Render auto-generates |
-| `Billing__Stripe__SecretKey` | **yes** | fail-closed guard; a `sk_test_…` key for staging |
+| `Billing__Enabled` | optional | default **off** — off means no `/api/billing` routes at all and everyone is Free (GATES-1) |
+| `Billing__Stripe__SecretKey` | **if billing is on** | fail-closed guard; a `sk_test_…` key for staging. Not needed while the gate is off |
 | `Email__Smtp__Host/Port/Username/Password` | yes | Brevo |
 | `Email__Smtp__FromAddress` | yes | a Brevo-**verified** sender; sends fail without it |
 | `Email__Smtp__FromName` | no | display name on outgoing mail |
 | `Auth__AppBaseUrl` | yes | the public URL — used to build email links |
 | `Hosting__ServeWebClient` | yes | `true` (baked into the image; keep set) |
-| `Proxy__Enabled` | behind a proxy | `true` on Render — honor `X-Forwarded-*` |
+| `Proxy__Enabled` | behind a proxy | `true` on Render — honor `X-Forwarded-*`. **Assumes the proxy is the sole ingress** — see §8 |
+| `Proxy__KnownNetworks__0…` | if directly reachable | CIDRs; honor `X-Forwarded-*` only from a peer inside them (§8) |
+| `Proxy__ForwardLimit` | rarely | proxy hops to trust, from the right (default `1`) (§8) |
 | `PORT` | platform-set | Render provides it; image defaults to 8080 |
 | `Auth__AllowedOrigins` | no | leave empty — single-origin needs no CORS |
 | `Authentication__Google/Microsoft__*` | optional | enable OAuth |
 | `PublicApi__Enabled`, `Webhooks__Enabled` | optional | default off |
+| `Signup__AllowedEmails__0…`, `Signup__AllowedDomains__0…` | optional | the signup green list (GATES-2). Both empty ⇒ open. Non-empty ⇒ only these may create an account, plus anyone invited into a household whose **owner** is listed |
 | `Admin__StaffEmails__0…` | optional | platform-staff allowlist |
 | `ConnectionStrings__Migrations` | prod (two-role RLS) | owner/migrator connection — startup migrations do DDL (§7) |
 | `Rls__EnforceRuntimeRole` | prod (two-role RLS) | `true` — fail-closed startup check that RLS actually applies (§7) |
+| `OpenTelemetry__Otlp__Endpoint` | optional | collector **base** URL; empty ⇒ nothing exported. Grafana Cloud: `https://otlp-gateway-<region>.grafana.net/otlp` plus the SDK's `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` and `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64 instanceId:token>` — the app appends `/v1/traces` / `/v1/metrics` / `/v1/logs` itself; **logs are exported too** (message + tenant/user scope + trace id), and the metrics include the .NET runtime (memory, GC, CPU, thread pool) and the Npgsql connection pool, so an error line and its trace sit side by side in Grafana — the host's own log stream (Render → Logs) keeps the console copy; what leaves the host: §11 |
 
 This table is the deploy-oriented subset (what to set to go live). For the **complete list of every
 configurable key and its default** — plus what's compiled-in and *not* configurable — see the
@@ -204,12 +310,25 @@ role the app connects as** — Postgres exempts superusers/`BYPASSRLS` roles ent
 - **Local dev** — the compose `dev` user is a superuser: RLS is present but bypassed, on purpose
   (zero-friction inner loop). The integration suite ALWAYS runs RLS-enforced via its own runtime
   role; to run the app enforced locally, see the optional block in `.env.example`.
-- **Staging (Neon, single role)** — the Neon owner is *not* a superuser, and `FORCE` subjects
-  owners to policies: **RLS is live on staging with no config change.** Migrations still work
-  (owner does DDL).
+- **Staging (Neon) — the two-role setup is REQUIRED, not optional.** ⚠️ A previous version of this
+  runbook said single-role staging enforces RLS because the Neon owner is not a superuser. That is
+  **wrong**: `rolsuper` is indeed false, but Neon grants `neondb_owner` membership in
+  **`neon_superuser`, which carries `BYPASSRLS`** — and `BYPASSRLS` exempts a role from every policy,
+  `FORCE`d ones included. Connecting as the owner therefore runs with the tenancy backstop **silently
+  off**. Verify on any Neon project with:
+  `SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolcanlogin;`
+  Run step 1 below on staging as well as production. `Rls__EnforceRuntimeRole=true` catches the
+  mistake — it refuses to boot on an owner connection — so a staging service that won't start with
+  that flag set is the guard working, not a bug. (Found 2026-09-09: two downstream apps, one
+  correctly two-role, one not.)
 - **Prod (two roles — activate with production, `STATUS.md` §5):**
   1. `psql` into the database **as the owner** and run
      `docker/db/provision-rls-runtime-role.sql` — **change the password literal first**.
+     ⚠️ **On Neon, create this role with that SQL — never through the Neon console or API.** Roles
+     created that way are granted `neon_superuser` and inherit `BYPASSRLS`, producing a runtime role
+     that boots happily and enforces nothing. After provisioning, confirm
+     `rolbypassrls = false` for `app_runtime`; the owner also needs `GRANT app_runtime TO <owner>`
+     for `ALTER DEFAULT PRIVILEGES` to keep covering tables that later migrations create.
   2. Set `ConnectionStrings__DefaultConnection` to the `app_runtime` connection (same host/db,
      `Username=app_runtime;Password=<yours>;SSL Mode=Require`).
   3. Set `ConnectionStrings__Migrations` to the owner connection (startup migrations bootstrap
@@ -223,6 +342,164 @@ Adding a new `ITenantScoped` entity? Ship its policy in the same migration
 
 ---
 
+## 8. The proxy trust model — sole ingress (v3 audit DEP-1/ADM-10)
+
+`Proxy__Enabled=true` tells the app to believe `X-Forwarded-For` / `X-Forwarded-Proto`. That matters
+because the **real client IP drives the per-IP passwordless rate limiter** (and, through it, the MFA
+attempt cap) and the `https` scheme drives OAuth redirect URIs.
+
+**The assumption:** with no `Proxy__KnownNetworks` set, the app trusts **any** peer's `X-Forwarded-For`.
+This is deliberate. A managed proxy fronts the app from an unknown, rotating IP, so the framework default
+(trust loopback only) would ignore its headers entirely. It is safe **only because the proxy is the app's
+only route in** — on Render the container's port isn't publicly reachable, so the only way to reach the
+app is through the proxy, which *overwrites* the header with the true client IP.
+
+**When that assumption breaks:** if the app is *also* reachable directly (a VM with an open port, a
+cluster without an ingress-only policy, a port-forward), any client can send `X-Forwarded-For: 1.2.3.4`
+and become whoever it likes — defeating the per-IP rate limiter and the brute-force protections built on
+it. **Enabling this on a directly-reachable deployment is the failure mode to avoid.**
+
+**Narrow the trust when you can't guarantee sole ingress:**
+
+```bash
+Proxy__Enabled=true
+Proxy__KnownNetworks__0=10.0.0.0/8        # only honor X-Forwarded-* from peers in these ranges
+Proxy__KnownNetworks__1=192.168.0.0/16    # repeat __2, __3… as needed
+Proxy__ForwardLimit=1                     # hops to walk back (default 1); raise only for real chains
+```
+
+With `KnownNetworks` set, a request arriving from outside those ranges keeps its **real** peer IP and its
+forged header is ignored. `ForwardLimit=1` means only the entry the nearest proxy appended is trusted, so
+a client pre-seeding its own `X-Forwarded-For` can't reach past it — raise it only to the actual number of
+proxies in front of the app.
+
+Both fail closed: an unparseable CIDR or a `ForwardLimit` below 1 **stops startup** rather than quietly
+widening trust. Leave `Proxy__Enabled=false` (the default) whenever there's no proxy at all.
+
+---
+
+## 9. Native clients — an installable build pointed at a host
+
+The MAUI shells (Android, Windows; iOS/macCatalyst on a Mac) are the same app as the web client, so
+"installing the app on my phone against staging" is a **build**, not a deploy: a Release build compiles
+the API base URL in (`-p:ApiBaseUrl`, refused when missing — v3 NAT-3), so one build = one host. Debug
+builds keep the localhost base and are for development only.
+
+**Use the script.** Every sideloading failure below is silent — the phone shows nothing, or "app not
+installed", and none of them says why. `tools/publish-native.ps1` exists so there is no choice to get wrong:
+it publishes, picks the signed APK, copies it to `out/<app>.apk` and prints the signature schemes.
+
+```powershell
+pwsh tools/publish-native.ps1 -ApiBaseUrl https://<your-host>            # both platforms
+pwsh tools/publish-native.ps1 -ApiBaseUrl https://<your-host> -Android   # just the phone
+```
+
+Send `out/<app>.apk`. The script **refuses to finish** unless `apksigner` reports `Verified using v2/v3 …
+true` (v4 T50): it finds the SDK through `ANDROID_HOME`/`ANDROID_SDK_ROOT`, then Visual Studio's install,
+then Android Studio's, and throws when none is there — an unverified APK is never presented as "send THIS".
+
+**The Release guards** live in `src/Maui/ReleaseGuards.targets`, under one condition (`Configuration !=
+Debug`, so `-c Staging` is guarded like `-c Release`): `ApiBaseUrl` must be present, `https://` and an
+**origin only** (no path, query or trailing slash — the OAuth URLs are concatenated onto it); the Android
+build signs through `apksigner` with the store key when the `AndroidSigning*` properties are supplied, else
+the developer's debug keystore found on **this** host (Windows, macOS/Linux and Android Studio locations),
+and it is an **error** when none exists — the old fallback looked only under `%LOCALAPPDATA%`, so a Mac took
+the v1-only route silently. `EnforcementGateTests.ReleaseGuards_*` probes the file without the MAUI
+workloads, and the `native-release-android` CI leg (a device leg: Run workflow → `devices` = android / all, ADR-031)
+publishes a Release APK with a throwaway store key, verifies v2/v3 the way a phone will, and proves a
+Release build without `ApiBaseUrl` fails.
+
+**The four ways a sideload fails without telling you:**
+
+1. **The wrong file.** A publish leaves *two* APKs in `out/android`: `<ApplicationId>.apk` is **unsigned**
+   (no `META-INF/MANIFEST.MF`) and Android drops it on the floor. Only `<ApplicationId>-Signed.apk`
+   installs. The script copies that one out for you.
+2. **A v1-only signature.** Android 11+ refuses it and the installer does nothing — what the old jarsigner
+   fallback produced. A Release build now forces `apksigner` (v2 + v3) with the developer's **debug key**,
+   the same key the IDE's debug installs use, so a sideload upgrades over one.
+3. **The app is running.** Android will not replace a package that is in the foreground. Close it on the
+   phone first.
+4. **A different signing key** (the reverse-upgrade trap). Android only upgrades an app in place when the
+   new build carries the **same** key as the installed one. A store-signed build will not install over a
+   debug-signed sideload, nor a sideload over a store install: uninstall the old one first. What is lost
+   with it is only what lives on the device (the sign-in, the language and theme choice) — the account
+   and its data are on the server, and since v4 T51 nothing is backed up off the device to restore
+   (`allowBackup="false"` + data-extraction rules; `NativeShellGateTests`).
+
+**Raw commands** (the fallback, when you cannot run the script):
+
+```powershell
+dotnet publish src/Maui/<App>.Maui.csproj -f net10.0-android -c Release `
+  -p:ApiBaseUrl=https://<your-host> -p:AndroidPackageFormat=apk -p:AcceptAndroidSDKLicenses=true `
+  -o out/android
+```
+
+Then verify by hand before sending `out/android/<ApplicationId>-Signed.apk`:
+
+```powershell
+& "$env:LOCALAPPDATA\Android\Sdk\build-tools\<newest>\apksigner.bat" verify --verbose out/android/<ApplicationId>-Signed.apk
+```
+
+`apksigner.bat` reads `JAVA_HOME` and dies when it points at a JDK you have since uninstalled — a common
+state after a JDK update, and the reason the check gets skipped. The script drops a stale value and finds a
+JDK itself. For a store build use the real keystore instead — `pwsh tools/publish-native.ps1 … -KeyStore
+<path outside the repo> -KeyAlias <alias>` with the two passwords in `ANDROID_SIGNING_STORE_PASS` and
+`ANDROID_SIGNING_KEY_PASS`; by hand that is `-p:AndroidKeyStore=true -p:AndroidSigningKeyStore=…
+-p:AndroidSigningKeyAlias=… -p:AndroidSigningStorePass=env:ANDROID_SIGNING_STORE_PASS
+-p:AndroidSigningKeyPass=env:ANDROID_SIGNING_KEY_PASS`. The `env:` prefix is read by the Android SDK's
+signing task, so the command line names the variable and never holds the password (a literal would sit in
+the shell history, the process list and any binlog — `NativeShellGateTests` refuses one in docs, scripts
+and workflows). Keep the keystore outside the repo; `.gitignore` covers `*.jks`, `*.keystore`, `*.p12`
+and `*.pfx` as the net under that. Do **not** pass
+`-p:RuntimeIdentifier` for the Android or Windows publish (it drags the android inner build into a Mono
+runtime-pack lookup — NU1102).
+
+**Windows (unpackaged folder)** — no installer, no certificate; the same script does it
+(`-Windows`), or by hand:
+
+```powershell
+dotnet publish src/Maui/<App>.Maui.csproj -f net10.0-windows10.0.19041.0 -c Release `
+  -p:ApiBaseUrl=https://<your-host> -p:WindowsPackageType=None -o out/windows
+```
+
+Run `out/windows/<App>.Maui.exe` from that folder (pin a shortcut). SmartScreen warns once because it is
+unsigned — *More info → Run anyway*. An MSIX for the Store needs a signing certificate; not covered here.
+
+**On the host:** native OAuth (Google / Microsoft sign-in from the phone) returns to the app through the
+custom URL scheme, which the API only honours when `Auth__Native__CallbackScheme` is set (`vuelto`-style
+lowercase app name). Without it, email-code sign-in still works and OAuth is refused on the way back.
+Desktop uses a localhost loopback instead and needs nothing.
+
+**iOS / macCatalyst** need a Mac, an Apple developer identity and provisioning — out of scope for this guide.
+
+## 10. Forgejo — retired
+
+From 2026-09-16 to 2026-10-02 a self-hosted Forgejo was the primary forge and ran this pipeline on the
+maintainer's machines (LOCALCI-4, ADR-028). GitHub is the only forge again (ADR-030), and `.forgejo/` was
+removed with the CI rebuild (ADR-031). The runbook that lived here is in the git history of this file.
+
+## 11. Observability — what leaves the host (v4 audit OBS-1, decision #7)
+
+When `OpenTelemetry__Otlp__Endpoint` is set (staging: Grafana Cloud), the app exports logs, traces and metrics
+over OTLP to that collector, a **third-party processor** of whatever it receives.
+
+- **What leaves:** log messages and their fields (user and household ids, provider names, status codes), request
+  traces (routes, timings, status) and runtime metrics.
+- **What never leaves:** email addresses (held by `EnforcementGateTests.LogTemplates_NeverCarryAnEmailAddress`:
+  logs name the user by `{UserId}`), tokens and card data.
+- **Retention:** whatever the collector's plan keeps; the app sets none.
+- **When the collector can't be reached** (down, misaddressed, firewalled): the SDK drops every span, metric and
+  log line silently, with bounded memory, and startup never fails because of it. The app logs **one Warning**
+  (`Telemetry collector … cannot be reached`) at startup and on every change of state (re-checked every 15 min,
+  TCP reachability only — a TLS or auth refusal needs the collector's side), and an Information line when it is
+  back. Nothing is buffered for later: what was produced meanwhile is gone (v4 T42).
+- **Protocol:** `OTEL_EXPORTER_OTLP_PROTOCOL` is read from configuration like any other key (`.env`, user-secrets
+  or the environment) and applied to the exporter by the app itself, so the per-signal paths and the wire protocol
+  can't disagree.
+- **Production:** a deploy that exports to Grafana (or any collector outside your own infrastructure) must list it
+  as a data processor in the privacy policy. Leave the endpoint empty and nothing is exported; the host's own log
+  stream (Render → Logs) still has the console copy.
+
 ## Prod, later
 
 When a downstream app has real users, repeat §1–§5 as a second Render service fed from `main` (an
@@ -230,4 +507,5 @@ always-on plan), with **live** Stripe keys, the **two-role RLS setup (§7 — re
 prod-activation checklist)**, a verified email sender domain (DKIM), and — optionally — a
 custom domain (~$10/yr, the first worthwhile paid upgrade: nicer URLs + deliverability). Rehearse risky
 migrations against a **Neon branch** (a free copy-of-prod DB) before promoting. The `main`→prod deploy is
-gated behind a manual approval (DEPLOY-3).
+gated behind a manual approval **only once you add the required reviewer to the `production` Environment**
+— that gate is repo settings, not code, so it does not come with the clone. See §6.4.

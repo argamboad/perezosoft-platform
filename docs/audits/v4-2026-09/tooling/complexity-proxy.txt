@@ -1,0 +1,28 @@
+top 25 files by decision-point proxy (cx, loc, path)
+  131    882 src\Shared.Ui\Auth\AuthService.cs
+   70    544 src\Shared.Ui\Pages\Household.razor
+   64    483 src\Shared.Ui\Pages\Login.razor
+   54    476 src\Shared.Ui\Pages\AdminConsole.razor
+   52    394 src\Api\Controllers\AdminController.cs
+   47    381 src\Api\Controllers\AuthController.cs
+   41    255 src\Shared.Ui\Components\NotificationBell.razor
+   40    285 src\Api\Services\TenantInvitationService.cs
+   39    253 src\Shared.Ui\Layout\MainLayout.razor
+   38    253 src\Api\Services\MfaService.cs
+   37    261 src\Shared.Ui\Pages\Billing.razor
+   35    369 src\Api\Program.cs
+   33    277 src\Shared.Ui\Pages\Settings.razor
+   32    254 src\Shared.Ui\Components\MfaCard.razor
+   25    237 src\Infrastructure\Persistence\RlsSessionInterceptor.cs
+   25    183 src\Api\Controllers\AccountController.cs
+   24     64 src\Infrastructure\Http\OutboundUrlGuard.cs
+   23    239 src\Infrastructure\ServiceCollectionExtensions.cs
+   21    233 src\Api\Services\WebhookService.cs
+   20    257 src\Api\Services\TenantService.cs
+   19    270 src\Api\Services\UserService.cs
+   19    153 src\Api\Controllers\NativeAuthController.cs
+   18    184 src\Maui\MauiProgram.cs
+   18    136 src\Shared.Ui\Pages\Join.razor
+   18    131 src\Api\Services\JwtTokenService.cs
+
+duplicated 6-line windows across files: 0

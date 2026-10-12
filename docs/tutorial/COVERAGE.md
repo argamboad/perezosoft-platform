@@ -10,19 +10,24 @@
 
 *(no repo files — narrative/capstone lesson)*
 
-## 0.2 — A reproducible machine (5 files)
+## 0.2 — A reproducible machine (8 files)
 
 - `.env.example` — documented env contract (ADR-001); grows every config lesson
 - `.gitattributes`
 - `.gitignore`
 - `.gitleaks.toml` — secret-scanning gate — part of 'secrets never in the repo'
 - `docker-compose.yml` — Postgres 17 + Mailpit; grows in 2.3/8.2
+- `local-ports.props` — the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)
+- `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
+- `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (14 files)
+## 1.1 — Solution, projects & supply chain (17 files)
 
-- `Directory.Build.props` — warnings-as-errors etc.
+- `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
+- `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
 - `Directory.Packages.props` — Central Package Management (R25/R27)
 - `Perezosoft.slnx`
+- `global.json` — single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
 - `src/Api/Properties/launchSettings.json`
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
@@ -34,6 +39,7 @@
 - `tests/Api.Tests/Perezosoft.Api.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/E2E.Tests/Perezosoft.E2E.Tests.csproj` — created here; PackageReferences added as lessons need them
+- `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
 
 ## 1.2 — First endpoint, first test (6 files)
 
@@ -44,26 +50,39 @@
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 
-## 1.3 — Database & the test container (8 files)
+## 1.3 — Database & the test container (14 files)
 
 - `src/Api/AppDbContextFactory.cs` — design-time factory for dotnet ef
+- `src/Infrastructure/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
 - `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
+- `tests/Api.Tests/App/AppTestComposition.cs` — the app's half of the test chassis: its contributors and host pins (Arch A1)
 - `tests/Api.Tests/AppDbContextFactoryTests.cs`
+- `tests/Api.Tests/Infrastructure/CapturingLogger.cs` — the one log double the suite shares
+- `tests/Api.Tests/Infrastructure/Concurrently.cs` — the shared concurrency runner (v4 T54, R7)
+- `tests/Api.Tests/Infrastructure/DbFaultInjector.cs` — the database-fault + interleaving seam (v4 T54, R7)
 - `tests/Api.Tests/Infrastructure/PostgresFixture.cs`
 - `tests/Api.Tests/Infrastructure/PostgresTestBase.cs` — model-derived TRUNCATE (R11)
+- `tests/Api.Tests/Infrastructure/Recording.cs` — the recording double: forwards to the real implementation and writes down what was asked (v4 T25, R151)
 - `tests/Api.Tests/Infrastructure/ServiceHarness.cs`
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (7 files)
+## 1.4 — Configuration & the options pattern (14 files)
 
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
 - `src/Api/Configuration/SettingsRegistration.cs` — the one blessed Bind+ValidateOnStart pattern (R22)
+- `src/Api/LocalDotEnv.cs` — the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)
 - `src/Api/appsettings.Development.json` — non-secret config; grows every config lesson
 - `src/Api/appsettings.json` — non-secret config; grows every config lesson
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
+- `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)
+- `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
 - `tests/Api.Tests/DocAndConfigSyncTests.cs` — config keys must exist in .env.example + appsettings (R20)
+- `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)
+- `tests/Api.Tests/LocalDotEnvTests.cs` — opt-out set, single load site, skip + walk-up behaviour
+- `tests/Api.Tests/RulesEnforcement.App.cs` — the app's half of the manifest: per-rule Pending/NotHere overrides (Arch A1)
+- `tests/Api.Tests/RulesEnforcement.cs` — the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)
 
 ## 1.5 — The error envelope (1 files)
 
@@ -75,7 +94,7 @@
 - `.github/pull_request_template.md` — the PR checklist — process as a gate
 - `.github/workflows/ci.yml` — born here (build+test+secret/license gates); every part adds jobs — e2e 3.6, docker 8.2, deploy 8.3, native A.1
 
-## 2.1 — Users & JWT access tokens (21 files)
+## 2.1 — Users & JWT access tokens (23 files)
 
 - `src/Api/Authentication/ClaimsPrincipalExtensions.cs`
 - `src/Api/Configuration/IJwtSettings.cs`
@@ -96,6 +115,8 @@
 - `src/Core/Repositories/IUserRepository.cs`
 - `src/Infrastructure/Persistence/Configurations/UserConfiguration.cs`
 - `src/Infrastructure/Repositories/UserRepository.cs`
+- `tests/Api.Tests/Integration/RefreshReplayTests.cs` — rotated-token replay revokes all sessions (v3 TB-AUTH-1); the 60 s reuse grace window (ADR-002 addendum)
+- `tests/Api.Tests/TokenHasherTests.cs` — hasher hostile-input + fixed-time contract (v3 TB-AUTH-8)
 - `tests/Api.Tests/TokenServiceTests.cs`
 - `tests/Api.Tests/UserServiceTests.cs`
 
@@ -112,7 +133,7 @@
 - `tests/Api.Tests/CookieServiceTests.cs`
 - `tests/Api.Tests/SessionServiceTests.cs`
 
-## 2.3 — Email I — the IEmailSender seam (7 files)
+## 2.3 — Email I — the IEmailSender seam (9 files)
 
 - `src/Core/Abstractions/IEmailSender.cs` — the ONLY way to send email
 - `src/Infrastructure/Email/Assets/logo.png`
@@ -120,9 +141,11 @@
 - `src/Infrastructure/Email/EmailStrings.resx` — localized in 3.5
 - `src/Infrastructure/Email/SmtpEmailSender.cs` — MailKit quarantined here
 - `src/Infrastructure/Email/SmtpSettings.cs`
+- `tests/Api.Tests/Email/SmtpMessageBuilderTests.cs` — MIME shape: CID images + attachment parts (JOBS-4)
 - `tests/Api.Tests/SmtpSettingsTests.cs` — incl. the SMTP-revocation knob (PR #125)
+- `tests/Core.Tests/EmailAttachmentTests.cs` — attachment guard: 7 MiB raw total incl. inline images (10 MiB on the wire), ≤ 20 parts, strict type/subtype, safe base name (JOBS-4, v4 T40)
 
-## 2.4 — Passwordless: magic link + OTP (11 files)
+## 2.4 — Passwordless: magic link + OTP (12 files)
 
 - `src/Api/Services/PasswordlessService.cs` — single-use, hashed, time-limited
 - `src/Api/Services/SingleUseCacheToken.cs` — one-shot handoff token
@@ -131,6 +154,7 @@
 - `src/Infrastructure/Persistence/Configurations/LoginTokenConfiguration.cs`
 - `src/Infrastructure/Repositories/LoginTokenRepository.cs`
 - `tests/Api.Tests/OtpErrorMappingTests.cs`
+- `tests/Api.Tests/PasswordlessConcurrencyTests.cs` — atomic single-use consume + lockout counter (v3 LB-AUTH-2/3)
 - `tests/Api.Tests/PasswordlessServiceTests.cs`
 - `tests/Api.Tests/SingleUseCacheTokenTests.cs`
 - `tests/Core.Tests/Auth/NativeOtpLockoutTests.cs` — OTP resend-proof lockout coverage on the native verify path (landed on develop post-write)
@@ -152,12 +176,19 @@
 - `tests/Api.Tests/Integration/AuthProvidersEndpointTests.cs`
 - `tests/Api.Tests/ProviderEmailTrustTests.cs`
 
-## 2.6 — Tenancy I — the global query filter (reads) (6 files)
+## 2.6 — Tenancy I — the global query filter (reads) (13 files)
 
 - `src/Api/Services/HttpCurrentTenant.cs` — tenant_id claim -> request scope
 - `src/Core/Abstractions/ICurrentTenant.cs`
+- `src/Core/Entities/ISharedOrTenantScoped.cs` — the sibling of ITenantScoped: rows shared (null) or one tenant's — second filter, write rule, four RLS policies (Arch A4)
 - `src/Core/Entities/ITenantScoped.cs` — the marker the filter keys off
+- `tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs` — an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)
+- `tests/Api.Tests/Architecture/TenantHatchGuard.cs` — polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)
+- `tests/Api.Tests/Architecture/TenantHatchGuardTests.cs`
 - `tests/Api.Tests/HttpCurrentTenantTests.cs`
+- `tests/Api.Tests/Infrastructure/TwoTenants.cs` — the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)
+- `tests/Api.Tests/Rls/SharedOrTenantRlsTests.cs` — the four command-scoped policies as the runtime role sees them (Arch A4)
+- `tests/Api.Tests/Tenancy/SharedOrTenantTests.cs` — the shared-or-tenant shape at the EF level, on the TestSharedWidget fixture (Arch A4)
 - `tests/Api.Tests/TenantInvariantTests.cs` — every ITenantScoped entity filtered or allowlisted (R2)
 - `tests/Api.Tests/TenantScopeFilterTests.cs` — the leak-then-fix test
 
@@ -180,9 +211,11 @@
 - `src/Infrastructure/Persistence/Configurations/TenantMembershipConfiguration.cs`
 - `src/Infrastructure/Repositories/TenantRepository.cs`
 
-## 2.9 — Invitations, dissolve & the contributor seam (10 files)
+## 2.9 — Invitations, dissolve & the contributor seam (17 files)
 
+- `src/Api/Configuration/SignupSettings.cs` — GATES-2 green list; empty = open
 - `src/Api/Controllers/HouseholdInvitationsController.cs`
+- `src/Api/Services/SignupGate.cs` — GATES-2: who may FOUND a household, enforced at 2.8's account-creation choke point
 - `src/Api/Services/TenantDissolutionService.cs` — contributor fan-out
 - `src/Api/Services/TenantInvitationService.cs`
 - `src/Core/Abstractions/ITenantDataContributor.cs` — the seam GDPR later extends
@@ -190,6 +223,11 @@
 - `src/Core/Repositories/ITenantInvitationRepository.cs`
 - `src/Infrastructure/Persistence/Configurations/TenantInvitationConfiguration.cs`
 - `src/Infrastructure/Repositories/TenantInvitationRepository.cs`
+- `tests/Api.Tests/Architecture/InvitationValidityGateTests.cs` — one invitation-validity rule on the entity; no expiry comparison outside it, status-only reads are named sites (v4 T34, R127)
+- `tests/Api.Tests/Auth/SignupGateTests.cs` — GATES-2
+- `tests/Api.Tests/Auth/SignupRefusalSurfacingTests.cs` — GATES-2: the refusal on every sign-in path
+- `tests/Api.Tests/Configuration/SignupSettingsTests.cs` — green-list entries normalized at bind: trim, lower-case, strip a leading @, drop blanks (v4 T35, R82)
+- `tests/Api.Tests/Tenancy/AcceptDissolveTests.cs` — the join retires an empty tenant-of-one through the dissolution sequence, never a raw delete (v4 H5, R123)
 - `tests/Api.Tests/WipeDataTests.cs`
 - `tests/Core.Tests/TenantInvitationTests.cs`
 
@@ -201,31 +239,51 @@
 - `src/Infrastructure/Repositories/EfUnitOfWork.cs`
 - `tests/Api.Tests/RepositoryScopingTests.cs`
 
-## 3.2 — Anatomy of a vertical slice (Notes) (10 files)
+## 3.2 — Anatomy of a vertical slice (Notes) (12 files)
 
+- `src/Api/AppComposition.cs` — the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)
 - `src/Api/Configuration/AuthPolicies.cs`
 - `src/Api/Endpoints/FeatureEndpointExtensions.cs` — MapTenantFeatureGroup (R6)
 - `src/Api/Features/Notes/NotesDataContributor.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
 - `src/Api/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
+- `src/Core/Abstractions/IStartupTask.cs` — work that needs the schema, run by Program.cs after Migrate(); registered in AppComposition (Arch A1)
 - `src/Core/Entities/Note.cs`
 - `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
-## 3.3 — Injected clocks & the architecture tests (1 files)
+## 3.3 — Injected clocks & the architecture tests (9 files)
 
+- `src/Api/Endpoints/RouteTableGuard.cs` — boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)
+- `tests/Api.Tests/App/AppAllowlists.cs` — the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)
+- `tests/Api.Tests/Architecture/RoutePrefixInspector.cs` — route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)
+- `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
+- `tests/Api.Tests/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
+- `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
+- `tests/Api.Tests/Architecture/SliceWriteInspector.cs` — which entities a slice writes: the matcher behind the one-writer gate (Arch A8)
+- `tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs` — self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (90 files)
+## 3.4 — The web client & auth UI (133 files)
 
 - `src/Shared.Ui/App.razor`
+- `src/Shared.Ui/Auth/AccessTokenState.cs` — the token in memory and its clock (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Auth/AppClaims.cs`
 - `src/Shared.Ui/Auth/AuthErrorCopy.cs` — server error code -> localized copy key; keeps 2.4's enumeration-safe collapse client-side (landed on develop post-write)
+- `src/Shared.Ui/Auth/AuthProbes.cs` — staff / billing / providers probes (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Auth/AuthService.cs`
+- `src/Shared.Ui/Auth/AuthWireModels.cs` — the JSON shapes the auth client reads (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/BearerRetry.cs` — both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)
+- `src/Shared.Ui/Auth/BearerScopedHandler.cs` — the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)
 - `src/Shared.Ui/Auth/IOAuthInitiator.cs`
 - `src/Shared.Ui/Auth/ISessionStore.cs` — per-platform session seam
+- `src/Shared.Ui/Auth/NativeSignIn.cs` — body-token sign-in and OAuth resume (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/PreferenceShadow.cs` — a just-saved theme/locale the token predates (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/RenewalScheduler.cs` — the keep-alive timer (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/SessionTransport.cs` — the refresh and logout calls per host (split out of AuthService, v4 T57)
+- `src/Shared.Ui/Auth/SignInModels.cs` — SignInStatus / SignInResult (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Components/AppHeader.razor`
 - `src/Shared.Ui/Components/AppHeader.razor.css` — co-located component CSS
 - `src/Shared.Ui/Components/ThemeSwitcher.razor`
@@ -249,8 +307,8 @@
 - `src/Shared.Ui/wwwroot/brand/lockup_light.svg` — placeholder brand assets — replaced in 9.1
 - `src/Shared.Ui/wwwroot/brand/lockup_light_1520.png` — placeholder brand assets — replaced in 9.1
 - `src/Shared.Ui/wwwroot/css/app.css`
+- `src/Shared.Ui/wwwroot/js/bfcache-guard.js` — reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)
 - `src/Shared.Ui/wwwroot/js/theme.js` — THEME-1 pre-paint dark-mode bootstrap (data-bs-theme)
-- `src/Web/Http/AuthHeaderHandler.cs`
 - `src/Web/Http/CookieHandler.cs`
 - `src/Web/Http/CookieSessionStore.cs`
 - `src/Web/Program.cs`
@@ -309,9 +367,42 @@
 - `src/Web/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js`
 - `src/Web/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map`
 - `src/Web/wwwroot/og_image_1200x630.png`
+- `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)
+- `tests/Api.Tests/BfcacheGuardTests.cs` — pins the guard's contract + presence in BOTH hosts' index.html
+- `tests/Api.Tests/JsLogicTests.cs` — runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
+- `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/App/TestHttpHandler.App.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/BearerScopedHandlerTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/BillingGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/HomePageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Infrastructure/ComponentTestBase.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Infrastructure/Fakes.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Infrastructure/TestHttpHandler.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Infrastructure/TestJwt.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/LocaleReloadDeepLinkTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/LocaleReloadLoopGuardTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/NotifyBillingTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Pages/AdminConsoleAndSmallPagesTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Pages/BillingAndHeaderTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Pages/HouseholdPageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Pages/LoginAndJoinPageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/Pages/RemainingControlsTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/PreferenceScopingTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/PreferenceSyncClaimTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/ReconcileMatrixTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/SeatLimitCopyTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/SessionKeepAliveTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/SignupRefusedCopyTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/SwitcherStateTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/js-logic/bfcache-guard.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/load.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/mfa-qr.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/smoke.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
+- `tests/js-logic/theme.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
 
-## 3.5 — Localization (EN/ES) (8 files)
+## 3.5 — Localization (EN/ES) (11 files)
 
 - `src/Infrastructure/Email/EmailStrings.es.resx`
 - `src/Shared.Ui/Components/LanguageSwitcher.razor`
@@ -320,11 +411,19 @@
 - `src/Shared.Ui/Resources/AppStrings.cs`
 - `src/Shared.Ui/Resources/AppStrings.es.resx`
 - `src/Shared.Ui/Resources/AppStrings.resx`
+- `tests/Api.Tests/AccountControllerTests.cs` — PREFS-1/ADR-022: theme+locale preference-endpoint storage rules
+- `tests/Api.Tests/ResourceParityTests.cs` — EN/ES resx key parity, no duplicate or unprefixed keys (2026-07 truth-up; v4 T9)
 - `tests/E2E.Tests/I18nTests.cs`
+- `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (12 files)
+## 3.6 — The E2E harness (Playwright) (19 files)
 
+- `tests/Api.Tests/E2E/BlazorBootTests.cs` — the boot decision driven by a scripted page — the audit's six cases (v4 T55)
+- `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
+- `tests/Api.Tests/TestIdContractTests.cs` — the test-id contract (every data-testid is used, every used id exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)
 - `tests/E2E.Tests/AuthFlowTests.cs`
+- `tests/E2E.Tests/BlazorBoot.cs` — the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)
+- `tests/E2E.Tests/BlazorBootCore.cs` — the boot helper's decision, Playwright-free (v4 T55, R109)
 - `tests/E2E.Tests/E2ETestBase.cs`
 - `tests/E2E.Tests/MagicLinkJourneyTests.cs` — happy + single-use
 - `tests/E2E.Tests/Mailpit.cs` — read OTPs from the fake inbox
@@ -335,23 +434,33 @@
 - `tests/E2E.Tests/Pages/JoinPage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/LoginPage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/SettingsPage.cs` — Page Object Model
+- `tests/E2E.Tests/SessionJourneyTests.cs` — session journeys only a browser can prove: Back after sign-out with the back/forward cache on, keep-alive on Playwright's clock, a theme save during a renewal (v4 T58)
 - `tests/E2E.Tests/playwright.runsettings`
+- `tools/e2e.ps1` — runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)
 
 ## 3.7 — Build your own slice (capstone)
 
 *(no repo files — narrative/capstone lesson)*
 
-## 4.1 — The transactional outbox (9 files)
+## 4.1 — The transactional outbox (17 files)
 
 - `src/Core/Abstractions/IOutbox.cs`
 - `src/Core/Abstractions/IOutboxHandler.cs`
+- `src/Core/Abstractions/OutboxPermanentFailureException.cs` — a failure no retry can change dead-letters at once (v4 H8)
 - `src/Core/Entities/OutboxMessage.cs`
+- `src/Core/Text/SafeTruncation.cs` — rune-safe column truncation — never through an emoji (v4 T38, R96)
 - `src/Infrastructure/Outbox/EfOutbox.cs` — dispatcher + SKIP LOCKED claiming
+- `src/Infrastructure/Outbox/OutboxDataContributor.cs` — dissolve removes the types whose handler declares DissolvesWithItsTenant (v4 H6)
 - `src/Infrastructure/Outbox/OutboxDispatcher.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxOptions.cs` — dispatcher + SKIP LOCKED claiming
 - `src/Infrastructure/Outbox/OutboxProcessor.cs` — dispatcher + SKIP LOCKED claiming
+- `src/Infrastructure/Outbox/OutboxRetentionJob.cs` — deletes finished rows after Outbox:RetentionDays (v4 H7)
+- `src/Infrastructure/Outbox/OutboxUserDataContributor.cs` — account erasure removes mail still queued for the user (v4 H7)
 - `src/Infrastructure/Persistence/Configurations/OutboxMessageConfiguration.cs`
 - `tests/Api.Tests/Outbox/OutboxProcessorTests.cs`
+- `tests/Api.Tests/Outbox/OutboxRetentionTests.cs` — a finished row is a receipt: payload cleared, deleted after RetentionDays; erasure removes queued mail (v4 H7)
+- `tests/Api.Tests/Outbox/OutboxTenancyTests.cs` — a dissolved tenant's mail and webhook rows leave with it; billing.cancel stays (v4 H6)
+- `tests/Core.Tests/SafeTruncationTests.cs` — the truncation never leaves half an emoji (v4 T38)
 
 ## 4.2 — Email II — the outbox decorator (3 files)
 
@@ -376,14 +485,20 @@
 - `tests/Api.Tests/Scheduling/ExpiredTokenCleanupJobTests.cs`
 - `tests/Api.Tests/Scheduling/ScheduledJobsHostTests.cs`
 
-## 4.5 — Observability: logs, traces, health (6 files)
+## 4.5 — Observability: logs, traces, health (12 files)
 
 - `src/Api/Observability/DatabaseHealthCheck.cs`
+- `src/Api/Observability/OtlpCollectorProbe.cs`
+- `src/Api/Observability/OtlpEndpoints.cs`
 - `src/Api/Observability/RequestLoggingScopeMiddleware.cs`
 - `src/Api/Observability/TelemetryExtensions.cs`
 - `tests/Api.Tests/Observability/DatabaseHealthCheckTests.cs`
+- `tests/Api.Tests/Observability/OtlpEndpointsTests.cs`
+- `tests/Api.Tests/Observability/OtlpProtocolAndProbeTests.cs`
 - `tests/Api.Tests/Observability/RequestLoggingScopeMiddlewareTests.cs`
 - `tests/Api.Tests/Observability/TelemetryEnrichmentTests.cs`
+- `tests/Api.Tests/Observability/TelemetryLogsExportTests.cs`
+- `tests/Api.Tests/TelemetryLoggingTests.cs` — HttpClient logs stay at Warning, or every OTLP export logs itself into the next (Local Dev Alignment L3)
 
 ## 4.6 — The append-only audit log (7 files)
 
@@ -395,11 +510,15 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (19 files)
+## 5.1 — Billing abstraction & entitlements (28 files)
 
+- `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
+- `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
 - `src/Api/Controllers/BillingController.cs`
+- `src/Api/Controllers/FeaturesController.cs` — GATES-1: anonymous report of which gates are open, so the client can hide the billing link
 - `src/Api/Endpoints/EntitlementEndpointExtensions.cs` — RequireEntitlement -> 402
 - `src/Api/Models/BillingModels.cs`
+- `src/Api/Services/BillingPostureCheck.cs` — startup Warning when Stripe-managed rows linger with the gate off — resolution is gate-blind (v4 T46)
 - `src/Api/Services/BillingService.cs`
 - `src/Api/Services/EntitlementService.cs`
 - `src/Core/Abstractions/IBillingProvider.cs`
@@ -410,12 +529,17 @@
 - `src/Infrastructure/Persistence/Configurations/SubscriptionConfiguration.cs`
 - `src/Shared.Ui/Pages/Billing.razor` — BILLING-8 billing summary page
 - `tests/Api.Tests/Billing/BillingControllerTests.cs`
+- `tests/Api.Tests/Billing/BillingGateTests.cs` — GATES-1
+- `tests/Api.Tests/Billing/BillingPostureCheckTests.cs` — the posture warning: counts live Stripe-managed rows, silent with the gate on (v4 T46)
 - `tests/Api.Tests/Billing/BillingProviderRegistrationTests.cs`
 - `tests/Api.Tests/Billing/BillingServiceTests.cs`
 - `tests/Api.Tests/Billing/EntitlementServiceTests.cs`
+- `tests/Api.Tests/Billing/PlanCatalogTests.cs` — GATES-1 pins the catalog's fail-closed Free fallback
 - `tests/Api.Tests/Billing/RequireEntitlementFilterTests.cs`
 - `tests/Api.Tests/Billing/SubscriptionTenantIsolationTests.cs`
+- `tests/Api.Tests/Integration/FeaturesEndpointTests.cs` — GATES-1
 - `tests/E2E.Tests/BillingJourneyTests.cs` — fake-provider upgrade loop
+- `tests/E2E.Tests/GateJourneyTests.cs` — GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48
 
 ## 5.2 — Stripe: checkout, webhook, portal (7 files)
 
@@ -427,17 +551,20 @@
 - `tests/Api.Tests/Billing/BillingWebhookHandlerTests.cs`
 - `tests/Api.Tests/Billing/StripeBillingProviderTests.cs`
 
-## 5.3 — Quotas, dunning & billing dissolve (12 files)
+## 5.3 — Quotas, dunning & billing dissolve (15 files)
 
 - `src/Api/Services/BillingDataContributor.cs`
 - `src/Api/Services/BillingNotifier.cs`
 - `src/Api/Services/QuotaService.cs` — atomic under concurrency (R30)
 - `src/Api/Services/SubscriptionLapseSweepJob.cs`
+- `src/Api/Services/UsageCounterDataContributor.cs` — quota rows join dissolve/export (v3 LB-TEN-1)
 - `src/Core/Abstractions/IQuotaService.cs`
 - `src/Core/Entities/UsageCounter.cs`
 - `src/Infrastructure/Billing/BillingCancelOutboxHandler.cs`
 - `src/Infrastructure/Persistence/Configurations/UsageCounterConfiguration.cs`
+- `tests/Api.Tests/Billing/AcceptSeatQuotaTests.cs` — BILLING-9: seat quota re-checked at invitation ACCEPT (402 seat_limit_reached)
 - `tests/Api.Tests/Billing/BillingDissolveTests.cs`
+- `tests/Api.Tests/Billing/CatalogNumbersTests.cs` — catalog numbers are read, never copied: docs that state a seat cap state PlanCatalog's, QA drills count relative to the cap (v4 T47, R88)
 - `tests/Api.Tests/Billing/QuotaServiceTests.cs`
 - `tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs`
 - `tests/E2E.Tests/SeatQuotaJourneyTests.cs` — seat-quota 402 UX
@@ -473,7 +600,7 @@
 - `tests/Api.Tests/Files/LocalDiskFileStorageTests.cs`
 - `tests/Api.Tests/Files/S3FileStorageMinioTests.cs`
 
-## 6.3 — Data protection: signed URLs & secrets at rest (6 files)
+## 6.3 — Data protection: signed URLs & secrets at rest (7 files)
 
 - `src/Api/Controllers/FilesController.cs`
 - `src/Infrastructure/Files/FileDownloadTokenizer.cs` — DataProtection-signed URLs
@@ -481,6 +608,7 @@
 - `src/Shared.Ui/IFileDownloadLauncher.cs` — download seam (NATIVE-3): web same-tab, native share sheet
 - `tests/Api.Tests/Files/FileDownloadTokenizerTests.cs`
 - `tests/Api.Tests/Files/FilesControllerTests.cs`
+- `tests/Api.Tests/Integration/ContributorRegistrationTests.cs` — every declared contributor resolves from the app DI (v3 TB-TEN-11)
 
 ## 6.4 — The SSRF seam (4 files)
 
@@ -489,7 +617,7 @@
 - `tests/Api.Tests/Infrastructure/AllowAllUrlGuard.cs` — test-only bypass
 - `tests/Api.Tests/Webhooks/OutboundUrlGuardTests.cs`
 
-## 6.5 — MFA / TOTP step-up (19 files)
+## 6.5 — MFA / TOTP step-up (22 files)
 
 - `src/Api/Controllers/MfaController.cs`
 - `src/Api/Models/MfaModels.cs`
@@ -497,6 +625,7 @@
 - `src/Api/Services/MfaLoginService.cs`
 - `src/Api/Services/MfaService.cs`
 - `src/Api/Services/MfaUserDataContributor.cs`
+- `src/Api/Services/RecoveryCodeHasher.cs` — HKDF-peppered recovery-code hashing (v3 ADM-4)
 - `src/Core/Entities/MfaRecoveryCode.cs` — hashed, single-use
 - `src/Core/Entities/UserMfa.cs` — secret encrypted at rest
 - `src/Infrastructure/Persistence/Configurations/MfaRecoveryCodeConfiguration.cs`
@@ -504,14 +633,16 @@
 - `src/Shared.Ui/Components/MfaCard.razor`
 - `src/Shared.Ui/Pages/Settings.razor`
 - `src/Shared.Ui/wwwroot/js/mfa-qr.js` — JS interop to render the TOTP QR
+- `tests/Api.Tests/DataProtectionIdentityTests.cs` — DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)
 - `tests/Api.Tests/Integration/MfaStepUpIntegrationTests.cs` — step-up on EVERY sign-in path
 - `tests/Api.Tests/Mfa/MfaChallengeServiceTests.cs`
 - `tests/Api.Tests/Mfa/MfaLoginServiceTests.cs`
 - `tests/Api.Tests/Mfa/MfaServiceTests.cs`
+- `tests/Api.Tests/Mfa/RecoveryCodeHasherTests.cs`
 - `tests/E2E.Tests/MfaJourneyTests.cs`
 - `tests/E2E.Tests/Totp.cs`
 
-## 7.1 — GDPR: export & erasure (7 files)
+## 7.1 — GDPR: export & erasure (8 files)
 
 - `src/Api/Controllers/AccountController.cs`
 - `src/Api/Services/AccountErasureService.cs`
@@ -519,9 +650,10 @@
 - `src/Core/Abstractions/IUserDataContributor.cs` — per-user erasure seam (R12)
 - `tests/Api.Tests/Gdpr/AccountErasureTests.cs`
 - `tests/Api.Tests/Gdpr/TenantExportTests.cs`
+- `tests/Api.Tests/Gdpr/TenantTeardownContributorTests.cs`
 - `tests/E2E.Tests/GdprExportJourneyTests.cs`
 
-## 7.2 — In-app notifications (13 files)
+## 7.2 — In-app notifications (14 files)
 
 - `src/Api/Controllers/NotificationsController.cs`
 - `src/Api/Models/NotificationModels.cs`
@@ -533,57 +665,71 @@
 - `src/Infrastructure/Persistence/Configurations/NotificationPreferenceConfiguration.cs`
 - `src/Shared.Ui/Components/NotificationBell.razor`
 - `src/Shared.Ui/Components/NotificationPrefsCard.razor`
+- `tests/Api.Tests/Integration/NotificationClearScopeTests.cs` — bulk-clear requires an explicit scope (v3 LB-UI-10)
 - `tests/Api.Tests/Notify/NotificationFanOutTests.cs`
 - `tests/Api.Tests/Notify/NotificationServiceTests.cs`
 - `tests/E2E.Tests/NotificationJourneyTests.cs`
 
-## 7.3 — Public API & API keys (9 files)
+## 7.3 — Public API & API keys (10 files)
 
 - `src/Api/Authentication/ApiKeyAuthenticationHandler.cs` — key -> tenant-scoped principal
 - `src/Api/Configuration/PublicApiSettings.cs` — config-gated default-OFF (R21)
 - `src/Api/Configuration/RateLimiting.cs`
 - `src/Api/Endpoints/ApiKeyEndpoints.cs`
+- `src/Api/Services/ApiKeyDataContributor.cs` — hashed keys join dissolve/export (v3 LB-TEN-1)
 - `src/Api/Services/ApiKeyService.cs`
 - `src/Core/Entities/ApiKey.cs` — hash-only storage
 - `src/Infrastructure/Persistence/Configurations/ApiKeyConfiguration.cs`
 - `tests/Api.Tests/PublicApi/ApiKeyServiceTests.cs`
 - `tests/Api.Tests/RateLimitingTests.cs`
 
-## 7.4 — Outbound webhooks (15 files)
+## 7.4 — Outbound webhooks (22 files)
 
 - `src/Api/Configuration/WebhooksSettings.cs`
 - `src/Api/Endpoints/WebhookEndpoints.cs`
+- `src/Api/Services/WebhookDataContributor.cs` — subscriptions + secrets join dissolve/export (v3 LB-TEN-1)
 - `src/Api/Services/WebhookService.cs`
 - `src/Core/Entities/WebhookDelivery.cs`
 - `src/Core/Entities/WebhookSubscription.cs`
 - `src/Core/Webhooks/WebhookSignature.cs` — HMAC signing
 - `src/Infrastructure/Persistence/Configurations/WebhookDeliveryConfiguration.cs`
 - `src/Infrastructure/Persistence/Configurations/WebhookSubscriptionConfiguration.cs`
+- `src/Infrastructure/Webhooks/WebhookFailure.cs` — the delivery log carries a reason code, never exception text (v4 T39, R89)
+- `src/Infrastructure/Webhooks/WebhookHttp.cs` — the webhook transport: no redirects, pinned connect, no proxy (v4 H8)
 - `src/Infrastructure/Webhooks/WebhookOutboxHandler.cs`
 - `src/Infrastructure/Webhooks/WebhookSecretProtector.cs` — encrypted at rest (builds on 6.3)
 - `src/Infrastructure/Webhooks/WebhookSender.cs`
+- `tests/Api.Tests/Architecture/WebhookErrorCodeGateTests.cs` — scan gate: a tenant-visible Error is never assigned from .Message (v4 T39)
+- `tests/Api.Tests/Integration/DbContextFactoryScopeTests.cs` — the handler's failure-row context comes from a scoped IDbContextFactory that resolves inside a scope and is not the scoped context (v4 T42)
 - `tests/Api.Tests/Webhooks/WebhookDeliveryLogTests.cs`
 - `tests/Api.Tests/Webhooks/WebhookDeliveryTests.cs`
+- `tests/Api.Tests/Webhooks/WebhookRedirectAndPinningTests.cs` — no redirects, connection pinned to what the guard accepts, a refusal dead-letters at once (v4 H8)
 - `tests/Api.Tests/Webhooks/WebhookSubscriptionServiceTests.cs`
+- `tests/Api.Tests/Webhooks/WebhookWritePolicyTests.cs` — test-send + replay carry the per-tenant webhook-write throttle on the real route table (v4 T44)
 - `tests/Core.Tests/WebhookSignatureTests.cs`
 
-## 7.5 — Admin back-office & impersonation (10 files)
+## 7.5 — Admin back-office & impersonation (14 files)
 
 - `src/Api/Configuration/PlatformAdminSettings.cs`
 - `src/Api/Controllers/AdminApiControllerBase.cs`
 - `src/Api/Controllers/AdminController.cs` — sanctioned QueryAllTenants + audited EnterTenant
 - `src/Api/Models/AdminModels.cs`
 - `src/Api/Services/AdminBroadcastOutboxHandler.cs` — announce-all -> outbox fan-out to every user
+- `src/Api/Services/HttpCurrentImpersonation.cs`
 - `src/Api/Services/PlatformStaffService.cs`
+- `src/Core/Abstractions/ICurrentImpersonation.cs` — audit rows carry impersonated_by (v3 LB-ADM-1)
 - `src/Shared.Ui/Pages/AdminConsole.razor`
 - `tests/Api.Tests/Admin/AdminControllerTests.cs`
 - `tests/Api.Tests/Admin/PlatformStaffServiceTests.cs`
+- `tests/Api.Tests/Integration/ImpersonationGuardTests.cs` — staff gate rejects impersonation tokens (v3 ADM-2)
+- `tests/Core.Tests/Auth/ImpersonationIdentityTests.cs` — client identity swap raises AuthService.IdentityChanged so the header re-sources on impersonate
 - `tests/E2E.Tests/AnnouncementJourneyTests.cs` — ADMIN-3 announce -> NOTIFY fan-out
 
-## 8.1 — Single-origin hosting (4 files)
+## 8.1 — Single-origin hosting (5 files)
 
 - `src/Api/Configuration/ProxyForwardingExtensions.cs` — config-gated forwarded headers
 - `tests/Api.Tests/Hosting/ProxyForwardingTests.cs`
+- `tests/Api.Tests/Hosting/RouteTableGuardTests.cs`
 - `tests/Api.Tests/Infrastructure/TempWebRoot.cs`
 - `tests/Api.Tests/Integration/SingleOriginHostingTests.cs`
 
@@ -594,33 +740,172 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (3 files)
+## 8.3 — The deploy pipeline & CI gates (125 files)
 
+- `.github/scripts/deploy-smoke.sh`
+- `.github/scripts/qa-runlog-append-only.sh`
 - `.github/workflows/postman-sync.yml`
 - `docs/QA_TEST_PLAN.md` — release readiness: manual QA plan beside the automated gates
+- `tests/Api.Tests/CiWorkflowTests.cs` — the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)
+- `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
+- `tests/Api.Tests/PostmanParityDescriptionTests.cs` — each request's description names the error codes its action returns, the signup refusal and the billing gate key (v4 T63, R83/R119)
+- `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/build-props/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/build-props/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/build-props/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/docs-only/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/docs-only/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/docs-only/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/e2e-readme-is-code-not-native/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/e2e-readme-is-code-not-native/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/e2e-readme-is-code-not-native/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling-with-code/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling-with-code/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling-with-code/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/editor-tooling/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/fail-open-base-gone/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/fail-open-base-gone/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/fail-open-no-base/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/fail-open-no-base/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/readme-any-case/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/readme-any-case/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/readme-any-case/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/shared-ui-is-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/shared-ui-is-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/shared-ui-is-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/solution-file/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/solution-file/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/solution-file/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/workflow-script/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/workflow-script/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/workflow-script/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-parameterised-journey-is-named/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-parameterised-journey-is-named/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-parameterised-journey-is-named/files/list.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-parameterised-journey-is-named/files/tests/E2E.Tests/NativeSmokeTests.cs` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/files/list.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/a-prefix-name-selects-only-itself/files/tests/E2E.Tests/NativeSmokeTests.cs` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/files/list.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/files/tests/E2E.Tests/Placeholder.cs` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-1/files/tests/E2E.Tests/journey-seconds.tsv` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/files/list.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/files/tests/E2E.Tests/Placeholder.cs` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/dealt-by-measured-time-shard-3/files/tests/E2E.Tests/journey-seconds.tsv` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/nothing-listed-says-so/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/nothing-listed-says-so/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/nothing-listed-says-so/files/list.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/nothing-listed-says-so/files/tests/E2E.Tests/NativeSmokeTests.cs` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/the-longer-name-runs-in-its-own-shard/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/the-longer-name-runs-in-its-own-shard/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/the-longer-name-runs-in-its-own-shard/files/list.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/the-longer-name-runs-in-its-own-shard/files/tests/E2E.Tests/NativeSmokeTests.cs` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/too-few-listed/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/too-few-listed/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/too-few-listed/files/list.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/e2e-shard/too-few-listed/files/tests/E2E.Tests/NativeSmokeTests.cs` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/args` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/executed-row-rewritten/args` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/executed-row-rewritten/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/no-executed-rows/args` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/no-executed-rows/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/no-sheet/args` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/no-sheet/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/row-appended/args` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-append-only/row-appended/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/plan-absent-at-base/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/plan-absent-at-base/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/pr-base-unfetchable/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/pr-base-unfetchable/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/push-base-unknown/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/push-base-unknown/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-intact/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-intact/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-all-devices/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-all-devices/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-android-only/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-android-only/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-apple-only/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-apple-only/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-deploy-runs-every-web-gate/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-deploy-runs-every-web-gate/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-nothing-chosen/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/dispatch-nothing-chosen/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/pr-docs-only/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/pr-docs-only/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/pr-never-runs-devices/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/pr-never-runs-devices/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/pr-with-code/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/run-plan/pr-with-code/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-at-budget/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-at-budget/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-over-budget/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retries-over-budget/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retry-counted-once/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/boot-retry-counted-once/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/no-trx/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/trx-without-results/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/slowest-journeys/trx-without-results/files/e2e-results/e2e.trx` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/run.sh` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/stubs/curl` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/stubs/dotnet` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/stubs/git` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/targets` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 
-## 8.4 — The RLS tenancy backstop (9 files)
+## 8.4 — The RLS tenancy backstop (16 files)
 
 - `docker/db/provision-rls-runtime-role.sql` — non-BYPASSRLS runtime role — mirrors prod (Neon) provisioning
 - `src/Infrastructure/Persistence/RlsDdl.cs` — policy DDL — source of the RlsMigrationGateTests parity gate
 - `src/Infrastructure/Persistence/RlsPostureGuard.cs` — gates prod activation (ADR-020)
 - `src/Infrastructure/Persistence/RlsSessionInterceptor.cs` — sets the tenant GUC per connection
 - `src/Infrastructure/Persistence/RlsTags.cs`
+- `tests/Api.Tests/Architecture/CrossTenantWriteGuard.cs` — EnterTenant required on set-based cross-tenant writes — tags don't render for ExecuteUpdate (v3/T7)
+- `tests/Api.Tests/Architecture/CrossTenantWriteGuardTests.cs`
+- `tests/Api.Tests/Rls/CrossTenantTagSiteTests.cs` — backstop + migration-parity + posture-guard tests
+- `tests/Api.Tests/Rls/DissolveUnderForeignTenantTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsBackstopTests.cs` — backstop + migration-parity + posture-guard tests
+- `tests/Api.Tests/Rls/RlsMigrationGateBitesTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsMigrationGateTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsPostureGuardTests.cs` — backstop + migration-parity + posture-guard tests
+- `tests/Api.Tests/Rls/RlsSchemaProbe.cs` — backstop + migration-parity + posture-guard tests
+- `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTestSetup.cs` — backstop + migration-parity + posture-guard tests
 
-## 9.1 — Make it yours (rebrand & de-sample) (5 files)
+## 9.1 — Make it yours (rebrand & de-sample) (15 files)
 
 - `docs/brand/android_adaptive_foreground_432.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/app_store_icon_1024.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
+- `docs/brand/build_assets.py` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/linkedin_banner_1128x191.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
+- `platform-ownership.json` — which files are the platform's, which an app adapts, which are the app's (Arch A2)
+- `platform-schema.json` — the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
+- `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
+- `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
+- `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
+- `tests/Api.Tests/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
+- `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
+- `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
+- `tools/port-platform.ps1` — ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)
 
-## A.1 — Appendix — MAUI shells & parity (33 files)
+## A.1 — Appendix — MAUI shells & parity (43 files)
 
 - `src/Maui/App.xaml`
 - `src/Maui/App.xaml.cs`
@@ -628,11 +913,14 @@
 - `src/Maui/MainPage.xaml.cs`
 - `src/Maui/MauiProgram.cs`
 - `src/Maui/Platforms/Android/AndroidManifest.xml`
+- `src/Maui/Platforms/Android/AndroidSystemBarTheme.cs`
 - `src/Maui/Platforms/Android/MainActivity.cs`
 - `src/Maui/Platforms/Android/MainApplication.cs`
 - `src/Maui/Platforms/Android/Resources/values/colors.xml`
+- `src/Maui/Platforms/Android/Resources/xml/data_extraction_rules.xml`
 - `src/Maui/Platforms/Android/Resources/xml/network_security_config.xml`
 - `src/Maui/Platforms/Android/WebAuthenticatorCallbackActivity.cs`
+- `src/Maui/Platforms/Android/network_security_config_release.xml`
 - `src/Maui/Platforms/MacCatalyst/AppDelegate.cs`
 - `src/Maui/Platforms/MacCatalyst/Entitlements.Debug.plist`
 - `src/Maui/Platforms/MacCatalyst/Entitlements.plist`
@@ -648,28 +936,40 @@
 - `src/Maui/Platforms/iOS/Resources/PrivacyInfo.xcprivacy`
 - `src/Maui/PreferencesCulturePersistence.cs`
 - `src/Maui/Properties/launchSettings.json`
+- `src/Maui/ReleaseGuards.targets`
 - `src/Maui/ShareFileDownloadLauncher.cs`
 - `src/Maui/wwwroot/index.html`
 - `src/Shared.Ui/AppResumeNotifier.cs` — refresh-on-resume seam (NATIVE-4 G2)
+- `src/Shared.Ui/Components/SystemBarThemeSync.razor` — renderless: relays theme.js's applied theme to ISystemBarTheme
+- `src/Shared.Ui/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
+- `tests/Api.Tests/NativeChromeGateTests.cs` — Android bar colours = app.css tokens; top inset applied once
+- `tests/Api.Tests/NativeShellGateTests.cs` — Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)
+- `tests/Api.Tests/ToolsScriptsTests.cs` — the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)
 - `tests/E2E.Tests/NativeSmokeTests.cs` — NATIVE-7 emulator/WebView2 smoke
+- `tests/Ui.Tests/SystemBarThemeSyncTests.cs` — the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)
 - `tests/native-smoke-android/package-lock.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/package.json` — Android playwright-core smoke harness
 - `tests/native-smoke-android/smoke.js` — Android playwright-core smoke harness
 
-## A.2 — Appendix — native auth bridge (10 files)
+## A.2 — Appendix — native auth bridge (15 files)
 
 - `src/Api/Controllers/NativeAuthController.cs`
 - `src/Api/Services/NativeAuthCodeService.cs`
+- `src/Api/Services/NativeAuthUrls.cs` — state CSRF round-trip through login→callback (v3 NAT-9)
 - `src/Api/Services/NativeRedirectPolicy.cs`
 - `src/Maui/Auth/DebugFileSessionStore.cs`
 - `src/Maui/Auth/LoopbackOAuthInitiator.cs`
-- `src/Maui/Auth/NativeAuthHeaderHandler.cs`
+- `src/Maui/Auth/PreferencesOAuthResumeStore.cs`
 - `src/Maui/Auth/SecureStorageSessionStore.cs`
 - `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`
+- `src/Shared.Ui/Auth/IOAuthResumeStore.cs` — OAuth resume-across-process-death seam (NATIVE-12)
+- `src/Shared.Ui/Auth/OAuthResumeResult.cs` — resume outcome handed to Login/Settings (NATIVE-12)
 - `tests/Api.Tests/NativeAuthCodeServiceTests.cs`
+- `tests/Api.Tests/NativeAuthUrlsTests.cs`
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
+- `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (49 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (62 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Core/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -713,6 +1013,18 @@
 - `src/Infrastructure/Persistence/Migrations/20260706222645_RlsTenancyBackstop.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/20260710163540_AddUserTheme.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/20260710163540_AddUserTheme.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260715230641_MfaLockout.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260715230641_MfaLockout.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -720,6 +1032,7 @@
 - `tests/Api.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/Core.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/E2E.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `tests/Ui.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 
 ## [VENDORED] Third-party asset shipped by a template/package — copied, not written (51 files)
 
@@ -775,15 +1088,18 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (117 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (255 files)
 
+- `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
 - `CONTRIBUTING.md` — docs
 - `README.md` — docs
 - `_PLATFORM_PRIMER.md` — docs
+- `docs/ARCHITECTURE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/DATA_MODEL.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/DECISIONS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/FEATURES.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/FLOWS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/LOCALIZATION.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/MOBILE_TESTING.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/NATIVE_PARITY.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -798,6 +1114,7 @@
 - `docs/STATUS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/TECH_STACK.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/WAYS_OF_WORKING.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/AUDIT_SUITE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v1-2026-06/AUDIT_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v1-2026-06/AUDIT_TASKS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v2-2026-07/ADVERSARIAL_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -812,6 +1129,65 @@
 - `docs/audits/v2-2026-07/tooling/packages.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v2-2026-07/tooling/test-run.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/audits/v2-2026-07/tooling/vulnerable.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/ADVERSARIAL_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/AUDIT_RECONCILIATION.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/AUDIT_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/AUDIT_TASKS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/FOUNDATION_RULES.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/IMPLEMENTATION_TRACKER.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/LOGIC_AND_TEST_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/PHASE5_GATE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/RULE_CONFLICTS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/tooling/build-tests.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/tooling/coverage-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/tooling/deprecated-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/tooling/test-run-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/tooling/vulnerable-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v3-2026-07/tooling/web-locked-restore.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/ADVERSARIAL_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_RECONCILIATION.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/AUDIT_TASKS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/FOUNDATION_RULES.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/HIGH_SEVERITY_TRACKER.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/IMPLEMENTATION_TRACKER.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/LOGIC_AND_TEST_REPORT.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/PHASE5_GATE.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/RULE_CONFLICTS.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/auth.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/billing.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/client.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/deploy-ci.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/docs-template.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/jobs-obs.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/native.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase1-raw/step0.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/auth-client.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/billing-jobs.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/ci-native.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_base.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_head_filled.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p10_head_realigned.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p1_push_diagnosis.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p2_already_green.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p2b_already_green.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p3_classifier.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p4_shards.sh` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p5_slowest.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p7_exists.proj` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/probes/p8_stderr_stop.ps1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/phase3-raw/test-completeness.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/build.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/ci-status.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/complexity-proxy.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/coverage-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/deprecated-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/license-scan.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/outdated-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/test-run-summary.txt` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/audits/v4-2026-09/tooling/vulnerable-packages.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/check_qa_artifacts.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/gen_qa_guide.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/gen_qa_runlog.py` — authoring docs; the course TEACHES writing these in 0.1
@@ -819,6 +1195,12 @@
 - `docs/postman/Perezosoft.postman_collection.json` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/postman/Perezosoft.staging.postman_environment.json` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/postman/README.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/qa-runs/2026-08-run-log.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/qa-runs/helpers/adv.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/qa-runs/helpers/getlinks.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/qa-runs/helpers/mfa.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/qa-runs/helpers/mint_jwt.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/requirements.txt` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/_EXAMPLE_epic.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/admin.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/apple-signin.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -827,21 +1209,70 @@
 - `docs/stories/deploy.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/e2e.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/files.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/flavors.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/gates.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/gdpr.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/hooks.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/localci.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/mfa.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/native.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/notify.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/observability.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/prefs.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/pubapi.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/rbac.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/test-toolchain.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/stories/theme.md` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/stories/ui.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/CONCEPTS.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/COVERAGE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/FRONTMATTER.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/OUTLINE.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/PEREZOSOFT_COURSE.pdf` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-auth-server.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-auth-server.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-background.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-background.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-billing.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-billing.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-client.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-client.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-notify-hooks.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-notify-hooks.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-onion.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-onion.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-solution-map.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-solution-map.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-tenancy.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/arch-tenancy.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-announce.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-announce.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-billing-webhook.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-billing-webhook.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-dissolve.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-dissolve.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-magic-link.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-magic-link.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-mfa.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-mfa.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-oauth.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-oauth.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-otp.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-otp.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-refresh.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-refresh.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-request.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-request.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-startup.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-startup.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-webhook-delivery.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/flows-webhook-delivery.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/mermaid-410c701968cb.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/mermaid-410c701968cb.sha1` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/mermaid-c5f96cf12c49.png` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/diagrams/mermaid-c5f96cf12c49.sha1` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_coverage.py` — authoring docs; the course TEACHES writing these in 0.1
+- `docs/tutorial/gen_diagrams.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/gen_tutorial_pdf.py` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/0.1-mental-model-and-the-decision-record.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/0.2-a-reproducible-machine.md` — authoring docs; the course TEACHES writing these in 0.1
@@ -894,5 +1325,25 @@
 - `docs/tutorial/lessons/A.1-maui-shells-and-parity.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `tests/E2E.Tests/README.md` — docs
+- `tests/E2E.Tests/journey-seconds.tsv` — CI tuning data: measured seconds per journey so the e2e shards are dealt evenly (Env L28)
+- `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/base.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/head.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/executed-row-rewritten/files/base.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/executed-row-rewritten/files/head.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/no-executed-rows/files/base.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/no-executed-rows/files/head.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/no-sheet/files/base.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/no-sheet/files/head.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/row-appended/files/base.md` — docs
+- `tests/ci-logic/cases/qa-runlog-append-only/row-appended/files/head.md` — docs
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-intact/files/base.md` — docs
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-intact/files/docs/QA_TEST_PLAN.md` — docs
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/files/base.md` — docs
+- `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/files/docs/QA_TEST_PLAN.md` — docs
+- `tests/ci-logic/run.py` — authoring tooling
+- `tools/android-emulator.ps1` — editor tooling: boots an AVD on a fixed port for the VS Code Android profiles
+- `tools/dev-profiles.ps1` — editor tooling: writes the gitignored VS/VS Code start profiles for this clone, not part of the rebuilt app
+- `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
+- `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 728 tracked files · 511 built in lessons · 217 bucketed · 0 unmapped
+**Totals:** 1179 tracked files · 811 built in lessons · 368 bucketed · 0 unmapped

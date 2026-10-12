@@ -1,0 +1,15 @@
+<Project>
+  <!-- P7: Maui.csproj line 132's Exists() with LOCALAPPDATA empty, and the RequireApiBaseUrlInRelease condition with -p:ApiBaseUrl="" / " " -->
+  <PropertyGroup>
+    <KsPath>$(LOCALAPPDATA)\Xamarin\Mono for Android\debug.keystore</KsPath>
+    <KsExists>$([System.IO.File]::Exists('$(KsPath)'))</KsExists>
+    <KsFull>$([System.IO.Path]::GetFullPath('$(KsPath)'))</KsFull>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$(AndroidKeyStore)' == '' And Exists('$(LOCALAPPDATA)\Xamarin\Mono for Android\debug.keystore')">
+    <Fallback>debug-keystore-fallback-ACTIVE</Fallback>
+  </PropertyGroup>
+  <Target Name="Probe">
+    <Message Importance="high" Text="LOCALAPPDATA='$(LOCALAPPDATA)' path='$(KsPath)' resolves-to='$(KsFull)' exists=$(KsExists) fallback='$(Fallback)'" />
+    <Message Importance="high" Text="ApiBaseUrl='$(ApiBaseUrl)' guard-fires(empty-check)=$([System.String]::IsNullOrEmpty('$(ApiBaseUrl)'))" />
+  </Target>
+</Project>

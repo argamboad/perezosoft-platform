@@ -7,6 +7,13 @@
 > The **constant ADRs** below (C-prefixed) are pre-decided across all projects from this platform
 > — keep them. Add **app-specific ADRs** (number them 001, 002, …) as you make decisions during
 > conceptualization.
+>
+> **Diagrams:** the shapes these decisions produced are drawn (from the code) in
+> [`ARCHITECTURE.md`](ARCHITECTURE.md) (component + class diagrams), [`FLOWS.md`](FLOWS.md)
+> (sequence diagrams per call stack), and [`DATA_MODEL.md`](DATA_MODEL.md) (ER + lifecycle
+> diagrams). Key mappings: ADR-002 → FLOWS §3–7; ADR-003/020 → ARCHITECTURE §3 + FLOWS §2;
+> ADR-006 → ARCHITECTURE §6 + FLOWS §8; ADR-007 → ARCHITECTURE §5 + FLOWS §9–10;
+> ADR-011 → FLOWS §11; ADR-012 → FLOWS §6.
 
 ## Constant decisions (carry forward — do not re-debate)
 
@@ -56,6 +63,12 @@ Docs: PROJECT_BRIEF, FEATURES, DATA_MODEL, TECH_STACK, DECISIONS, WAYS_OF_WORKIN
 LOCALIZATION, MOBILE_TESTING, QA_TEST_PLAN, CLAUDE.md, plus per-epic stories under `docs/stories/`.
 User stories generated per-epic at build time, not upfront. *Rationale:* lean, persistent context for solo +
 Claude Code; stories stay grounded in real screens.
+> *Amendment (2026-09-08, first downstream app):* **app decisions carry an app prefix** (`JJ-001…`
+> for JiggerJot) in a closing section of the same `DECISIONS.md`, because `ADR-001+` here are the
+> platform's own build decisions (logged while the platform was built as its own app) and a downstream
+> app's `ADR-001` would collide. Platform decisions stay `ADR-…`/`ADR-C…`; when the two disagree, the
+> platform wins and the app logs a prefixed decision. The intro note above and `NEW_APP_GUIDE.md`
+> Phase 2 say the same.
 
 ---
 
@@ -79,6 +92,14 @@ run simultaneously without conflicts (the API/Web app ports are fixed in their l
 condition: service_healthy`. No pgAdmin in the platform — devs use their own DB client.
 *Rationale:* PostgreSQL is always needed; Mailpit traps passwordless + invitation email in dev with
 zero config; env-var ports prevent port clashes across projects.
+> *Amendment (2026-09-08, first downstream app):* env-driven **compose** ports are not enough when two
+> apps from this platform share a machine. The **app** ports are pinned in the launch profiles and
+> mirrored in ~40 files (dev `appsettings` CORS/`AppBaseUrl`/SMTP port, the Web client's `ApiBaseUrl`,
+> the MAUI fallbacks + `adb reverse`, the E2E and Android-smoke Mailpit defaults, CI's host-side Mailpit
+> mappings, the Postman local environment, the docs), and `APP_PORT` for the prod-like `app` compose
+> service was undocumented. Every downstream app must **re-pin a free set before Phase 4**
+> (`NEW_APP_GUIDE.md` → "Phase 3 → ports"); `APP_PORT` is now in `.env.example`. Single-sourcing the
+> app ports is a backlog item (`PLATFORM_BACKLOG.md` §15).
 
 **ADR-C14 — Testing: 100% TDD; unit tests (xUnit) + E2E (Playwright/NUnit). (2026-06-17)**
 All production code is test-driven (red-green-refactor). Unit tests (xUnit) in `Core.Tests` and
@@ -117,6 +138,10 @@ section nesting, so `Section__Sub` ≡ the `Section:Sub` config key) so they bin
 (committed) documents every key with placeholders. **Production is unchanged** — the same keys
 come from real environment variables, never a committed file. This **supersedes the
 `dotnet user-secrets`** approach noted in ADR-C15.
+*Amendment 2026-09-25 (argamboad/perezosoft-platform#122):* the load goes through `LocalDotEnv.Load()` (Program and the
+EF design-time factory alike), which honours `SKIP_DOTENV=1`. The test assembly sets it before any host starts, so
+a `WebApplicationFactory<Program>` never reads the developer's `.env`: with a real local `.env` the suite had been
+running against the developer's billing and SMTP settings and disagreeing with CI.
 *Rationale:* a single, visible local-config file was the explicit preference; `.env` already
 existed for docker-compose, so the app secrets join it. Trade-off vs user-secrets: secrets now
 sit in the working tree (mitigated by `.gitignore`) rather than the user profile — accepted for
@@ -133,6 +158,152 @@ an unverified-email takeover guard; passwordless magic-link + email OTP via `Pas
 JWT model (ported and hardened) was chosen over more Identity debugging, and it also gives native
 (MAUI) clients clean body-token transport.
 
+*Addendum (2026-09-18) — a 60-second reuse grace window: a rotated-out refresh token replayed that soon,
+while its successor is still live, is a race, not a theft.* **Evidence:** staging logged 15
+"Refresh-token reuse detected … revoked all sessions" warnings for the owner's own account in 4 days,
+often in pairs ~2 s apart; the owner experienced it as "the web keeps forgetting me". Every one was the
+theft response firing on benign traffic, killing every session of the user (web AND native). **The
+benign races:** two browser tabs refreshing at once (both send the same cookie; the second presents a
+token the first just rotated out), and a refresh whose response is lost — tab closed or reloaded
+mid-request, a slow cold start — so the browser still holds the old cookie and presents it again.
+**Decision (the owner chose 60 s):** `RefreshToken` gains `RotatedAt` + `ReplacedByTokenId`, stamped
+**only by rotation** (never by logout, revoke-all or a staff reset). `InspectRefreshTokenAsync` returns
+`RotatedWithinGrace` when the token is revoked AND was rotated AND `now − RotatedAt ≤
+RefreshToken:ReuseGraceSeconds` (default 60; 0 disables it — strict behaviour) AND the successor exists,
+is not revoked and is not expired. The controller then issues a fresh session for the same user and
+provider and **revokes nothing** — not the successor either: both chains stay valid and rotate
+independently, and the unused one simply expires. Anything else revoked stays `Reuse` → revoke all.
+**The live-successor condition is what keeps logout final:** logout and revoke-all revoke the successor,
+so a stale token from another tab can never undo a sign-out, even inside the window. **Trade-off:** a
+thief who replays a stolen token within 60 s of the victim's rotation gets a session instead of tripping
+the alarm — the same trade the industry makes (Auth0's refresh-token *reuse interval*, Okta's rotation
+*grace period*). Past the window, or once the user signs out, the full theft response still fires.
+Observability: the grace path logs at Information, reuse
+keeps its Warning. Evidence of the fix: `RefreshTokenServiceTests` (grace boundary, successor
+revoked/expired, grace 0, never-rotated) + `RefreshReplayTests` (same cookie twice → both 200, nothing
+revoked; replay after the window → 401 + revoke-all; pre-logout token within the window → 401, no
+session). Migration `AddRefreshTokenRotationLink` (two nullable columns). Flow: FLOWS §7.
+
+*Addendum (2026-09-28) — the grace is one-shot, and the trade it makes is symmetric.* **Evidence (v4 audit
+AUTH-1/AUTH-13, T28):** the window above forgave a rotated-out token any number of times for 60 s, each
+replay minting an independent chain, and the grace path logged at Information with no count — so a thief
+who kept landing inside the window left no trace. And the forgiveness has no notion of who came first: if
+the thief rotates a stolen token and the victim's scheduled renewal lands within 60 s, it is the *victim's*
+presentation that is treated as the benign race, and the pair raises no alarm. **Decision:** `RefreshToken`
+gains `GraceUsedAt`, stamped by a **conditional set-based update** (`TryMarkGraceUsedAsync`, `WHERE
+GraceUsedAt IS NULL`) *before* the session is issued: exactly one presentation inside the window is
+forgiven; any further presentation of that token — a third tab, a replay racing the forgiven one, or a
+thief — is `Reuse` and revokes every session. The grace path now logs at **Warning** with the user's running
+grace count, so a run of them on one account is visible. **The symmetric trade, stated:** attacker-first
+inside the window is *accepted* — the platform cannot tell the two presentations apart, and refusing both
+would bring back the sign-outs the 2026-09-18 addendum removed. What bounds it: the grace is spent on that
+pair, so the thief's next replay (or the victim's) kills both chains; the window is 60 s; and the client's
+refresh timeout plus retry delay is pinned below it (T30), so the benign race the window exists for
+completes well inside it. `RefreshReplayTests` records both halves —
+`Refresh_ThirdPresentationInsideGrace_Is401_AndRevokesAllSessions` and
+`Refresh_AttackerRotatesFirst_VictimsRenewalInsideGrace_GetsASession_ByDesign`. Migration
+`AddRefreshTokenGraceUsedAt` (one nullable column).
+
+*Addendum (2026-09-28) — logout revokes the family of any known token.* **Evidence (v4 LB-AUTH-4, T29):**
+`POST /api/auth/logout` found the user through the live-token lookup, so a token that had just been rotated
+out or had expired resolved to nothing: no revocation, the cookie deleted anyway, 200. With the keep-alive
+above that is routine — a refresh in flight when the user clicks Sign out presents the old token, then the
+refresh response lands and restores the session (web cookie, or the native store); and a device that slept
+past expiry could not sign the user's other devices out. **Decision (R124):** logout resolves the user through
+`InspectRefreshTokenAsync` — valid, expired, rotated-out or revoked, all name their owner — and revokes the
+whole family whenever a token is found; only an unknown hash is a no-op, and the answer is 200 either way.
+The 2026-09-18 sentence "logout revokes the successor" therefore holds for the rotated-out leg too.
+
+*Addendum (2026-09-30) — the rotation is one transaction, serialized per user against revoke-all.* **Evidence
+(v4 audit TB-AUTH-30, landed with the harness fault seam, T54):** `POST /api/auth/refresh` inspected the
+presented token, issued its successor and marked the rotation as three autocommitted writes. A revoke-all
+landing between the inspection and the mark — "sign out everywhere" from another device, an erasure, the theft
+response to a replay — revoked the presented token and everything else that existed at that instant, and the
+successor minted a moment later survived it: a session that outlives a sign-out. **Decision:** from the
+inspection's verdict to the commit is one transaction. The two claims — `TryMarkRotatedAsync` (the token is
+still live) and `TryMarkGraceUsedAsync` (the grace is unspent AND the successor is still live) — are
+conditional, set-based updates taken under the user's **chain lock**, a Postgres advisory lock
+(`pg_advisory_xact_lock` keyed on the user id, released with the transaction) that `RevokeAllForUserAsync`
+takes as well. A revoke-all therefore either goes first, in which case the claim fails, the endpoint answers
+the same generic 401 and the scope's disposal rolls the successor back, or waits for the rotation to commit
+and then sees the successor too. No row is locked; only two writers of the same user's chain ever wait on
+each other. Proven by `RefreshReplayTests.Refresh_RevokeAllBetweenInspectAndIssue_LeavesNoLiveToken` (both
+paths, through the endpoint, with a decorator that runs the revoke-all right after the inspection) and the
+two `RefreshTokenServiceTests.Rotation_*` races driven through the fault seam's interleaving hook — the
+second of which is red with the conditional update alone and green only with the lock.
+Evidence: `RefreshReplayTests.Logout_With*`.
+
+**2026-10-03 addendum to ADR-002 (v4 audit T58, UX-10) — a page restored from the back/forward cache is reloaded.**
+After sign-out the browser's Back button can restore the last signed-in render from its back/forward
+cache: inert (the refresh 401s) but readable. `bfcache-guard.js` reloads on `pageshow` with `persisted`,
+which re-runs auth and sends a signed-out visitor to `/login`. **Kept, knowingly:** the cost is one extra
+page load whenever a signed-in user's Back hits that cache; opting the pages out with `Cache-Control:
+no-store` would cost the same and more. Held by a browser journey that runs with the cache on
+(`SessionJourneyTests.SignOut_ThenBack_LandsOnLogin_NotTheCachedHousehold`) and a unit test of the script
+(`tests/js-logic/bfcache-guard.test.js`).
+
+*Addendum (2026-09-22) — the client keeps an open session alive, and only the server ends it.* **Evidence:**
+downstream (`y-el-vuelto`) the owner still had to sign in every day, on web and on Android, after the reuse
+grace window above. The 30-day refresh token was never the problem: the client only spent it once, at
+startup. An app left open — a tab overnight, the phone app in the background — kept its 60-minute access
+token past expiry and nothing renewed it, so the next call 401'd and the page looked signed out. And every
+failed refresh counted as "signed out": a timeout, a proxy's 502 while a free-tier host cold-starts, or no
+signal made the native app **delete its stored refresh token**, so a sleeping server cost the session for
+good. **Decision:** `AuthService` renews ahead of expiry on three paths — a timer (one minute before expiry,
+capped at a quarter of the token's lifetime, never sooner than 30 s), the bearer handlers before each
+request (the net for a device that slept through the timer), and the layout when the app returns to the
+foreground (`AppResumeNotifier`). *Amended by v4 T32 (LB-UI-14/15, R126, 2026-09-28):* the lifetime the
+client counts is the **server's** — `expires_in` at receipt, on the injected clock — never the JWT's `exp`
+read against the device clock, which on a phone a few minutes slow meant 401s for part of every hour and on
+one an hour fast a signed-out screen plus a refresh rotation every 30 s; the quarter-lifetime cap comes from
+the same `expires_in` (it used to read `nbf`, which the API's tokens never carry). And both hosts' bearer
+handlers share one `BearerRetry`: a 401 on a request sent with a held session renews **once** and resends;
+a second 401 stands. The bUnit chassis mints tokens with a `serverClockOffset` so skew is a test theory.
+*And by v4 T33 (AUTH-5/UX-11, R84/R111, 2026-09-28):* the layout shows the signed-in shell while a session
+is **held** (`AuthService.HasSession`), not while the token is unexpired — through an outage that outlasts
+the token the user is still signed in, waiting on a renewal; `SignedOut` is raised from that same held
+flag, so a rejection that lands after the token expired still fires it exactly once (and the device
+preferences are wiped); and `OnSignedOut` sends a protected page to `/login` instead of leaving the user on
+chrome-less content that 401s. Evidence: `SessionKeepAliveTests` (`UnreachableThroughExpiry_*`,
+`MidSessionRejected_*`). *And v4 T36 (2026-09-28), five small gaps:* the OAuth callback signs out of the
+external carrier cookie in a `finally`, so a refused signup no longer leaves the provider's identity parked
+in the browser (AUTH-12); a remembered theme/locale is forgotten only on sign-out or when the next token
+names a different user, not on every renewal (UX-17); `TryRefreshAsync(force: true)` lets a renewal already
+on the wire land and then asks again, and Join uses it after accepting an invitation so the new household
+shows at once (LB-UI-16); an optional **absolute session lifetime** (`RefreshToken:AbsoluteLifetimeDays`,
+off by default — decision #2) stamps `SessionExpiresAt` at sign-in, inherited at every rotation and a ceiling
+on the token's expiry; and `/api/auth/refresh` is rate-limited per IP (`Auth:RateLimit:RefreshPermitLimit`,
+60/min, raised for E2E — decision #4). Refresh
+outcomes split three ways: **401, or a 400/403 carrying the API's own error body = rejected** (clear the
+session, as before); **5xx, 429, a 400/403 without that body (a proxy's challenge page), network, timeout
+or an unreadable body = unreachable** (keep everything — the server never ruled on the token; mid-session
+the timer retries after 30 s, then 1, 2 and 4 minutes, capped at 5, and a renewal resets the pause); **200 =
+renewed**. The refresh call has its own 20 s deadline on the injected clock (`AuthService.RefreshTimeout`),
+pinned with the retry pause under the server's 60 s reuse grace by a cross-project test
+(`ConfigPostureTests.ClientRefreshTimeoutPlusRetry_FitsInsideTheServersReuseGrace`), so a lost response is
+retried inside the window it exists for — v4 T30 (UX-6/7/12, R107/R108/R144), 2026-09-28. At startup an unreachable refresh is
+retried after 2, 5, 10 and 15 s behind the loading spinner before the layout sends the user to `/login`,
+and even then the stored token stays for the next launch. **Unchanged:** impersonation tokens are never
+renewed *as impersonation* (the timer is cancelled on `BeginImpersonation`), and anonymous pages never spend
+a refresh. *Precision added by v4 T64 (C12, 2026-10-01):* before T31 the sentence hid a renewal — when the
+impersonation token expired, the bearer handler's next refresh minted the STAFF identity and the page carried
+on as that user mid-screen, which is what ADR-014's "expiry returns the staff user to their own identity"
+described without saying it was silent. T31's epoch (R125) made the end explicit: the client ends the
+impersonation, reloads home as the staff user, and never swaps identities inside a page. *Amended by v4 T31 (LB-UI-11/12/13, R125, 2026-09-28):* the client
+session carries an **epoch**, bumped by logout, by entering or leaving an impersonation and by an
+impersonation expiring; a refresh captures it when it starts and an answer that lands after the epoch moved
+is **discarded**, never applied — so a refresh on the wire when the admin clicks "Sign in as" cannot swap
+the impersonation for the staff token, and one on the wire when the user signs out cannot sign them back
+in (on native the discarded answer's rotated refresh token is still saved while a session is held, so
+leaving the impersonation can restore the staff user; never after a logout). Impersonation is a **state**
+entered and left explicitly, not a claim read off the current token, and its **expiry ends it** — the
+in-memory session is let go, `IdentityChanged` fires, and the layout reloads home so the staff identity is
+restored on a neutral page — instead of the request-time renewal that used to put the staff identity on
+the target's page. Evidence: `SessionKeepAliveTests` (`ARefreshInFlight_*`, `ImpersonationExpiry_*`). **Why this is safe:** the server stays the sole authority — keeping a
+refresh token the client can't validate only means asking again; a revoked one still gets 401 and is
+dropped. Concurrent renewals (timer + request) coalesce into one call as before, now under a lock for
+native's thread pool. Evidence: `SessionKeepAliveTests` (Ui.Tests, on a fake clock). QA: QA-SMK-04.
+
 **ADR-003 — Tenancy is membership-based and enforced by a global query filter. (2026-06-19)**
 A user's tenant lives in a **`TenantMembership`** join entity (unique on `UserId` — one tenant at a
 time; `Role` owner/member), **not** a `tenant_id` column on `User`. Tenant-owned entities implement
@@ -142,6 +313,8 @@ hash) opt out with `IgnoreQueryFilters()`.
 *Rationale:* membership models "a user moves between tenants" and the always-in-exactly-one-tenant
 invariant cleanly; the global filter turns "never leak across tenants" (ADR-C2) from a per-query
 convention into a structural guarantee, so feature slices can't forget to scope.
+*(Relaxing "exactly one tenant" to several — own household + family household — was considered and
+**deferred** in ADR-029, which also fixes the constraints any future implementation must keep.)*
 
 *Amendment (2026-06-22) — scoping is now structural on BOTH read and write.* The original query
 filter scoped reads only; nothing stamped or validated `TenantId` on insert, so a slice that forgot
@@ -224,6 +397,62 @@ distinction is structural, not just narrative:
    `FeatureFiles_RegisterRoutesViaMapTenantFeatureGroup_NotRawMapGroup`) scans `src/Api/Features/**` and
    fails on any raw `.MapGroup(` there, so a future slice can't quietly bypass the shared tenant-API auth.
    This is a pure move + namespace change — no route, behavior, or signature changed.
+
+*Amendment (v3 audit Phase 4, 2026-07-27, T58) — the touchpoint contract is verified-adversarially and
+gains one member.* Phase 4 built a real entity-bearing slice against this ADR and measured the central
+edits: the "~5 mechanical touchpoints" list is accurate **plus one the list omitted — the RLS policy**.
+`dotnet ef migrations add` scaffolds no RLS DDL, so an `ITenantScoped` entity's policy must be appended
+to the same migration by hand (ADR-020; step 4 of the add-a-slice checklist in `WAYS_OF_WORKING.md`,
+enforced by the `RlsMigrationGateTests` parity gate). Read "without touching central code" as the
+bounded ~6-touchpoint contract above — never as literally zero; the durable half of the claim is what
+Phase 4 confirmed HOLDS: the EF filter, stamping interceptor, RLS backstop, and the group auth policy
+are all inherited with no slice re-implementation.
+
+*Amendment (v4 audit Phase 4, 2026-10-01, T64 / ADV-P4-17, R158) — the contract is the measured list, not a
+count.* The v4 re-drill built another entity-bearing slice by the recipe alone and logged every existing file
+it had to edit: **seven forced** — `AppDbContext` (DbSet), `Program.cs` (bind, register, map), the migration
+(scaffolded) and its hand-appended RLS policy, `docs/DATA_MODEL.md` (the `EveryEntity_IsDocumentedInDataModel`
+gate fired), the tenant-axis canary's `handled` set in `ArchitectureTests` (the
+`EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` gate fired) and the Postman collection
+(`PostmanParityTests` fired) — plus two the gates did not force but the catalog and the parity rule expect:
+`.env.example` and the EN/ES resx. The "~6" of the 2026-07-27 amendment was a count with two gate-forced
+members missing from it and from the checklist, whose fixture-reset step had been dead since v2 TR-3. The
+checklist in `WAYS_OF_WORKING.md` now carries that list with each step's gate, and
+`EnforcementGateTests.AddASliceChecklist_NamesEveryArtifactAGateForces` holds the two together: a gate that
+forces a new artifact must appear there. Read "without touching central code" as *this list and nothing
+else* — the durable half of the claim (filter, stamping, RLS, group auth all inherited) still holds.
+
+*Amendment (Architecture milestone A1, 2026-10-06, #362, R159) — the touchpoints become app-owned files; the
+platform's composition files are identical in every repo.* The measured list above was right about *what* a slice
+edits and wrong about *where*: every member was a platform-owned file (`Program.cs`, `AppDbContext`, the `handled`
+set in `ArchitectureTests`, the harness), so each platform change to them was a hand merge downstream (measured on
+2026-10-05: vuelto `Program.cs` +80 lines, `AppDbContext` +20, `ArchitectureTests` +53; jigger-jot `Program.cs` +31
+and a seeder registered in the platform's `ServiceCollectionExtensions`). The seam: `src/Api/AppComposition.cs`
+(`AddAppServices` / `MapAppEndpoints` — the one file outside `Features/` that may name a slice, R8 as amended);
+`IStartupTask` (`Core/Abstractions`) for work that needs the schema, run by `Program.cs` after `Migrate()`; the
+app's half of the context in `AppDbContext.App.cs` (partial class, `OnAppModelCreating` hook);
+`tests/Api.Tests/App/AppAllowlists.cs` for every allowlist the gates read (`EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`,
+`EveryUserKeyedEntity_IsWiredIntoAccountErasure`, the outbound-HTTP, controller, type-name, tenant-id and
+data-protection sets); `AppTestComposition.cs` for the harness's contributors and the integration host's pins;
+`RulesEnforcement.App.cs` for the manifest's per-app `Pending`/`NotHere`; `tests/Ui.Tests/App/TestHttpHandler.App.cs`
+for the UI stub. `Program.cs` calls the two composition methods once and runs the startup tasks; nothing in it
+changes per app. The checklist in `WAYS_OF_WORKING.md` names these files and
+`AddASliceChecklist_NamesEveryArtifactAGateForces` still holds it to the gates (`EveryEntity_IsDocumentedInDataModel`,
+`EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`, `PostmanParityTests`); `CompositionFiles_AreFreeOfTheSampleSlice`
+proves the seam on the Notes sample: no platform composition file names it. Downstream, A2's manifest gate holds the
+same files identical to the platform's.
+
+*Amendment (Architecture milestone A8, 2026-10-07, #367, R162) — one owning slice writes an entity.* Slices were
+vertical at the HTTP layer only: every entity sits in `Core/Entities`, any slice can inject `IRepository<T>` for any
+of them, and the R7 gate checks namespaces, not data. Measured: vuelto's Dashboard handler injects eleven other slices'
+repositories and Reports nine — reading is their point — and nothing stopped either from writing. Decided (owner): each
+entity has ONE writing slice, declared in `AppAllowlists.EntityWriters` (entity → slice folder); every other slice
+reads it, or calls a Core contract the owner implements (vuelto's `ITransactionService` is the model: the Ledger slice
+owns `Transaction`, the review queue creates one through the contract). Platform entities are written by platform
+services, never by a slice. `EveryEntity_HasOneWritingSlice` holds it: `SliceWriteInspector` reads each slice's
+sources for writing members (`AddAsync`, `Add`, `Update`, `Remove`, their range forms, and `ExecuteDelete/UpdateAsync`
+chained from a query) on an injected repository; a write without a declared writer, a write by a slice other than the
+declared one, and a declaration nobody writes through all fail. Reads are free. The checklist gains a step (7, Writer).
 
 **ADR-005 — Apple Sign In fits the agnostic provider model; implementation DEFERRED, web-first. (2026-06-24)**
 A third OAuth provider (Apple) was assessed against the provider-agnostic auth stack (ADR-002). The
@@ -407,6 +636,15 @@ Constraints recorded:
 2. **`OutboxMessage` is NOT `ITenantScoped`** — it's platform infra and may carry system (non-tenant)
    effects; it stores an optional `TenantId` for handler context but is outside the global filter.
    On dissolve, pending tenant-related outbox rows are drained/cancelled by the relevant contributor.
+   *(Built 2026-09-24, v4 audit H6: until then nothing did it. `OutboxDataContributor` removes the tenant's
+   rows of every type whose handler declares `DissolvesWithItsTenant` — mail and webhook bodies — and keeps
+   `billing.cancel`, which the dissolve itself queues.)*
+   *(Amended 2026-09-24, v4 audit H7 / decision #6 — retention: a finished row (sent or dead) is stamped and
+   its payload cleared to `{}`, and `OutboxRetentionJob` deletes it after `Outbox:RetentionDays` (default 30).
+   A handler may declare its payload a record (`KeepsPayloadWhenDone`): only `admin.broadcast`, the sole
+   attribution of a platform-wide announcement, which carries no personal data and is kept whole. Account
+   erasure removes the user's pending mail by recipient. Attachments stay inline in the payload — capped at
+   10 MiB — rather than moving to `IFileStorage`; revisit when a downstream needs more.)*
 3. **At-least-once delivery ⇒ all handlers must be idempotent** — the same contract billing webhooks
    need (ADR-006).
 4. **First consumer is the existing email path** — passwordless and invitation sends currently call
@@ -438,6 +676,22 @@ failure isolation (one job's throw never stops the others or the host) and a fre
 the reference `ExpiredTokenCleanupJob` deletes expired login/refresh tokens hourly. In-process,
 single-instance per the baseline; Hangfire/Quartz remains the documented multi-node swap-in. The JOBS
 epic (outbox, inbox, scheduler) is now done — **BILLING is unblocked.**
+
+*Amendment (2026-09-16) — JOBS-4: file attachments ride the email outbox, capped at 7 MiB raw (10 MiB on the wire).* A
+downstream app needs to email a generated PDF. `IEmailSender.SendAsync` gains
+`IReadOnlyList<EmailAttachment>? attachments = null` (new Core record `EmailAttachment(FileName,
+Content, MediaType)`), placed after `inlineImages` and before the `CancellationToken` — so the token
+must now be passed **by name** (a positional token no longer compiles, which is the point: it can't
+silently rebind). The attachment bytes travel **inside the outbox payload** (base64 in the JSON
+`EmailOutboxPayload.Attachments`) rather than via `IFileStorage` + a key: one-row atomicity is kept,
+and the handler stays storage-free. That is only acceptable because the size is bounded:
+`EmailAttachment.MaxTotalBytes` = 7 MiB raw — Brevo's 10 MiB is on the encoded message (v4 T40), checked by `EmailAttachment.Validate`
+**before enqueueing** in `OutboxEmailSender` (an oversize mail would otherwise sit in the outbox failing
+until it dead-letters) and again in `SmtpEmailSender`; a blank file name / media type is refused the
+same way. Violations throw `ArgumentException` (a programming error in the caller, not a delivery
+failure — so not `EmailSendException`). `EmailOutboxPayload.Attachments` is nullable **and defaulted**,
+so payloads enqueued by the previous build still replay. *Revisit* if an app needs attachments past the
+cap: that is the point to switch to storage-key references in the payload.
 
 **ADR-008 — Observability (structured logging + OpenTelemetry + health checks) and a tenant-scoped audit log. Implementation DEFERRED. (2026-06-25)**
 Two complementary concerns shipped as one slice group.
@@ -477,6 +731,15 @@ dissolved, admin access). The `AuditAppendOnlyInterceptor` is present but **only
 (it throws on any tracked update/delete of an `AuditEvent`); it does **not** author audit rows. A
 declarative auto-audit-on-SaveChanges interceptor remains an optional future add (also noted in
 `docs/ROADMAP.md`).
+
+*Amendment (2026-09-07):* **log records are exported through OpenTelemetry too** (`WithLogging` + the OTLP
+log exporter on the same config-gated endpoint, `/v1/logs`), carrying the rendered message, the request
+scope and the trace/span ids. Found on the first downstream app's staging: a failed Stripe call showed up
+in Grafana as a trace with a 400 span and nothing else — the error's text lived only on Render's log
+stream, so the operator had to read two consoles to understand one failure. The console providers stay
+(the host's own stream); nothing is exported when no endpoint is configured, as before. The metrics also
+gain the .NET runtime (GC, heap, CPU, thread pool — `OpenTelemetry.Instrumentation.Runtime`) and the Npgsql
+connection-pool meter: on a small host these say "too small" or "leaking" long before any request errors.
 
 **ADR-009 — RBAC: a third `admin` role + a permission seam (capability checks, not role checks). (2026-06-30)**
 The platform shipped with exactly two tenant roles — `owner` and `member` — enforced by `IsOwner(...)`
@@ -768,7 +1031,10 @@ hatch, ADR-003; the audit log, ADR-008) rather than loosening any of them.
    user.** "Sign in as" mints an access token carrying the target's claims **plus an `impersonated_by`
    claim** (the staff user id) and a **short expiry**, with **no refresh token** — so it auto-expires and
    can't be silently extended. The impersonator acts as the target within that window; the token scopes
-   naturally via the target's `tenant_id` claim (no filter bypass).
+   naturally via the target's `tenant_id` claim (no filter bypass). *Client half, amended v4 T31
+   (2026-09-28):* the client holds impersonation as an explicit state and treats the expiry as the end of
+   the "sign in as" — no renewal, a reload home as the staff user — rather than reading the claim off a
+   token that has gone silent (ADR-002 keep-alive addendum, R125).
 4. **Every admin action is audited (ADR-008), prominently.** Cross-tenant reads and — especially —
    impersonation start record an `AuditEvent` with the staff actor + target; impersonation is stamped in
    the **target's** tenant so that tenant's owner can see "a platform admin accessed this account."
@@ -903,6 +1169,15 @@ outbox). Like `OutboxMessage`, `WebhookDelivery` is deliberately **not** `ITenan
 from the tenant-less outbox dispatcher); its `TenantId` is a plain filter column the read side scopes
 on. See `docs/DATA_MODEL.md` and `docs/stories/hooks.md`.
 
+> **Amended 2026-09-24 (v4 audit H8, decision #7) — the client reaches exactly what the guard approved.** The
+> webhook `HttpClient` (`WebhookHttp.CreatePrimaryHandler`) follows **no redirects** (a 3xx is a failed delivery
+> whose error says to register the final URL — following one had turned a 302 into a GET to an unchecked host
+> whose 200 was logged as delivered, and a 307 re-sent the signed body), **pins its connection** (a
+> `ConnectCallback` dials only addresses `IOutboundUrlGuard.ResolveAllowedAsync` accepts at connect time, closing
+> the guard-then-socket rebinding window the original design accepted), and uses **no proxy**. A URL the guard
+> refuses throws `OutboxPermanentFailureException`, so the outbox dead-letters it on the first attempt with one
+> delivery row (`url_refused: ...`) instead of five.
+
 **ADR-017 — Hosting: free-tier single-origin deployment — Render (API serving the WASM bundle) + Neon Postgres + Brevo. (2026-07-02)**
 Resolves the hosting decision deferred in `docs/TECH_STACK.md` ("pick near deploy"). The driver set:
 **$0/mo, no credit card, the refresh-token cookie must stay first-party, and the in-process background
@@ -932,8 +1207,9 @@ jobs (outbox dispatcher / scheduler / lapse sweep) must not be silently broken.*
    already the platform's assumed real provider in the `.env` docs. **Consequence:** staging has no
    Mailpit, so email-based QA cases use real (plus-addressed) inboxes there, and the automated
    post-deploy smoke checks health/app-shell only, never email journeys.
-5. **Environments follow the git model:** `develop` auto-deploys **staging** (behind CI + a
-   post-deploy smoke gate); `main` deploys **prod** behind a required-approval GitHub environment —
+5. **Environments follow the git model:** `develop` deploys **staging** (on GitHub it auto-deploys
+   behind CI + a post-deploy smoke gate; on Forgejo, the primary forge since ADR-028, a `deploy=staging`
+   dispatch is the trigger); `main` deploys **prod** behind a required-approval GitHub environment —
    preserving "`main` is deploy-only". The platform proves the machinery on staging; actual prod
    provisioning is each downstream app's first deployment step (runbook: `docs/DEPLOYMENT.md`).
 6. **Proxy correctness, gated:** `UseForwardedHeaders` (for/proto) is added **config-gated, default
@@ -954,7 +1230,21 @@ deliberate first paid upgrade (pretty URLs + DKIM deliverability); nothing in th
 depends on it.
 Stories + slice plan: `docs/stories/deploy.md` (epic `DEPLOY`).
 
-**ADR-018 — Native (MAUI) client: commit to full feature parity across Android/Windows/iOS/macOS, incl. automated native tests + signed distribution. (2026-07-02)**
+*Amendment (2026-07-14; recorded 2026-08-25 — the branch carrying it predated ADR-023's numbering
+and was recovered during branch housekeeping) — the platform itself never activates production;
+staging is its terminal environment.* Point 5 already assigned prod provisioning to "each
+downstream app's first deployment step"; this makes it explicit after `STATUS.md` kept listing prod
+activation as a platform to-do (same scope logic as ADR-024): a live prod service for the platform
+would be a paid Stripe key, a prod Neon DB, and an always-on Render instance serving an app with
+zero users — recurring cost and operational surface proving nothing that the live, CI-deployed
+(a Forgejo dispatch, ADR-028), RLS-enforced staging doesn't already prove. The `main`→prod pipeline (DEPLOY-3), the `STATUS.md`
+§5 walkthrough, and `DEPLOYMENT.md` §6–7 stay maintained as the **downstream Phase-8 runbook**
+(`NEW_APP_GUIDE.md`). One consequence carried as a Phase-8 note, mirroring ADR-024's signing traps:
+the pieces that only run at prod activation — the **RLS two-role topology + posture guard**
+(ADR-020, `DEPLOYMENT.md` §7) and the **Production live-Stripe-key startup guard** — get their
+first real execution during a downstream app's activation, not here.
+
+**ADR-018 — Native (MAUI) client: commit to full feature parity across Android/Windows/iOS/macOS, incl. automated native tests + signed distribution. (2026-07-02) — amended by ADR-031 (the device legs run on request)**
 Resolves the deferred "non-web framework commitment" from `docs/TECH_STACK.md`. The platform already ships
 **MAUI Blazor Hybrid** shells that reuse the shared RCL (`Shared.Ui`) and have native auth wired (OTP,
 OAuth via system browser, MFA step-up MFA-4, secure-storage tokens) — so the native clients already render
@@ -1025,7 +1315,47 @@ only change alongside a re-encryption migration. The Render service keeps the na
 (Render treats the name as service identity; renaming would mint a new service + URL and churn the
 OAuth consoles for zero functional gain — fold into a future console-touching change if desired).
 
-**ADR-020 — Tenancy defense-in-depth: Postgres row-level security as a second, DB-level wall under the EF query filter. Implementation DEFERRED — hard prerequisite for production activation. (2026-07-06)**
+*Amendment (Architecture milestone A2, 2026-10-07, #363, R160) — clone-and-rebrand ships with an ownership map, a
+stamp and a port tool; "extend, never modify" has a gate.* The boundary audit of 2026-10-05 measured vuelto at 142
+changed platform files (19 backend) and jigger-jot at 144 (30 backend) with nothing saying which of them *may* differ.
+Now `platform-ownership.json` (ordered globs, first match wins) classes every tracked file — **platform** (identical
+modulo the brand tokens; downstream, a change needs a reason in `tests/Api.Tests/App/PlatformDivergences.json`),
+**adapts** (platform origin, the app is expected to edit: its UI per #368, its journeys, its config, its docs; drift
+is reported, never failed), **app** (the slices and the Arch A1 seams; never ported) and **sample** (the DELETE-ME
+Notes slice) — and `OwnershipMap_ClassifiesEveryTrackedFile` fails the platform's own build on a file with no class.
+Downstream, `pwsh tools/port-platform.ps1 -Platform <checkout> -To <commit> -Apply` three-way-merges every platform and
+adapts file from the stamped commit to the target (brand renamed in content and path; `git merge-file --diff3`,
+markers left for a human; app files never touched), then writes `tests/Api.Tests/App/platform-manifest.json` (the
+brand-normalised SHA-256 of every platform and adapts file at the target) and `platform-stamp.json` (the commit, the
+date, the brand map). `PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted` holds the repo to them, and an allowlist
+entry whose file is identical again fails too, so the list cannot rot. The manifest is derived data, generated
+downstream, never committed in the platform (which carries a null stamp). `/api/version` reports the platform commit
+beside the app's own. The hash is computed in PowerShell by the tool and in C# by the gate;
+`PortTool_MergesPlatformAndAdaptsFiles_AndWritesTheManifestTheGateAccepts` runs the tool against two scratch repos
+and pins the two equal. The NuGet-packages door (`PLATFORM_BACKLOG.md` §10) stays open: the map is also the list of
+what such packages would contain.
+
+*Amendment (Architecture milestone A5, 2026-10-07, #365, R161) — a schema parity gate for the platform's tables.*
+Platform migrations are regenerated per app, so the same change carries a different migration id in each repo and
+nothing proved an app's platform tables equalled the platform's. Decided: a gate only (a separate migration history for
+platform tables belongs with packaging, `PLATFORM_BACKLOG.md` §10). The platform publishes `platform-schema.json` — the
+columns, constraints, indexes and RLS policies of its tables as Postgres reports them, extracted from the database the
+real migrations build, never from the model — and `MigratedDatabase_MatchesThePlatformSchema` compares every repo's
+migrated database with it for those tables (an app's own tables are not listed and not checked). On the platform the
+same test is the file's currency check: a new or dropped platform table fails it until the file is regenerated
+(`PLATFORM_SCHEMA_WRITE=1 dotnet test --filter PlatformSchemaTests`). The sample's table is not a platform table.
+
+*Amendment (Architecture milestone A6, 2026-10-07, #366) — the Notes sample is its own removable unit.* Its table was
+created by one platform migration (`AddNotesSample`) and named by another (`RlsTenancyBackstop`'s frozen list), so
+removing the sample meant editing platform history: vuelto deleted the first and edited the second, and its platform
+migrations diverged from upstream for good; jigger-jot never removed it. Now `RlsTenancyBackstop` no longer names
+`Notes` (a database that ran it before is unchanged; a fresh one gets the policy from the sample's own
+`NotesSampleRlsPolicy` migration, idempotently), both sample migrations are class `sample` in the ownership map, and
+`PlatformMigrations_DoNotNameTheSample` keeps every other migration free of it (R9 amended). Removing the sample is an
+app change: delete its code, drop its table with an app migration, leave the two sample migrations as history
+(`NEW_APP_GUIDE.md`, "Removing the Notes sample").
+
+**ADR-020 — Tenancy defense-in-depth: Postgres row-level security as a second, DB-level wall under the EF query filter. (2026-07-06; IMPLEMENTED — see the addenda. Header fixed 2026-07-27, v3 T57: it still read "DEFERRED" long after the backstop merged)**
 Tenant isolation is currently enforced entirely in the application layer: the ADR-003 global query
 filter, the write-side interceptor (V2-B2), and the arch-test bans. One missed seam in a future
 feature — most plausibly a downstream app's vertical slice, written outside this repo's review
@@ -1085,6 +1415,29 @@ activation)**. Design detail: `docs/PLATFORM_BACKLOG.md` §11.
    it), `docker/db/provision-rls-runtime-role.sql`, `DEPLOYMENT.md` §7, and the
    `RlsMigrationGateTests` parity gate (a new `ITenantScoped` entity without its policy migration
    fails CI).
+
+*Addendum (v3 audit remediation, 2026-07) — the backstop re-hardened where the audit bit it:* the
+parity gate above was proven TAUTOLOGICAL as first shipped (v3 RLS-1: the harness back-filled
+model-derived policies into the database the gate inspected) and was fixed to migrations-only
+provisioning with a bites-test; dissolve/erasure under a foreign entered tenant (RLS-2) was made
+all-or-nothing; and the slice recipe is now documented + enforced end-to-end (the hand-written
+policy step in `WAYS_OF_WORKING.md` + the PR-template checkbox + the honest gate — v3 T52/T57).
+
+*Amendment (Architecture milestone A4, 2026-10-07, #364) — the shared-or-tenant shape is a platform seam.* jigger-jot
+needed rows that are either shared (a curated catalog, `TenantId` null) or one household's, and built it by editing
+two platform files (JJ-031: a second query filter in `AppDbContext`, a second policy family in `RlsDdl`). The
+capability is generic, so it moves upstream as `ISharedOrTenantScoped` (`Core/Entities`), the deliberate sibling of
+`ITenantScoped`: a second global filter (`TenantId == null || TenantId == CurrentTenantId`; shared rows only when
+no tenant is current), a write rule in `TenantStampingInterceptor` (no stamping — the writer sets `TenantId`; under a
+tenant, a shared row or another tenant's row is refused), and FOUR command-scoped RLS policies
+(`RlsDdl.SharedOrTenantStatementsFor`): SELECT admits shared and own, INSERT/UPDATE/DELETE admit own only, so a tenant
+cannot delete the catalog even past the EF filter, and writing a shared row needs the bypass GUC of a tenant-less
+context. Gates: both markers under the filter gate; a nullable `TenantId` is this shape or allowlisted infrastructure
+(R2 amended); the migration-parity gate asks every such table for ENABLE + FORCE and all four policies by name; and
+each such entity ships four lifecycle facets — `Dissolve`, `Export`, `SharedWrites`, `Erasure` — in place of the R145
+infrastructure facets (R145 amended). The platform owns no such table: the shape is proven on the `TestSharedWidget`
+fixture (`SharedOrTenantTests`, `SharedOrTenantRlsTests`), and jigger-jot's catalog returns its two files to the
+platform's text when it syncs.
 
 **ADR-021 — Admin back-office writes: narrow, enumerated, audited mutations (amends ADR-014's "read-only" posture). (2026-07-09)**
 ADR-014 point 2 declared admin **read-only over tenant data** ("inspect, don't mutate"), with the
@@ -1165,6 +1518,421 @@ pre-paint, and the columns already serve that; only the sync behavior changes.
    no-reload approach — it couldn't work on WASM (satellite assemblies) — while keeping its actual
    goal: the reload happens only on a real mismatch, never as a guaranteed double load. Theme
    applies live (`data-bs-theme`), no reload.
+*Amendment (v4 T64 / UX-18, 2026-10-01) — two accepted client-side races, recorded here instead of only in code
+comments (R72).* (a) A theme or language saved from Settings is **remembered beside the token, not refreshed
+into it**: the reconcile on reload trusts the access token's claims, and the Android app keeps that token across
+a WebView reload, so a save followed by a reload re-applied the old value (found downstream, 2026-09-16). The
+first fix refreshed the session after each save, and on the web that rotated the refresh cookie under the
+ThemeJourney's reload and came back signed out. So `AuthService.RememberTheme`/`RememberLocale` overlay the saved
+value until the next genuine refresh (`PreferenceSyncClaimTests`); between the save and that refresh, a second
+device that changes the same preference wins only at the next sign-in — accepted. (b) A theme change made while
+the PUT is in flight (or that fails) keeps the device's choice and marks the sync failed; the next sign-in's
+reconcile resolves it the usual way (server wins). Neither race loses data; both are visible, and neither is
+worth a round-trip on every keystroke.
+
 5. **"system" is stored verbatim** (amends THEME-1): `User.Theme` null now means "never chose",
    which is what makes adoption (3) well-defined and lets System propagate across devices like the
    other two values. No schema change — same nullable column, same endpoints.
+
+**ADR-023 — API documentation governance: the repo Postman collection is the canonical, machine-enforced API contract; the workspace is a one-way mirror. (2026-07-27)**
+The platform documents its API as a Postman collection rather than a spec-first OpenAPI document.
+This was practice (CLAUDE.md rule + `docs/postman/README.md`) without a recorded decision; the v3
+audit (TR-6/TR-10, T55/T57) found the gap and this ADR closes it. Decided:
+
+1. **`docs/postman/Perezosoft.postman_collection.json` is canonical.** Any change to an API
+   endpoint (route, verb, params, request/response shape, auth, error codes) updates the
+   collection **in the same slice** — the PR-template checkbox and review enforce the habit; the
+   `PostmanParityTests` CI gate (T55) enforces the floor: every endpoint the app actually maps
+   under `/api` must have a matching request, or an inline exclusion rationale. Browser-flow
+   endpoints are documented as annotated **`(doc-only)`** requests.
+2. **The Postman workspace is a disposable one-way mirror.** The `postman-sync` workflow pushes
+   `docs/postman/**` to the workspace on every `develop` change (sync-by-name); edits made in the
+   Postman UI are overwritten on the next sync and are never pulled back. The repo copy is the only
+   reviewed, versioned artifact.
+3. **Why not spec-first OpenAPI:** the collection *is* executable documentation — chained
+   auth flows (OTP via Mailpit, token rotation, shown-once secrets), per-environment files, and
+   test scripts double as a manual API harness, which a generated spec can't replace. The one
+   OpenAPI surface that exists stays: the leak-free public-API document at
+   `/api/public/openapi.json` (ADR-015) serves *external* consumers of the config-gated PUBAPI
+   only. Revisit if a downstream app needs full-API OpenAPI for client generation — that would be
+   a new ADR, generating *from* the code, with this collection remaining the human-facing harness.
+4. **Rebrand note:** the collection, environments, and the sync workflow's file path all rename
+   with the app (`docs/REBRANDING.md` already lists them).
+
+**ADR-024 — Native distribution (signing, packaging, store submission) is downstream-app work, not platform scope (resolves ADR-018's NATIVE-8 gate; NATIVE-8..11 leave the platform roadmap). (2026-07-14; recorded 2026-08-25)**
+*Recording note:* this decision was made and drafted 2026-07-14 — before ADR-023 (2026-07-27) took
+that number — but the branch carrying it never merged; it was recovered during branch housekeeping
+and renumbered here. It predates the v3 audit in substance.
+
+ADR-018's 2026-07-06 amendment made distribution a decision **re-made at the NATIVE-8 gate** rather
+than an autopilot consequence of the parity commitment. That gate is now decided: signed artifacts
+and store listings are **per-app deliverables**. This repo is horizontal chassis only (ADR-019
+posture); a release artifact is the ultimate vertical.
+
+*Rationale:*
+1. **Signing identity is inherently per-app.** The Android keystore *is* the app's identity; Apple
+   certs/profiles bind to a bundle id + team; the MSIX publisher must match a specific manifest.
+   The platform has no shippable app — anything it signed would be `com.perezosoft.platform`, an
+   artifact nobody ships, so the resulting workflow would be **untested plumbing** the moment a
+   downstream app swapped in its own identity.
+2. **The costs are recurring and buy the platform nothing.** The Apple Developer account is
+   $99/**yr** and lapses certs when it stops; per-release QA columns and store-review friction are
+   exactly the distribution tail the 2026-07-06 amendment flagged.
+3. **Capability is already proven without artifacts.** The parity commitment is held by the CI
+   build gate (NATIVE-1, all four TFMs), the four boot smokes (NATIVE-7), and the QA plan
+   (§12–13b + the per-release §13c checklist).
+
+*Decision:*
+1. **NATIVE-8, -9, -10, -11 are removed from the platform roadmap** and reclassified as the
+   downstream **first-native-release checklist**. Canonical actionable home:
+   `docs/NEW_APP_GUIDE.md` Phase 9. The detailed scoping knowledge (keystore discipline,
+   tag-triggered release-workflow shape, signing reality per platform, store-account costs) stays
+   in `docs/stories/native.md` Wave 4, re-badged as downstream reference — it is **hardening for
+   the apps**, not slices this repo will build.
+2. **Epic NATIVE closes at verification**: NATIVE-6 (the manual device QA pass) remains the last
+   platform slice; all-pass on §13c completes the epic. ADR-018's parity commitment is otherwise
+   unchanged (capability on all four platforms, web-first, parity ≠ more).
+3. **Two platform-code risks that only manifest under a real signing identity transfer as hard
+   checklist items** (they cannot be verified here, precisely because verification needs the
+   identity only a downstream app has):
+   (a) **packaged MSIX runs containerized** — Preferences/SecureStorage/file paths must be
+   re-verified in the packaged flavor before shipping Windows (same failure class as the Catalyst
+   keychain gap, PR #125);
+   (b) **properly-provisioned Apple builds can claim `keychain-access-groups`** — re-verify
+   SecureStorage under the real identity and re-evaluate retiring `DebugFileSessionStore` (the
+   `MACCATALYST && DEBUG` fallback from PR #125).
+4. **Pre-scoped sub-decisions carry with the checklist** (decided 2026-07-07, still good): enroll
+   in Play App Signing (the keystore becomes the upload key); let the MS Store sign the MSIX (no
+   purchased cert / HSM); signing material lives only in repo secrets, base64, ADR-001 discipline.
+
+**Accepted trade-off:** every downstream app pays its own signing bring-up — there is no
+ready-made release workflow to inherit. Accepted because an unverifiable workflow is a liability,
+not an asset; the checklist and scoping notes transfer the knowledge instead. This supersedes
+ADR-018's "honest counterweight" (store distribution as a platform commitment) in the downstream
+direction the 2026-07-06 amendment anticipated.
+
+
+**ADR-025 — (number reserved; never adopted) CI runner selection is variable-driven with a hosted fallback (LOCALCI-1). (drafted 2026-09-08)**
+*Stub.* The draft lives in [`stories/localci.md`](stories/localci.md) ("ADR-025 draft") and was to be pasted
+here with LOCALCI-1's first commit. It never was: LOCALCI-4 (ADR-028) replaced the variable-driven design
+before it was built, and ADR-030 then retired self-hosted CI altogether. The number stays reserved so the
+references to it in `localci.md` resolve; do not reuse it.
+
+**ADR-026 — (draft, not yet adopted) The platform becomes the reference implementation of a stack-neutral spec (FLAVORS). (drafted 2026-09-08)**
+*Stub.* The draft lives in [`stories/flavors.md`](stories/flavors.md), with the spec ADRs S-001..S-003 beside
+it, and is pasted here when the FLAVORS program starts (SPEC-1). Nothing is decided until then.
+
+**ADR-027 — Pre-launch gates: billing and account creation are deployment configuration, not runtime switches (GATES-1/2). (2026-09-11)**
+A deployment must be able to run **private and free** before it is published: nothing offers to sell
+a tester anything, and a stranger who finds the URL cannot create an account. Hiding the deployment
+itself was explicitly **not** wanted — knowing the app exists is fine.
+
+Both properties are decided before the process starts and change exactly once, on launch day. That
+makes them configuration, and it puts them in the same family as the PUBAPI/HOOKS gates
+(ADR-015/016): default off, opted into per deployment.
+
+**Decision:**
+1. **`Billing:Enabled`, default off.** With the gate off the billing controllers and the provider
+   webhook are removed from the application model at startup, so the routes do not exist (404) rather
+   than existing and refusing. The client hides the billing link and refuses the route, but the API
+   remains the authority. No new economics code is needed: `PlanCatalog.Get` already falls back to
+   Free for an absent plan key, so with billing off **every tenant without a granting subscription is
+   Free** — and nobody can be *given* one (the routes, the webhook and the staff comp are gone).
+   *(Corrected 2026-09-28, v4 T46: the original text said "every tenant is Free"; plan resolution is
+   gate-blind by design — a granting row, a comp or a Stripe row from before the gate closed, keeps its
+   plan so that flipping the gate never silently downgrades anyone. `BillingPostureCheck` warns at startup
+   when Stripe-managed rows linger while off, since the webhook that would cancel them is gone.)*
+2. **`Signup:AllowedEmails` / `Signup:AllowedDomains`, empty means open.** Non-empty restricts
+   account creation. The green list decides **who may found a household**; inside a household owned
+   by a green-listed person, membership is that owner's business, bounded by the seat cap.
+3. **The invitation bypass keys on the household's OWNER, not the inviter.** A valid pending
+   invitation addressed to the caller admits them when that invitation's tenant owner is
+   green-listed. Checking the owner (rather than `InvitedByUserId`) is what lets a non-listed admin
+   member invite into their owner's household, while keeping a household whose owner is not listed
+   from admitting anyone new.
+4. **The gate fires at account creation only, never at sign-in.** It lives at the single choke point
+   `UserService.CreateUserWithTenantAsync`, which every user-minting path funnels through (magic
+   link, OTP, web OAuth, native OAuth). Gating sign-in would lock out people who already have data
+   the moment the list is edited.
+5. **It deliberately does not fire when a magic link or OTP is issued.** Refusing at issue time would
+   require knowing whether the address already has an account, turning the login form into a "does
+   this person use the app" oracle. Accepted cost: a non-listed visitor learns they are not invited
+   only after entering their code.
+
+**Addendum (2026-09-28, v4 audit T45 — BILL-2/BILL-3/ADV-P4-6, R86):** the proof behind decision 1 is the
+**route table**, not a list of controllers. `BillingGateConvention` still removes the two billing controllers,
+but what CI holds is `BillingGateTests.GateOff_NothingUnderTheGatedPrefixes_IsMapped`: the host booted at the
+shipped defaults maps nothing under `api/billing`, `api/public`, `api/apikeys` or `api/webhooks`, by any
+mechanism (a minimal-API group, an action-level absolute route, a differently named controller — the
+adversarial pass had a billing-prefixed group answering 200 next to a 404 on `/api/billing`). The relaxed
+Stripe startup check (the fake provider is tolerated outside Development while the gate is off) depends on
+exactly that proof. The staff **comp/revert** actions under `api/admin` are part of the surface: they answer
+**404 while billing is off**, before the staff check, and the console's block follows `GET /api/features`.
+
+**Addendum (2026-09-28, v4 audit T46 — LB-BILL-21/22/27, R128):** the Stripe mapping **fails safe and
+loud**. A missing `current_period_end` (Stripe.net's field is a non-nullable `DateTime`) is stored as null
+with a Warning, not as the converter's sentinel date (the Unix epoch — which read as a lapsed period: a paying
+tenant on Free, "renews on 1970-01-01", nudged every six hours). A price absent from `Billing:Stripe:Prices` is acknowledged, **not
+applied**, and logged as an Error — never an "active Free" row staff cannot comp around. An event whose
+`livemode` disagrees with the deployment's expectation (`Billing:Stripe:ExpectLiveKey`, else inferred from
+the key prefix) is ignored with a Warning, so a test-mode signing secret in production cannot let Dashboard
+test events move real tenants' plans. Signed fixtures drive all three (`StripeBillingProviderTests`).
+6. **The Free seat limit moves 3 → 5** (`PlanCatalog`, code/config per ADR-006). Three is exactly one
+   family with no headroom, and a pending invitation already consumes a seat.
+
+**Rejected — a runtime toggle on the `/admin` console.** It would need a platform-scoped settings
+table, cross-instance cache invalidation, an audit trail and an admin write endpoint (which ADR-021
+requires be enumerated), and it would downgrade the gate from "the route does not exist" to a
+per-endpoint runtime check that every future billing endpoint must remember to run. It is also a
+footgun once real subscriptions exist: switching billing off does not stop the provider charging.
+The console may display the state **read-only**.
+
+**Rejected — promotional codes attached to an email address.** A code delivered to an inbox proves
+nothing that the passwordless sign-in to that same inbox does not already prove, so it would buy a
+code lifecycle (issuance, redemption, single-use, expiry, revocation) for no additional security.
+
+**Known and accepted:** `TenantService.ReHomeAsync` gives any departing member a fresh tenant-of-one
+they own, so someone who arrived by invitation can end up owning a household. That household's owner
+is not green-listed, so it admits nobody new — the leak is cosmetic, not a hole. *Same family, added by v4
+T64 (AUTH-8, decision #3, 2026-10-01):* an invited-but-unlisted person **founds** their household of one at
+sign-in, before accepting anything — `CreateUserWithTenantAsync` is the single choke point and it always
+provisions tenant + owner membership. If they never accept, the invitation is revoked, or accepting would
+abandon data they have since created (`WouldAbandonData`), that household stays, owned by someone the list
+never named. Deferring the household until the invitation is accepted was considered and rejected: it would
+give every path that mints a user a second shape (a user with no tenant), which the tenant filter, the
+JWT's `tenant_id` claim and the RLS backstop all assume away. The household admits nobody new, same as
+above; it is a cosmetic orphan, not an access path.
+
+**Ports downstream** (`vuelto`, `jigger-jot`) once the platform suite is green, like LOCALCI-3.
+
+**ADR-028 — The self-hosted Forgejo is the primary forge and runs the full CI/CD; GitHub stays a mirror whose own CI runs only when pushed to on purpose (LOCALCI-4). (2026-09-16) — SUPERSEDED by ADR-030 (2026-10-02)**
+The maintainer moved day-to-day git to a private Forgejo on the Windows desk (WSL2 + Docker, reachable over
+Tailscale) so that routine pushes cost nothing and leave nothing on a third-party server. GitHub keeps the
+repository — Render builds from it, and pushing there on purpose still runs the GitHub pipeline unchanged.
+The Forgejo pipeline must do everything the GitHub one does, deploys included. This supersedes
+LOCALCI-1's approach (route GitHub Actions to self-hosted runners) for this repo: the runners belong to
+Forgejo, and GitHub keeps its hosted ones.
+
+**Decision:**
+1. **Two workflow files, held together by a test.** `.forgejo/workflows/ci.yml` is a copy of
+   `.github/workflows/ci.yml` (each forge reads only its own directory once `.forgejo/workflows` exists).
+   `ForgejoCiParityTests` (**R80**) fails when the job list, a `runs-on` line, a pinned version or the change
+   classifier differs; the LOCALCI-3 gate tests run against both files. Every deliberate difference is
+   marked `LOCALCI-4:` in the copy.
+2. **The runners carry the hosted labels.** `ubuntu-latest` is a container image
+   (`forgejo-ci/ubuntu:24.04`: catthehacker's act image + Docker CLI, PowerShell, `gh`, JDK 17, the Android
+   SDK with the smoke's system image, the pinned .NET SDK and Android workload) on the WSL runner, which runs
+   jobs inside Docker-in-Docker with host networking and `/dev/kvm` passed through. Every WSL job shares that
+   one network namespace, so the two jobs that bind fixed ports (`e2e`, `native-smoke-android`) use
+   `ubuntu-host-ports` — the same image on a second WSL runner that takes one job at a time, which also
+   serializes them across runs and repos. That is the only `runs-on` difference the parity test allows, and
+   it fails for any Linux job with service containers left on the shared runner. `windows-latest` is the
+   Windows desk in host mode (a logon task, so WebView2 has a session). `macos-26` will be the MacBook.
+   Identical labels are what make `runs-on` comparable line for line.
+3. **Apple jobs require `vars.CI_MACOS_RUNNER`.** A job whose label no runner carries queues forever on
+   Forgejo (GitHub would expire it in 24 h), so until the Mac is registered the Apple legs are skipped.
+4. **Deploys publish to `deploy/*` branches on GitHub.** Render only builds from GitHub, and GitHub's
+   `ci.yml` only triggers on `main`, `develop` and pull requests. The deploy job force-pushes the tested
+   commit to `deploy/staging` (or `deploy/prod`) with a token scoped to that repository, fires the Render
+   hook, and runs the same `deploy-smoke.sh`. Each Render service tracks its `deploy/*` branch with
+   auto-deploy off. No GitHub Actions run for a deploy.
+5. **Prod is a manual dispatch.** Forgejo has no Environments and no required reviewers. `deploy-prod` runs
+   only on `workflow_dispatch` from `main`; a push to `main` runs every gate and deploys nothing. The
+   dispatched run re-runs the gates first (`changes` fails open without a diff base).
+6. **GitHub's deploy hooks are removed from GitHub.** With both pipelines holding the hook, a deliberate push
+   to GitHub's `develop` would fire a second deploy of whatever `deploy/staging` holds. Without the secret,
+   GitHub's deploy jobs already skip with a notice (DEPLOY-3's opt-in design) — a settings change, not a
+   code change.
+
+**Consequences.** The desk is now a deploy path: deploys need the laptop on (the accepted trade-off of
+SETUP.md; GitHub stays the emergency route — restore the hook secret there and push). Runners are not
+clean machines: the smoke's Postgres is recreated per run, port-binding Linux jobs queue behind each other,
+and the image's SDK/workload pins join the CLAUDE.md
+bump-together playbook. The Render deploy-hook and the GitHub mirror token live in Forgejo's secrets only.
+
+**Rejected — one shared, forge-aware `ci.yml`.** It would remove the duplication but thread
+`github.server_url` conditions through the file GitHub runs today, for every future reader of both.
+**Rejected — pushing `develop` to GitHub to deploy.** It runs the whole GitHub pipeline, and its deploy job,
+on every deploy. **Rejected — image-backed Render services.** Faster builds, but it means new services, a
+registry account, and losing the "redeploy from GitHub" escape hatch; revisit if Render's build time bites.
+
+**Addendum (2026-09-16, same day, after the first green runs) — deploys and smokes are on demand; the
+deploy pushes the real branch to GitHub; points 4–6 above are superseded.** Two things became clear once
+the pipeline ran on one machine: (a) a develop push that runs the emulator and the WebView2 smoke every
+time costs 20 minutes of a laptop the maintainer is also working on, for legs that rarely change; and
+(b) keeping GitHub deploying too was wanted after all ("I don't mind if GitHub deploys again when I push"),
+which makes the `deploy/*` branches pointless — Render can follow only one branch, and it stays on
+`develop`. So:
+- **Pushes and PRs run the gates, `e2e` and the native *builds* only** (≈10 min). The native **smokes**
+  run from `workflow_dispatch` (`smokes` = windows | android | apple | all) and on the Monday schedule.
+  The builds stay per push on purpose: they are free in wall clock and catch compile rot within one merge.
+- **Deploys run only from `workflow_dispatch`** (`deploy` = staging on `develop` | prod on `main`), never on
+  a push, and only after every gate and every smoke *selected in that run* is green (a smoke not selected
+  is skipped, and a skip is not a failure). Staging no longer tracks `develop` automatically: the
+  maintainer decides when.
+- **The deploy pushes the commit to the same branch on GitHub** — a plain fast-forward, never forced; if
+  GitHub is ahead the deploy stops and says so — then fires the hook and runs the shared smoke. GitHub's
+  pipeline runs on that push and re-deploys the same commit; accepted as harmless. GitHub keeps its hook,
+  Render keeps `develop`, nothing to reconfigure. "The deploy from Forgejo" and "the push to GitHub" are
+  the same button.
+- The earlier rejection of "pushing `develop` to GitHub to deploy" is withdrawn: its cost (GitHub's run
+  and second deploy) was re-weighed against the operational simplicity and accepted.
+
+**Addendum (2026-09-22) — a commit that is already green can be deployed without re-running its gates.**
+Three repos now share one desk. A deploy dispatch re-ran every gate on a commit whose merge run had gone
+green minutes earlier: ~10 minutes of a laptop the maintainer is also working on, for an answer already
+known. `.forgejo/workflows/deploy.yml` (dispatch only, Forgejo only) deploys such a commit directly — but it
+does not take anyone's word for it: it asks this instance's own Actions API which jobs ran for THAT commit
+and requires `changes`, `build-test`, `secret-scan`, `qa-artifacts`, `license-scan`, `docker-build`, `e2e`
+and both `native-build` legs to have a success. A missing job, a failure, a docs-only run that skipped the
+gates, or an API it cannot reach all stop the deploy and point back to `ci.yml`'s `deploy` input, which
+runs the gates itself. The job token can read that API and write nothing (probed 2026-09-22).
+Publishing is unchanged and shared: `push-to-github.sh` (fast-forward, never forced), the Render hook, then
+`deploy-smoke.sh`. Native smokes are not required, exactly as in `ci.yml`'s deploy jobs — the Monday
+schedule and the `smokes` input remain how those are proven. `ForgejoCiParityTests` pins the guard, the
+dispatch-only trigger and the shared script.
+**Rejected — a `skip_gates` input on `ci.yml`.** Same saving, but it would thread "was this skipped?"
+through every gate's `if:` and every deploy `needs:`, and one careless edit would turn the deploy's
+"everything green" rule into "nothing ran". A separate file cannot weaken the existing one.
+
+**Addendum (2026-09-22, evening) — the e2e boot flake was network churn on a shared Docker daemon, not CPU; the suite now survives a dead boot and no longer waits for the builds.**
+The 2026-09-17 gate (`e2e` `needs: build-test, native-build` on Forgejo) had become the longest thing in
+every run: `build-test` ≈ 4 min, then `e2e` ≈ 5 min, wall clock ≈ 9 min, when the shards could have started
+at second zero. It was also insufficient — sharding brought the flake back the same day — and it rested on a
+wrong diagnosis. The first run that recorded the browser console showed every `_framework/*.wasm` fetch
+failing with `net::ERR_NETWORK_CHANGED`: Chromium aborts in-flight requests when a network interface appears
+or vanishes in its namespace, and the first port lane shared its Docker daemon with the build slots, where
+Testcontainers' Postgres and `docker-build` start and stop containers all the time. Every dead boot ever
+seen ran on that lane; lanes 2 and 3, with their own daemons, never failed once. CPU only ever governed speed.
+Two fixes, both kept: the first lane got its own daemon (`runner-dind-1`; rule: no port lane shares a
+daemon with anything that creates containers), and `tests/E2E.Tests/BlazorBoot.cs` makes the suite survive
+the failure anyway — after every full navigation it watches the page and the browser console together (app
+up, Blazor's banner, or a failed framework fetch), reloads on a dead boot (three tries), then fails with the
+console attached; every red journey prints that console. With that, `e2e` needs only `changes` again on both
+forges; `ForgejoCiParityTests` pins the gate as gone and requires the "Blazor boot retries: N" line in the
+timing report, so a lane that starts sharing a network again shows up as a number. Measured on PR #17: with the lanes free, the three shards started at second 21 beside `build-test` (run 62, where the one shard on the still-shared lane died exactly as described); run 63 was green on all three, shards 3.9–6.4 min, the slowest again on the shared lane — the wall clock is now the slowest shard, not `build-test` plus a shard.
+**Rejected — keep the gate and shard less.** Fewer shards only lengthen the suite; the gate still costs the
+whole `build-test`; and neither would have found the cause.
+**Rejected — a Playwright-level retry of whole journeys.** It re-runs real regressions and hides them behind
+a green; the reload covers exactly the failure that is not ours, at the moment it happens, and nothing else.
+
+**ADR-029 — Multi-household membership (one user in several tenants) is DECIDED: DEFERRED, with the design that must survive if it is ever built. (2026-09-16)**
+The question keeps coming back, so it is answered here once. ADR-003 fixed **one tenant per user**
+(`TenantMembership` unique on `UserId`; accepting an invitation *moves* you, `ReHomeAsync` gives every
+departing member a fresh tenant-of-one). The persona that genuinely needs more is real and comes from
+the budget app (`vuelto`): a son who **owns** his own household to run his own money *and* is a
+**member** of the family household — the same person owns data in one context and is a guest in
+another.
+
+**Decision: not now.** Design detail and slice ladder live in `PLATFORM_BACKLOG.md` §16 (`MULTIHOME`).
+
+**Why deferred:**
+1. **The cost is where it lands, not how many slices.** Loosening "a user has one tenant" re-opens
+   the one assumption every v2/v3 tenancy gate was proven against (ADR-003/020, the erasure
+   completeness rules, LB-ADM-3's deterministic membership lookup). The failure mode of a mistake is
+   cross-tenant data exposure — the worst bug class the platform has — so the change would have to
+   re-run the audit suite's Phase 4 adversarial pass before it could be trusted.
+2. **Demand is one persona in one app, with no user asking yet.** Two accounts (two email addresses)
+   models the son's case today with zero platform risk. It is clunky; if that clunkiness becomes a
+   complaint from real users, that is the trigger, and it will come with a far better idea of what
+   "switching" should feel like than exists now.
+3. **The template pays a tax nobody else does:** Postman parity, 34 E2E journeys, 156 QA cases and
+   their PDFs, the FOUNDATION_RULES arch tests, DATA_MODEL/FLOWS/ARCHITECTURE diagrams, 51 tutorial
+   lessons that quote the current entity, then a port to each downstream app. That sync work is
+   realistically the largest line item.
+
+**Rejected alternatives:**
+- **A "personal wallet" scoped inside the family household** — app-level, no platform change, and it
+  is the wrong ownership: the owner sees it, the owner's dissolve/erasure wipes it, and the son cannot
+  take it with him when he moves out. It is a scope in someone else's tenant, not his money.
+- **Per-request tenant selection (a header on every call).** Even if the feature is built, this is
+  ruled out: the RLS backstop, the query filter, the stamping interceptor and every quota all anchor
+  on the JWT `tenant_id` claim. Selection must re-mint the token, never ride on the request.
+
+**Constraints that bind any future implementation (so the option stays open cheaply):**
+1. **The JWT keeps exactly one `tenant_id` — the *active* household.** Switching = an authenticated
+   endpoint that verifies membership and re-mints the access token. Scoping, RLS, quotas and every
+   gate stay untouched.
+2. **The link-entity shape is the enabler** (ADR-003's "membership, not `User.TenantId`"): the unique
+   index moves from `user_id` to `(user_id, tenant_id)`; nothing else in the schema changes.
+3. **The GATES-2 green list (ADR-027) must fire at every household-founding path.** Today the single
+   choke point is `UserService.CreateUserWithTenantAsync`; a "create another household" action for a
+   signed-in user is a second front door and must run the same check.
+4. **Notifications gain a nullable `tenant_id`** (ADR-013's per-user carve-out otherwise shows a
+   family announcement inside the son's own budget). Preferences stay per user (ADR-C2).
+5. **Erasure walks every membership** — solo owner → dissolve, member → drop the row — which the
+   per-user-AND-per-tenant completeness rule already anticipates.
+
+**Trigger to revisit:** a shipped app has users asking for it (or a second app with the persona).
+Build on the platform first — tenancy is chassis, not a vertical — then port, like GATES.
+
+**ADR-030 — GitHub is the forge again; Forgejo is retired (supersedes ADR-028). (2026-10-02)**
+Forgejo ran on the maintainer's work laptop, and a reboot or a Docker Desktop restart could stop CI
+(the 2026-10-02 morning: the Linux runner's Docker-in-Docker had restarted 187 times). An always-on
+machine at home is not in sight, so the forge goes back to GitHub:
+
+1. **`origin` is GitHub** (private) for code, PRs, merges and issues. The Forgejo issues were migrated
+   with their comments, labels and milestones; each GitHub issue's footer names its Forgejo number,
+   which old commit messages cite.
+2. **Forgejo is archived read-only, its runners are stopped.** It stays up as the rollback until it is
+   switched off; its encrypted backup is the frozen copy.
+3. **The repo is private, so every Actions minute is billed** (Free plan, 2,000 minutes a month, a $0
+   budget that stops runs at the limit). On 2026-10-01 one deploy round cost ~600 minutes, so the `CI`
+   workflow is **disabled until a CI rebuild**, whose agreed direction is: PRs and merges run backend +
+   web UI only (build-test, the scans, docker-build, e2e); every **device leg** (Windows, Linux-native,
+   macOS, iOS, Android builds and smokes) and every Render deploy runs only from a manual *Run workflow*.
+   The rebuild gets its own ADR (it amends NATIVE-1 and LOCALCI-3) and deletes `.forgejo/`,
+   `ForgejoCiParityTests` and R80; until then they stay, unused.
+4. **No branch protection:** a private repo on GitHub Free has neither branch protection nor rulesets.
+   Decided in ADR-031: none, the repos stay private.
+
+**Consequences.** DEPLOYMENT §10 and the LOCALCI-4 story are history. The Postman workspace sync runs
+from GitHub on every `develop` change. Downstream apps follow the same ADR.
+
+**ADR-031 — CI on billed minutes: pull requests run the web gates only; the device legs and every deploy run on request. (2026-10-02)**
+The repos are private (ADR-030), so every Actions minute is billed against 2,000 a month, and one develop push
+used to cost 57–147 of them (macOS bills 10×, Windows 2×). The maintainer manages the minutes by hand, and the CI
+says so:
+
+1. **Triggers:** `pull_request` into `develop`/`main`, and `workflow_dispatch`. No push trigger — a merge runs
+   nothing, its pull request already did — and no schedule.
+2. **A pull request runs the web gates only:** `changes`, `secret-scan` and `qa-artifacts` always (a docs-only
+   change can leak a credential or desync the QA PDFs), and `build-test`, `license-scan`, `docker-build`, `e2e`
+   when code changed. e2e runs as ONE shard: on hosted runners every shard boots the stack again, and that
+   setup cost more than the wall-clock it saved.
+3. **The device legs run only from *Run workflow* → `devices`** (android / windows / apple / all): the MAUI
+   builds, the Release APK and the three native smokes. This amends NATIVE-1 (ADR-018: "a change that breaks
+   the native build fails the PR") and LOCALCI-3's per-push Apple build: a change that can affect the MAUI app
+   is no longer proven by its PR. The maintainer runs them periodically and before a release. There is no
+   Linux desktop flavor (MAUI has no Linux target; the web app and the Flavors fronts cover it).
+4. **Deploys run only from *Run workflow* → `deploy`:** staging from `develop`, prod from `main` (a wrong
+   branch fails loudly). That run re-runs every web gate and deploys only if all pass — deploys are rare, and
+   re-testing beats trusting a merge commit. Choosing `prod` is the approval: GitHub Free has no Environment
+   reviewers on a private repo. The device legs are not in the deploy's needs (a native result must not block
+   a web deploy, ADR-018).
+5. **Cost hygiene:** `timeout-minutes` on every job, a NuGet cache keyed on the lockfiles, 3-day artifact
+   retention, and a new push to a pull request cancels its previous run.
+6. **No branch protection** (ADR-030's open point, decided): the repos stay private on GitHub Free.
+7. **`.forgejo/` is gone**, with `ForgejoCiParityTests`, the Forgejo branch-protection script and the
+   Forgejo-only CI-logic targets; rules **R80 and R138 retire**, **R98, R137 and R139** now speak of the one
+   workflow, and `CiWorkflowTests` holds this shape.
+
+**Consequences.** A pull request costs roughly 25–35 minutes, a docs-only one a few. The `changes` job's
+classifier still reports `native`/`maui` for the record. The platform and its downstream apps share this ADR.
+
+**ADR-032 — The platform's tenant is a "household", by design; an app whose tenant is something else renames at rebrand time. (2026-10-06)**
+The platform names its tenant with a product noun, not a neutral one: `HouseholdController` at `api/household`,
+`HouseholdInvitationsController`, the `Household.razor` page at `/household`, the `Household_*` resource keys
+(about 120 strings in EN and ES), the `nav-household` test id, and the word in emails and QA cases. The boundary
+audit of 2026-10-05 (Arch A11, #370) asked whether to rename it to a neutral word, make the display noun a per-app
+resource, or record it as intended. **Decided: record it as intended.** Both current apps (vuelto, jigger-jot) are
+household products, and the one word in code, routes, strings and tests is what lets a journey, a QA case and a
+support conversation say the same thing. A neutral word (`tenant`, `workspace`) would be right for nobody and
+would still be renamed by every app with a different noun.
+*Consequences:* the word is a **rebrand-time** concern, beside the brand itself. An app whose tenant is a team,
+a company or a classroom renames `Household` → its noun in the same pass as `Perezosoft` → its brand, following
+the entry in `docs/REBRANDING.md` §1 (routes, pages, controllers, resource keys, test ids and QA cases move
+together; `TestIdContractTests` and `ResourceParityTests` catch a half-done rename). The platform's own tests and
+docs keep saying household. Ports of platform changes into an app that renamed are three-way merges with a second
+token pair, the same mechanism the brand rename already uses. ADR-C1/C2 (tenant ≠ user; tenant-scoped data) are
+untouched: this is vocabulary, not shape.

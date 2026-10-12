@@ -37,11 +37,19 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        IHostEnvironment environment)
+        IHostEnvironment environment,
+        bool billingEnabled)
     {
         // Persistence
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+        // A SCOPED context factory for services that must write OUT-OF-BAND of the ambient
+        // transaction — the webhook delivery recorder persists failed-attempt rows through it, so
+        // they survive the OutboxProcessor's rollback (HOOKS-2). Scoped (not the default
+        // singleton) because AppDbContext takes the scoped ICurrentTenant in its constructor.
+        services.AddDbContextFactory<AppDbContext>(options =>
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")),
+            ServiceLifetime.Scoped);
 
         // Data Protection — keys stored in DB so the OAuth correlation/nonce cookies
         // survive server restarts/redeploys.
@@ -54,7 +62,7 @@ public static class ServiceCollectionExtensions
             .SetApplicationName("template");
 
         // Email — dev: points to Mailpit via appsettings.Development.json
-        services.Configure<SmtpSettings>(configuration.GetSection("Email:Smtp"));
+        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
         // The real SMTP sender, registered KEYED so the outbox handler can resolve it without
         // getting the outbox decorator (the default IEmailSender) back.
         services.AddKeyedTransient<IEmailSender, SmtpEmailSender>("smtp");
@@ -65,19 +73,28 @@ public static class ServiceCollectionExtensions
 
         // Transactional outbox + background dispatcher (ADR-007). OutboxMessage is staged in the
         // same transaction as the business change; the dispatcher drains it via typed handlers.
-        services.AddSingleton(new OutboxOptions());
+        services.AddSingleton(OutboxOptions.FromConfiguration(configuration)); // Outbox:RetentionDays; fails fast below 1
         services.AddScoped<IOutbox, EfOutbox>();
         services.AddScoped<OutboxProcessor>();
         services.AddScoped<IOutboxHandler>(sp =>
             new EmailOutboxHandler(sp.GetRequiredKeyedService<IEmailSender>("smtp")));
         services.AddHostedService<OutboxDispatcher>();
+        // A dissolved tenant's mail and webhook bodies leave with it (v4 audit H6); each handler declares
+        // whether its type does (IOutboxHandler.DissolvesWithItsTenant).
+        services.AddScoped<ITenantDataContributor, OutboxDataContributor>();
+        // A finished row's payload is cleared by the processor and the row deleted after Outbox:RetentionDays; an
+        // erased user's pending mail goes with their account (v4 audit H7, decision #6).
+        services.AddScoped<IScheduledJob, OutboxRetentionJob>();
+        services.AddScoped<IUserDataContributor, OutboxUserDataContributor>();
 
         // Outbound webhook delivery (HOOKS, ADR-016): the "webhook" outbox handler signs + POSTs each
         // delivery (retry/backoff via the outbox). Always registered — dormant until webhooks are enabled
         // and a subscription exists; the management routes are the config-gated part (Program.cs).
         services.AddScoped<IWebhookSecretProtector, WebhookSecretProtector>();
-        services.AddSingleton<IOutboundUrlGuard, OutboundUrlGuard>(); // SSRF guard for tenant-supplied webhook URLs (GAP-2)
-        services.AddHttpClient<IWebhookSender, WebhookSender>(c => c.Timeout = TimeSpan.FromSeconds(10));
+        services.AddSingleton<IOutboundUrlGuard>(sp => new OutboundUrlGuard(sp.GetRequiredService<IHostEnvironment>())); // SSRF guard for tenant-supplied webhook URLs (GAP-2)
+        // No redirects, a connection only to an address the guard accepts at connect time, no proxy (v4 audit H8).
+        services.AddHttpClient<IWebhookSender, WebhookSender>(c => c.Timeout = TimeSpan.FromSeconds(10))
+            .ConfigurePrimaryHttpMessageHandler(sp => WebhookHttp.CreatePrimaryHandler(sp.GetRequiredService<IOutboundUrlGuard>()));
         services.AddScoped<IOutboxHandler, WebhookOutboxHandler>();
 
         // Cancel a provider subscription out-of-band when a tenant is dissolved (BILLING-7).
@@ -103,24 +120,52 @@ public static class ServiceCollectionExtensions
         // webhook signature (FakeBillingProvider), and the webhook endpoint is anonymous, so registering
         // it outside Development would accept forged, unauthenticated cross-tenant billing writes. Fail
         // fast at startup instead, so a misconfigured production deploy cannot boot with the fake.
-        services.Configure<StripeSettings>(configuration.GetSection("Billing:Stripe"));
-        if (!string.IsNullOrEmpty(configuration["Billing:Stripe:SecretKey"]))
+        services.Configure<StripeSettings>(configuration.GetSection(StripeSettings.SectionName));
+        var stripeKey = configuration["Billing:Stripe:SecretKey"];
+        if (!string.IsNullOrEmpty(stripeKey))
+        {
+            // Mode sanity (v3 audit DEP-10): a presence-only check let a real prod deploy boot silently in
+            // TEST mode with a test key, or a LIVE key make real charges on staging. When the deploy
+            // declares which mode it expects (Billing:Stripe:ExpectLiveKey), the key prefix must match —
+            // fail closed at startup otherwise. Unset ⇒ no mode check (local/dev convenience).
+            if (configuration.GetValue<bool?>("Billing:Stripe:ExpectLiveKey") is { } expectLive)
+            {
+                var isLive = stripeKey.StartsWith("sk_live_", StringComparison.Ordinal);
+                var isTest = stripeKey.StartsWith("sk_test_", StringComparison.Ordinal);
+                if (expectLive && !isLive)
+                    throw new InvalidOperationException(
+                        "Billing:Stripe:ExpectLiveKey is true but Billing:Stripe:SecretKey is not a live key "
+                        + "(sk_live_…). Refusing to run a live deployment against Stripe test mode.");
+                if (!expectLive && !isTest)
+                    throw new InvalidOperationException(
+                        "Billing:Stripe:ExpectLiveKey is false but Billing:Stripe:SecretKey is not a test key "
+                        + "(sk_test_…). Refusing to run a non-live deployment against a live key that can make real charges.");
+            }
             services.AddScoped<IBillingProvider, StripeBillingProvider>();
-        else if (environment.IsDevelopment())
+        }
+        // GATES-1 (ADR-027): with the billing gate off there is no anonymous webhook to forge — the
+        // controllers are gone from the route table entirely — so the fail-fast below would only stop the
+        // deployment this gate exists for: published, free, no Stripe account. The fake stays registered
+        // because tenant dissolve still asks the provider to cancel (BillingDataContributor), where it is
+        // an inert no-op. `BillingControllers_AreAllGated` is what keeps "no reachable webhook" true.
+        // billingEnabled is the host's bound BillingSettings.Enabled, passed in rather than re-read here, so the
+        // switch that removes the billing routes and the one that relaxes this check can't disagree (v4 T6, BILL-4).
+        else if (environment.IsDevelopment() || !billingEnabled)
             services.AddScoped<IBillingProvider, FakeBillingProvider>();
         else
             throw new InvalidOperationException(
-                "No Billing:Stripe:SecretKey is configured and the environment is not Development. The " +
-                "in-memory FakeBillingProvider trusts a literal webhook signature and must never run " +
-                "outside Development (it would accept forged, unauthenticated cross-tenant billing " +
-                "writes). Configure a real Stripe secret key for this environment.");
+                "Billing:Enabled is true but no Billing:Stripe:SecretKey is configured, and the environment " +
+                "is not Development. The in-memory FakeBillingProvider trusts a literal webhook signature " +
+                "and must never back a REACHABLE billing surface outside Development (it would accept " +
+                "forged, unauthenticated cross-tenant billing writes). Configure a real Stripe secret key " +
+                "for this environment, or leave Billing:Enabled off to run without billing.");
 
         // File/blob storage (ADR-010). An S3-compatible backend (AWS/MinIO/R2/B2) is selected when a
         // bucket is configured; otherwise local disk — the dev/test default with zero setup. Same
         // config-presence switch as the billing provider. Keys are tenant-scoped and validated
         // server-side by the impl. The download tokenizer backs the local-disk /api/files endpoint.
-        services.Configure<LocalFileStorageSettings>(configuration.GetSection("Storage:Local"));
-        services.Configure<S3StorageSettings>(configuration.GetSection("Storage:S3"));
+        services.Configure<LocalFileStorageSettings>(configuration.GetSection(LocalFileStorageSettings.SectionName));
+        services.Configure<S3StorageSettings>(configuration.GetSection(S3StorageSettings.SectionName));
         services.AddSingleton<IFileDownloadTokenizer, FileDownloadTokenizer>();
         if (!string.IsNullOrEmpty(configuration["Storage:S3:Bucket"]))
         {

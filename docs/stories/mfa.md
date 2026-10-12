@@ -59,6 +59,37 @@ return recovery codes **once**), disable (verify a code → wipe secret + codes)
 `VerifyAsync(userId, code)` used by the login step-up (MFA-2). Endpoints under `/api/auth/mfa/*`
 (authenticated). **Also extends account erasure (GDPR-2)** to wipe `UserMfa` + `MfaRecoveryCode`.
 
+> **2026-07-15 — brute-force cap (v3 audit ADM-3).** The step-up verify had no per-user attempt cap —
+> only a per-IP limiter — and a wrong code doesn't consume the challenge, so an attacker holding factor 1
+> could mint a fresh challenge per guess and spray TOTPs across IPs (~333k expected guesses). `VerifyAsync`
+> now tracks **per-user consecutive failures** on `UserMfa` (`FailedAttemptCount` + `LockedUntil`, migration
+> `MfaLockout`): the increment is atomic (conditional `ExecuteUpdate`, cap on the persisted value), a
+> success resets it, and once `Auth:Mfa:MaxAttempts` (default 5) is hit the user's step-up is locked for
+> `Auth:Mfa:LockoutWindowMinutes` (default 15). Recovery codes share the path (also capped). The endpoint
+> keeps its single generic 401 (`mfa_failed`) — no lockout oracle. Tests: `MfaLoginServiceTests`
+> (`Verify_CapWrongCodesAcrossFreshChallenges…`, `Lockout_LiftsAfterTheWindow`, `Success_ResetsTheFailureCounter`).
+
+> **2026-07-15 — claim-before-verify (v3 audit LB-AUTH-1).** `VerifyChallengeAsync` used to call
+> `MfaService.VerifyAsync` (which **burns** a recovery code / advances the anti-replay step) *before*
+> `challenges.Consume`, so a claim that then failed — a replayed challenge, or one evicted from the
+> `IMemoryCache` — spent the second factor with **no session issued** (the user's recovery code simply
+> gone). The challenge is now claimed **first**; only the winner ever touches the factor. A wrong code burns
+> nothing, so the claim is handed back (`IMfaChallengeService.Restore`) and the same step-up stays
+> retryable — the per-user lockout above, not the challenge, is what caps guessing. The signed token's own
+> expiry still caps the real lifetime, so a restore can't extend a challenge.
+
+> **2026-07-15 — peppered recovery-code hashing (v3 audit ADM-4).** Typeable recovery codes are only ~49.5
+> bits, and were stored under the shared **unsalted SHA-256** `ITokenHasher` — a leaked `MfaRecoveryCode`
+> row was offline-crackable (day-scale on a GPU) into a working second factor. They now hash through a new
+> **`IRecoveryCodeHasher`** — HMAC-SHA256 under a server **pepper** — so a DB leak alone is useless (an
+> attacker needs `Jwt:Secret` too). The pepper is **derived from `Jwt:Secret` via HKDF** with a
+> domain-separation label, so it needs no separate secret and inherits that secret's presence/min-length
+> guard while staying independent of JWT signing. HMAC is deterministic, so the by-hash lookup is unchanged;
+> codes stay 10 chars (no UI change). The high-entropy tokens (magic-link/API-key/invitation) keep plain
+> SHA-256 — the finding is specific to the low-entropy codes. **Upgrade note:** changing the hash invalidates
+> existing recovery-code hashes; a real deployment adopting this must have users regenerate codes (disable +
+> re-enroll) — no dual-read fallback (this template has no real users). Tests: `RecoveryCodeHasherTests`.
+
 **Acceptance criteria**
 
 ```gherkin

@@ -7,9 +7,18 @@ unmapped — the course's own arch test: an unmapped file is a hole in the
 tutorial, not an oversight to shrug at.
 
 Run from the repo root:  python docs/tutorial/gen_coverage.py
+  --check         regenerate in memory and exit 1 if COVERAGE.md differs or a file is unmapped
+                  (CI's "Course coverage" step; nothing is written)
+  --check-quotes  the quote-currency sweep (v4 T61, R114/R115): every code block headed by a
+                  repo path (`// path` or `# path`) must name a file that exists, and every
+                  member the block declares must still be declared in that file. Exit 1 on a
+                  stale quote. A block the reader writes and the repo does not keep is headed
+                  `// path (yours)`.
+  --orphans       files the map assigns to a lesson whose text never names them (informational)
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from fnmatch import fnmatch
@@ -97,6 +106,15 @@ RULES: list[tuple[str, str, str]] = [
     ("*.py", "META", "authoring tooling"),
     ("*.pdf", "META", "generated QA guides"),
     (".claude/*", "META", "assistant config"),
+    (".vscode/*", "META", "editor run/debug config — not part of the rebuilt app"),
+    ("tests/E2E.Tests/journey-seconds.tsv", "META", "CI tuning data: measured seconds per journey so the e2e shards are dealt evenly (Env L28)"),
+    ("tools/dev-profiles.ps1", "META", "editor tooling: writes the gitignored VS/VS Code start profiles for this clone, not part of the rebuilt app"),
+    ("tools/android-emulator.ps1", "META", "editor tooling: boots an AVD on a fixed port for the VS Code Android profiles"),
+    ("tools/publish-native.ps1", "META", "maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed"),
+    ("tools/e2e.ps1", "3.6", "runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)"),
+    ("tools/ports.ps1", "0.2", "writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)"),
+    ("tools/port-platform.ps1", "9.1", "ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)"),
+    ("tools/telemetry.ps1", "META", "maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)"),
 
     # ---- Part 0 ----
     (".gitignore", "0.2", ""),
@@ -107,31 +125,57 @@ RULES: list[tuple[str, str, str]] = [
 
     # ---- Part 1 ----
     ("Perezosoft.slnx", "1.1", ""),
-    ("Directory.Build.props", "1.1", "warnings-as-errors etc."),
+    ("Directory.Build.props", "1.1", "warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)"),
+    ("local-ports.props", "0.2", "the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)"),
+    ("platform-ownership.json", "9.1", "which files are the platform's, which an app adapts, which are the app's (Arch A2)"),
+    ("platform-stamp.json", "9.1", "the platform commit this repo is synced to; null on the platform (Arch A2)"),
+    ("platform-schema.json", "9.1", "the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)"),
+    ("tests/Api.Tests/PlatformSchemaTests.cs", "9.1", "the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)"),
+    ("src/Api/PlatformStamp.cs", "9.1", "reads the stamp beside the binaries for /api/version (Arch A2)"),
+    ("tests/Api.Tests/App/PlatformDivergences.json", "9.1", "the app's allowlisted changes to platform files, with reasons (Arch A2)"),
+    ("tests/Api.Tests/PlatformOwnershipTests.cs", "9.1", "the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)"),
+    ("tests/Api.Tests/Architecture/PlatformOwnership.cs", "9.1", "the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)"),
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
+    (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
+    ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
+    ("tests/Api.Tests/CiWorkflowTests.cs", "8.3", "the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)"),
+    ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),
+    ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, doc-map/QA-count sync (v3 T60: R61/R68/R75)"),
+    ("tests/Api.Tests/RulesEnforcement.cs", "1.4", "the enforcement manifest: every [machine] rule names its standing check, or the issue that owes it (v4 T67)"),
+    ("tests/Api.Tests/RulesEnforcement.App.cs", "1.4", "the app's half of the manifest: per-rule Pending/NotHere overrides (Arch A1)"),
     ("*/Perezosoft.*.csproj", "1.1", "created here; PackageReferences added as lessons need them"),
     ("src/Api/Properties/launchSettings.json", "1.1", ""),
     ("src/Maui/Properties/launchSettings.json", "A.1", ""),
     ("src/Api/appsettings*.json", "1.4", "non-secret config; grows every config lesson"),
     ("src/Api/Perezosoft.Api.http", "1.2", "REST client scratchpad — grows with each endpoint"),
     ("src/Api/Program.cs", "1.2", "born here; every part adds registrations/middleware"),
+    ("src/Api/AppComposition.cs", "3.2", "the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)"),
+    ("src/Core/Abstractions/IStartupTask.cs", "3.2", "work that needs the schema, run by Program.cs after Migrate(); registered in AppComposition (Arch A1)"),
     ("tests/Api.Tests/HarnessSmokeTests.cs", "1.2", ""),
     ("tests/Api.Tests/Integration/HarnessSmokeTests.cs", "1.2", ""),
     ("tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs", "1.2", ""),
     ("tests/Api.Tests/Infrastructure/FakeHostEnvironment.cs", "1.2", ""),
     ("src/Infrastructure/Persistence/AppDbContext.cs", "1.3", "born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout"),
+    ("src/Infrastructure/Persistence/AppDbContext.App.cs", "1.3", "the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)"),
     ("src/Api/AppDbContextFactory.cs", "1.3", "design-time factory for dotnet ef"),
     ("tests/Api.Tests/AppDbContextFactoryTests.cs", "1.3", ""),
     ("tests/Api.Tests/Infrastructure/PostgresFixture.cs", "1.3", ""),
     ("tests/Api.Tests/Infrastructure/PostgresTestBase.cs", "1.3", "model-derived TRUNCATE (R11)"),
     ("tests/Api.Tests/Infrastructure/ServiceHarness.cs", "1.3", ""),
+    ("tests/Api.Tests/App/AppTestComposition.cs", "1.3", "the app's half of the test chassis: its contributors and host pins (Arch A1)"),
     ("tests/Api.Tests/Infrastructure/TestAppDbContext.cs", "1.3", "test-only subclass so platform tests don't depend on Notes (R9)"),
+    ("tests/Api.Tests/Infrastructure/DbFaultInjector.cs", "1.3", "the database-fault + interleaving seam (v4 T54, R7)"),
+    ("tests/Api.Tests/Infrastructure/Recording.cs", "1.3", "the recording double: forwards to the real implementation and writes down what was asked (v4 T25, R151)"),
+    ("tests/Api.Tests/Infrastructure/Concurrently.cs", "1.3", "the shared concurrency runner (v4 T54, R7)"),
+    ("tests/Api.Tests/Infrastructure/CapturingLogger.cs", "1.3", "the one log double the suite shares"),
     ("tests/Api.Tests/MigrationsTests.cs", "1.3", ""),
     ("src/Api/Configuration/SettingsProvider.cs", "1.4", ""),
     ("src/Api/Configuration/SettingsRegistration.cs", "1.4", "the one blessed Bind+ValidateOnStart pattern (R22)"),
     ("src/Api/Configuration/ServiceRegistrationExtensions.cs", "1.4", "grows as services appear"),
     ("src/Infrastructure/ServiceCollectionExtensions.cs", "1.4", "grows as infra appears"),
     ("tests/Api.Tests/DocAndConfigSyncTests.cs", "1.4", "config keys must exist in .env.example + appsettings (R20)"),
+    ("src/Api/LocalDotEnv.cs", "1.4", "the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)"),
+    ("tests/Api.Tests/LocalDotEnvTests.cs", "1.4", "opt-out set, single load site, skip + walk-up behaviour"),
     ("src/Api/Services/ErrorResponse.cs", "1.5", "shared envelope; never ex.Message (R16/R18)"),
 
     # ---- Part 2 ----
@@ -141,6 +185,12 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Infrastructure/Repositories/UserRepository.cs", "2.1", ""),
     ("src/Api/Services/UserService.cs", "2.1", ""),
     ("tests/Api.Tests/UserServiceTests.cs", "2.1", ""),
+    ("src/Api/Configuration/SignupSettings.cs", "2.9", "GATES-2 green list; empty = open"),
+    ("src/Api/Services/SignupGate.cs", "2.9", "GATES-2: who may FOUND a household, enforced at 2.8's account-creation choke point"),
+    ("tests/Api.Tests/Auth/SignupGateTests.cs", "2.9", "GATES-2"),
+    ("tests/Api.Tests/Configuration/SignupSettingsTests.cs", "2.9", "green-list entries normalized at bind: trim, lower-case, strip a leading @, drop blanks (v4 T35, R82)"),
+    ("tests/Api.Tests/Tenancy/AcceptDissolveTests.cs", "2.9", "the join retires an empty tenant-of-one through the dissolution sequence, never a raw delete (v4 H5, R123)"),
+    ("tests/Api.Tests/Auth/SignupRefusalSurfacingTests.cs", "2.9", "GATES-2: the refusal on every sign-in path"),
     ("src/Api/Services/JwtTokenService.cs", "2.1", ""),
     ("src/Api/Services/JwtClaims.cs", "2.1", ""),
     ("src/Api/Configuration/IJwtSettings.cs", "2.1", ""),
@@ -150,6 +200,8 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/ITokenHasher.cs", "2.1", ""),
     ("src/Api/Services/TokenHasher.cs", "2.1", "store hashes, never raw tokens"),
     ("tests/Api.Tests/TokenServiceTests.cs", "2.1", ""),
+    ("tests/Api.Tests/TokenHasherTests.cs", "2.1", "hasher hostile-input + fixed-time contract (v3 TB-AUTH-8)"),
+    ("tests/Api.Tests/Integration/RefreshReplayTests.cs", "2.1", "rotated-token replay revokes all sessions (v3 TB-AUTH-1); the 60 s reuse grace window (ADR-002 addendum)"),
     ("src/Api/Controllers/AuthControllerBase.cs", "2.1", ""),
     ("src/Api/Controllers/AuthController.cs", "2.1", "grows through 2.4/2.5/6.5"),
     ("src/Api/Models/AuthModels.cs", "2.1", ""),
@@ -170,6 +222,12 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Infrastructure/Email/SmtpEmailSender.cs", "2.3", "MailKit quarantined here"),
     ("src/Infrastructure/Email/SmtpSettings.cs", "2.3", ""),
     ("tests/Api.Tests/SmtpSettingsTests.cs", "2.3", "incl. the SMTP-revocation knob (PR #125)"),
+    ("tests/Api.Tests/Email/SmtpMessageBuilderTests.cs", "2.3", "MIME shape: CID images + attachment parts (JOBS-4)"),
+    ("tests/Core.Tests/EmailAttachmentTests.cs", "2.3", "attachment guard: 7 MiB raw total incl. inline images (10 MiB on the wire), ≤ 20 parts, strict type/subtype, safe base name (JOBS-4, v4 T40)"),
+    ("src/Core/Text/SafeTruncation.cs", "4.1", "rune-safe column truncation — never through an emoji (v4 T38, R96)"),
+    ("tests/Core.Tests/SafeTruncationTests.cs", "4.1", "the truncation never leaves half an emoji (v4 T38)"),
+    ("src/Api/Services/BillingPostureCheck.cs", "5.1", "startup Warning when Stripe-managed rows linger with the gate off — resolution is gate-blind (v4 T46)"),
+    ("tests/Api.Tests/Billing/BillingPostureCheckTests.cs", "5.1", "the posture warning: counts live Stripe-managed rows, silent with the gate on (v4 T46)"),
     ("src/Infrastructure/Email/BrandedEmail.cs", "2.3", "inline-branded templates — the rebrand trap"),
     ("src/Infrastructure/Email/EmailStrings.resx", "2.3", "localized in 3.5"),
     ("src/Infrastructure/Email/EmailStrings.es.resx", "3.5", ""),
@@ -221,9 +279,13 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Infrastructure/Repositories/TenantInvitationRepository.cs", "2.9", ""),
     ("src/Api/Services/TenantInvitationService.cs", "2.9", ""),
     ("tests/Core.Tests/TenantInvitationTests.cs", "2.9", ""),
+    ("tests/Api.Tests/Architecture/InvitationValidityGateTests.cs", "2.9", "one invitation-validity rule on the entity; no expiry comparison outside it, status-only reads are named sites (v4 T34, R127)"),
     ("src/Api/Controllers/HouseholdInvitationsController.cs", "2.9", ""),
     ("src/Api/Services/TenantDissolutionService.cs", "2.9", "contributor fan-out"),
     ("src/Core/Abstractions/ITenantDataContributor.cs", "2.9", "the seam GDPR later extends"),
+    ("src/Core/Entities/ISharedOrTenantScoped.cs", "2.6", "the sibling of ITenantScoped: rows shared (null) or one tenant's — second filter, write rule, four RLS policies (Arch A4)"),
+    ("tests/Api.Tests/Tenancy/SharedOrTenantTests.cs", "2.6", "the shared-or-tenant shape at the EF level, on the TestSharedWidget fixture (Arch A4)"),
+    ("tests/Api.Tests/Rls/SharedOrTenantRlsTests.cs", "2.6", "the four command-scoped policies as the runtime role sees them (Arch A4)"),
     ("tests/Api.Tests/WipeDataTests.cs", "2.9", ""),
 
     # ---- Part 3 ----
@@ -240,9 +302,13 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/NotesSliceTests.cs", "3.2", ""),
     ("tests/Api.Tests/FeatureAuthorizationTests.cs", "3.2", ""),
     ("tests/Api.Tests/ArchitectureTests.cs", "3.3", "born here; gains a rule per part (R5/R6/R15…)"),
+    ("tests/Api.Tests/App/AppAllowlists.cs", "3.3", "the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)"),
+    ("tests/Api.Tests/Architecture/SliceWriteInspector.cs", "3.3", "which entities a slice writes: the matcher behind the one-writer gate (Arch A8)"),
+    ("tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs", "3.3", "self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)"),
+    ("tests/Ui.Tests/SystemBarThemeSyncTests.cs", "A.1", "the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)"),
+    ("tests/Ui.Tests/*", "3.4", "bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test"),
     ("src/Web/Program.cs", "3.4", ""),
     ("src/Web/_Imports.razor", "3.4", ""),
-    ("src/Web/Http/AuthHeaderHandler.cs", "3.4", ""),
     ("src/Web/Http/CookieHandler.cs", "3.4", ""),
     ("src/Web/Http/CookieSessionStore.cs", "3.4", ""),
     ("src/Web/appsettings*.json", "3.4", ""),
@@ -257,6 +323,14 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/Pages/AuthError.razor", "3.4", ""),
     ("src/Shared.Ui/Pages/Join.razor", "3.4", "invitation accept UI (pairs with 2.9)"),
     ("src/Shared.Ui/Auth/AuthService.cs", "3.4", ""),
+    ("src/Shared.Ui/Auth/AccessTokenState.cs", "3.4", "the token in memory and its clock (split out of AuthService, v4 T57)"),
+    ("src/Shared.Ui/Auth/SessionTransport.cs", "3.4", "the refresh and logout calls per host (split out of AuthService, v4 T57)"),
+    ("src/Shared.Ui/Auth/RenewalScheduler.cs", "3.4", "the keep-alive timer (split out of AuthService, v4 T57)"),
+    ("src/Shared.Ui/Auth/NativeSignIn.cs", "3.4", "body-token sign-in and OAuth resume (split out of AuthService, v4 T57)"),
+    ("src/Shared.Ui/Auth/AuthProbes.cs", "3.4", "staff / billing / providers probes (split out of AuthService, v4 T57)"),
+    ("src/Shared.Ui/Auth/PreferenceShadow.cs", "3.4", "a just-saved theme/locale the token predates (split out of AuthService, v4 T57)"),
+    ("src/Shared.Ui/Auth/AuthWireModels.cs", "3.4", "the JSON shapes the auth client reads (split out of AuthService, v4 T57)"),
+    ("src/Shared.Ui/Auth/SignInModels.cs", "3.4", "SignInStatus / SignInResult (split out of AuthService, v4 T57)"),
     ("src/Shared.Ui/Auth/AuthErrorCopy.cs", "3.4", "server error code -> localized copy key; keeps 2.4's enumeration-safe collapse client-side (landed on develop post-write)"),
     ("src/Shared.Ui/Auth/ISessionStore.cs", "3.4", "per-platform session seam"),
     ("src/Shared.Ui/Auth/IOAuthInitiator.cs", "3.4", ""),
@@ -267,16 +341,28 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/Resources/AppStrings.es.resx", "3.5", ""),
     ("src/Shared.Ui/Components/LanguageSwitcher.razor", "3.5", ""),
     ("tests/E2E.Tests/I18nTests.cs", "3.5", ""),
+    ("tests/Api.Tests/ResourceParityTests.cs", "3.5", "EN/ES resx key parity, no duplicate or unprefixed keys (2026-07 truth-up; v4 T9)"),
+    ("tests/E2E.Tests/LocaleMismatchJoinTests.cs", "3.5", "locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)"),
     ("tests/E2E.Tests/E2ETestBase.cs", "3.6", ""),
+    ("tests/Api.Tests/E2eShardsTests.cs", "3.6", "the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)"),
     ("tests/E2E.Tests/Mailpit.cs", "3.6", "read OTPs from the fake inbox"),
+    ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)"),
+    ("tests/E2E.Tests/BlazorBootCore.cs", "3.6", "the boot helper's decision, Playwright-free (v4 T55, R109)"),
+    ("tests/Api.Tests/E2E/BlazorBootTests.cs", "3.6", "the boot decision driven by a scripted page — the audit's six cases (v4 T55)"),
     ("tests/E2E.Tests/Pages/*", "3.6", "Page Object Model"),
     ("tests/E2E.Tests/AuthFlowTests.cs", "3.6", ""),
+    ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)"),
 
     # ---- Part 4 ----
     ("src/Core/Abstractions/IOutbox.cs", "4.1", ""),
     ("src/Core/Abstractions/IOutboxHandler.cs", "4.1", ""),
     ("src/Core/Entities/OutboxMessage.cs", "4.1", ""),
     ("src/Infrastructure/Persistence/Configurations/OutboxMessageConfiguration.cs", "4.1", ""),
+    ("tests/Api.Tests/Outbox/OutboxTenancyTests.cs", "4.1", "a dissolved tenant's mail and webhook rows leave with it; billing.cancel stays (v4 H6)"),
+    ("tests/Api.Tests/Outbox/OutboxRetentionTests.cs", "4.1", "a finished row is a receipt: payload cleared, deleted after RetentionDays; erasure removes queued mail (v4 H7)"),
+    ("src/Infrastructure/Outbox/OutboxRetentionJob.cs", "4.1", "deletes finished rows after Outbox:RetentionDays (v4 H7)"),
+    ("src/Infrastructure/Outbox/OutboxUserDataContributor.cs", "4.1", "account erasure removes mail still queued for the user (v4 H7)"),
+    ("src/Infrastructure/Outbox/OutboxDataContributor.cs", "4.1", "dissolve removes the types whose handler declares DissolvesWithItsTenant (v4 H6)"),
     ("src/Infrastructure/Outbox/*", "4.1", "dispatcher + SKIP LOCKED claiming"),
     ("tests/Api.Tests/Outbox/OutboxProcessorTests.cs", "4.1", ""),
     ("src/Infrastructure/Email/OutboxEmailSender.cs", "4.2", "decorator: same seam, now crash-safe"),
@@ -292,6 +378,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Scheduling/*", "4.4", ""),
     ("src/Api/Observability/*", "4.5", ""),
     ("tests/Api.Tests/Observability/*", "4.5", ""),
+    ("tests/Api.Tests/TelemetryLoggingTests.cs", "4.5", "HttpClient logs stay at Warning, or every OTLP export logs itself into the next (Local Dev Alignment L3)"),
     ("src/Core/Abstractions/IAuditLog.cs", "4.6", ""),
     ("src/Core/Entities/AuditEvent.cs", "4.6", ""),
     ("src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs", "4.6", ""),
@@ -311,6 +398,13 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Infrastructure/Billing/FakeBillingProvider.cs", "5.1", "throws outside Development (R1)"),
     ("src/Api/Services/BillingService.cs", "5.1", ""),
     ("src/Api/Controllers/BillingController.cs", "5.1", ""),
+    ("src/Api/Configuration/BillingSettings.cs", "5.1", "GATES-1 config gate, default OFF"),
+    ("src/Api/Configuration/BillingGateConvention.cs", "5.1", "GATES-1: drops the billing controllers from the application model so gated-off routes 404"),
+    ("src/Api/Controllers/FeaturesController.cs", "5.1", "GATES-1: anonymous report of which gates are open, so the client can hide the billing link"),
+    ("tests/Api.Tests/Billing/BillingGateTests.cs", "5.1", "GATES-1"),
+    ("tests/E2E.Tests/GateJourneyTests.cs", "5.1", "GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48"),
+    ("tests/Api.Tests/Billing/PlanCatalogTests.cs", "5.1", "GATES-1 pins the catalog's fail-closed Free fallback"),
+    ("tests/Api.Tests/Integration/FeaturesEndpointTests.cs", "5.1", "GATES-1"),
     ("src/Api/Models/BillingModels.cs", "5.1", ""),
     ("tests/Api.Tests/Billing/EntitlementServiceTests.cs", "5.1", ""),
     ("tests/Api.Tests/Billing/RequireEntitlementFilterTests.cs", "5.1", ""),
@@ -334,6 +428,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/BillingDataContributor.cs", "5.3", ""),
     ("src/Infrastructure/Billing/BillingCancelOutboxHandler.cs", "5.3", ""),
     ("tests/Api.Tests/Billing/QuotaServiceTests.cs", "5.3", ""),
+    ("tests/Api.Tests/Billing/CatalogNumbersTests.cs", "5.3", "catalog numbers are read, never copied: docs that state a seat cap state PlanCatalog's, QA drills count relative to the cap (v4 T47, R88)"),
     ("tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs", "5.3", ""),
     ("tests/Api.Tests/Billing/BillingDissolveTests.cs", "5.3", ""),
 
@@ -396,6 +491,10 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/NotificationService.cs", "7.2", ""),
     ("src/Api/Services/NotificationUserDataContributor.cs", "7.2", ""),
     ("src/Api/Controllers/NotificationsController.cs", "7.2", ""),
+    ("tests/Api.Tests/Integration/NotificationClearScopeTests.cs", "7.2", "bulk-clear requires an explicit scope (v3 LB-UI-10)"),
+    ("tests/Api.Tests/Integration/ContributorRegistrationTests.cs", "6.3", "every declared contributor resolves from the app DI (v3 TB-TEN-11)"),
+    ("tests/Api.Tests/Integration/PostmanParityTests.cs", "8.3", "every mapped /api endpoint documented in the canonical collection (v3 TR-6)"),
+    ("tests/Api.Tests/PostmanParityDescriptionTests.cs", "8.3", "each request's description names the error codes its action returns, the signup refusal and the billing gate key (v4 T63, R83/R119)"),
     ("src/Api/Models/NotificationModels.cs", "7.2", ""),
     ("src/Shared.Ui/Components/NotificationBell.razor", "7.2", ""),
     ("src/Shared.Ui/Components/NotificationPrefsCard.razor", "7.2", ""),
@@ -415,13 +514,20 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Infrastructure/Persistence/Configurations/WebhookDeliveryConfiguration.cs", "7.4", ""),
     ("src/Core/Webhooks/WebhookSignature.cs", "7.4", "HMAC signing"),
     ("tests/Core.Tests/WebhookSignatureTests.cs", "7.4", ""),
+    ("src/Infrastructure/Webhooks/WebhookFailure.cs", "7.4", "the delivery log carries a reason code, never exception text (v4 T39, R89)"),
+    ("tests/Api.Tests/Architecture/WebhookErrorCodeGateTests.cs", "7.4", "scan gate: a tenant-visible Error is never assigned from .Message (v4 T39)"),
+    ("tests/Api.Tests/Integration/DbContextFactoryScopeTests.cs", "7.4", "the handler's failure-row context comes from a scoped IDbContextFactory that resolves inside a scope and is not the scoped context (v4 T42)"),
     ("src/Api/Services/WebhookService.cs", "7.4", ""),
     ("src/Api/Endpoints/WebhookEndpoints.cs", "7.4", ""),
     ("src/Infrastructure/Webhooks/WebhookOutboxHandler.cs", "7.4", ""),
+    ("tests/Api.Tests/Webhooks/WebhookWritePolicyTests.cs", "7.4", "test-send + replay carry the per-tenant webhook-write throttle on the real route table (v4 T44)"),
     ("src/Infrastructure/Webhooks/WebhookSender.cs", "7.4", ""),
     ("src/Infrastructure/Webhooks/WebhookSecretProtector.cs", "7.4", "encrypted at rest (builds on 6.3)"),
     ("src/Api/Configuration/WebhooksSettings.cs", "7.4", ""),
     ("tests/Api.Tests/Webhooks/WebhookDeliveryTests.cs", "7.4", ""),
+    ("tests/Api.Tests/Webhooks/WebhookRedirectAndPinningTests.cs", "7.4", "no redirects, connection pinned to what the guard accepts, a refusal dead-letters at once (v4 H8)"),
+    ("src/Infrastructure/Webhooks/WebhookHttp.cs", "7.4", "the webhook transport: no redirects, pinned connect, no proxy (v4 H8)"),
+    ("src/Core/Abstractions/OutboxPermanentFailureException.cs", "4.1", "a failure no retry can change dead-letters at once (v4 H8)"),
     ("tests/Api.Tests/Webhooks/WebhookDeliveryLogTests.cs", "7.4", ""),
     ("tests/Api.Tests/Webhooks/WebhookSubscriptionServiceTests.cs", "7.4", ""),
     ("src/Api/Configuration/PlatformAdminSettings.cs", "7.5", ""),
@@ -431,7 +537,13 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Services/AdminBroadcastOutboxHandler.cs", "7.5", "announce-all -> outbox fan-out to every user"),
     ("src/Api/Models/AdminModels.cs", "7.5", ""),
     ("src/Shared.Ui/Pages/AdminConsole.razor", "7.5", ""),
+    ("tests/Ui.Tests/AdminConsoleGateUiTests.cs", "7.5", "the Comp/Revert block follows /api/features: absent while billing is off (v4 T45)"),
     ("tests/Api.Tests/Admin/*", "7.5", ""),
+    ("tests/Core.Tests/Auth/ImpersonationIdentityTests.cs", "7.5", "client identity swap raises AuthService.IdentityChanged so the header re-sources on impersonate"),
+    ("src/Shared.Ui/Auth/BearerRetry.cs", "3.4", "both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)"),
+    ("src/Shared.Ui/Auth/BearerScopedHandler.cs", "3.4", "the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)"),
+    ("tests/Api.Tests/Auth/BearerHandlerParityTests.cs", "3.4", "both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)"),
+    ("tests/Ui.Tests/BearerScopedHandlerTests.cs", "3.4", "API requests carry the bearer; a foreign host gets none and spends no refresh (v4 T49)"),
 
     # ---- Part 8 ----
     ("src/Api/Configuration/ProxyForwardingExtensions.cs", "8.1", "config-gated forwarded headers"),
@@ -443,6 +555,7 @@ RULES: list[tuple[str, str, str]] = [
     (".github/workflows/ci.yml", "1.6", "born here (build+test+secret/license gates); every part adds jobs — e2e 3.6, docker 8.2, deploy 8.3, native A.1"),
     (".github/forbidden-licenses.json", "1.6", "copyleft ban (R26)"),
     (".github/*", "8.3", ""),
+    ("tests/ci-logic/*", "8.3", "CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)"),
 
     ("render.yaml", "8.2", "Render blueprint (ADR-017)"),
 
@@ -477,7 +590,13 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/BrowserFileDownloadLauncher.cs", "6.3", ""),
     ("src/Shared.Ui/AppResumeNotifier.cs", "A.1", "refresh-on-resume seam (NATIVE-4 G2)"),
     ("tests/E2E.Tests/NativeSmokeTests.cs", "A.1", "NATIVE-7 emulator/WebView2 smoke"),
+    ("tests/Api.Tests/ToolsScriptsTests.cs", "A.1", "the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)"),
+    ("tests/Api.Tests/NativeShellGateTests.cs", "A.1", "Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)"),
     ("tests/native-smoke-android/*", "A.1", "Android playwright-core smoke harness"),
+    ("tests/Api.Tests/TestIdContractTests.cs", "3.6", "the test-id contract (every data-testid is used, every used id exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)"),
+    ("tests/Ui.Tests/Pages/*", "3.4", "the page tests: every branch of Household, Login, Join, Billing, the header and the admin console on the bUnit chassis, plus the per-page floor (v4 T56)"),
+    ("tests/js-logic/*", "3.4", "the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)"),
+    ("tests/Api.Tests/JsLogicTests.cs", "3.4", "runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)"),
 
     # ---- drift absorbed 2026-07-10 (THEME-1 dark mode) ----
     ("src/Shared.Ui/wwwroot/js/theme.js", "3.4", "THEME-1 pre-paint dark-mode bootstrap (data-bs-theme)"),
@@ -485,6 +604,20 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Shared.Ui/LocalStorageThemePersistence.cs", "3.4", ""),
     ("src/Shared.Ui/Components/ThemeSwitcher.razor", "3.4", ""),
     ("tests/E2E.Tests/ThemeJourneyTests.cs", "3.4", "dark-mode journey (live flip, reload persist, cross-device reconcile)"),
+    ("tests/E2E.Tests/SessionJourneyTests.cs", "3.6", "session journeys only a browser can prove: Back after sign-out with the back/forward cache on, keep-alive on Playwright's clock, a theme save during a renewal (v4 T58)"),
+
+    # ---- drift absorbed 2026-08-31 (QA-SEC-03 bfcache guard) ----
+    ("src/Shared.Ui/wwwroot/js/bfcache-guard.js", "3.4", "reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)"),
+    ("tests/Api.Tests/BfcacheGuardTests.cs", "3.4", "pins the guard's contract + presence in BOTH hosts' index.html"),
+
+    # ---- drift absorbed 2026-09-16 (Android system bars, ported from JiggerJot) ----
+    ("src/Shared.Ui/ISystemBarTheme.cs", "A.1", "OS-drawn system-bar seam — Android paints its status bar from the page's theme"),
+    ("src/Shared.Ui/Components/SystemBarThemeSync.razor", "A.1", "renderless: relays theme.js's applied theme to ISystemBarTheme"),
+    ("tests/Api.Tests/NativeChromeGateTests.cs", "A.1", "Android bar colours = app.css tokens; top inset applied once"),
+
+    # ---- drift absorbed 2026-07-14 (PREFS-1 / ADR-022 + BILLING-9) ----
+    ("tests/Api.Tests/Billing/AcceptSeatQuotaTests.cs", "5.3", "BILLING-9: seat quota re-checked at invitation ACCEPT (402 seat_limit_reached)"),
+    ("tests/Api.Tests/AccountControllerTests.cs", "3.5", "PREFS-1/ADR-022: theme+locale preference-endpoint storage rules"),
 
     # ---- drift absorbed 2026-07-07 (RLS tenancy backstop, ADR-020 / PR #124) ----
     ("src/Infrastructure/Persistence/RlsDdl.cs", "8.4", "policy DDL — source of the RlsMigrationGateTests parity gate"),
@@ -498,11 +631,41 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Controllers/NativeAuthController.cs", "A.2", ""),
     ("src/Api/Services/NativeAuthCodeService.cs", "A.2", ""),
     ("src/Api/Services/NativeRedirectPolicy.cs", "A.2", ""),
+    ("src/Api/Services/NativeAuthUrls.cs", "A.2", "state CSRF round-trip through login→callback (v3 NAT-9)"),
     ("tests/Api.Tests/NativeAuthCodeServiceTests.cs", "A.2", ""),
     ("tests/Api.Tests/NativeRedirectPolicyTests.cs", "A.2", ""),
+    ("tests/Api.Tests/NativeAuthUrlsTests.cs", "A.2", ""),
     ("src/Maui/Auth/*", "A.2", ""),
     ("src/Maui/*", "A.1", ""),
     ("tests/Api.Tests/Infrastructure/TenantPermissionGate.cs", "6.1", "test double for the permission seam"),
+
+    # ---- v3 audit remediation + NATIVE-12 (2026-07) — mapped to the lesson that teaches each seam ----
+    ("global.json", "1.1", "single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles"),
+    ("tests/Api.Tests/PasswordlessConcurrencyTests.cs", "2.4", "atomic single-use consume + lockout counter (v3 LB-AUTH-2/3)"),
+    ("tests/Api.Tests/Architecture/TenantHatchGuard.cs", "2.6", "polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)"),
+    ("tests/Api.Tests/Architecture/TenantHatchGuardTests.cs", "2.6", ""),
+    ("tests/Api.Tests/Infrastructure/TwoTenants.cs", "2.6", "the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)"),
+    ("tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs", "2.6", "an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)"),
+    ("tests/Api.Tests/Configuration/ConfigPostureTests.cs", "1.4", "every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)"),
+    ("tests/Api.Tests/Configuration/SettingsCatalog.cs", "1.4", "the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)"),
+    ("tests/Api.Tests/Architecture/RoutePrefixInspector.cs", "3.3", "route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)"),
+    ("tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs", "3.3", ""),
+    ("tests/Api.Tests/Architecture/SliceReferenceInspector.cs", "3.3", "slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)"),
+    ("tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs", "3.3", ""),
+    ("src/Api/Endpoints/RouteTableGuard.cs", "3.3", "boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)"),
+    ("tests/Api.Tests/Hosting/RouteTableGuardTests.cs", "3.3", ""),
+    ("src/Api/Services/UsageCounterDataContributor.cs", "5.3", "quota rows join dissolve/export (v3 LB-TEN-1)"),
+    ("src/Api/Services/RecoveryCodeHasher.cs", "6.5", "HKDF-peppered recovery-code hashing (v3 ADM-4)"),
+    ("src/Api/Services/ApiKeyDataContributor.cs", "7.3", "hashed keys join dissolve/export (v3 LB-TEN-1)"),
+    ("src/Api/Services/WebhookDataContributor.cs", "7.4", "subscriptions + secrets join dissolve/export (v3 LB-TEN-1)"),
+    ("src/Core/Abstractions/ICurrentImpersonation.cs", "7.5", "audit rows carry impersonated_by (v3 LB-ADM-1)"),
+    ("src/Api/Services/HttpCurrentImpersonation.cs", "7.5", ""),
+    ("tests/Api.Tests/Integration/ImpersonationGuardTests.cs", "7.5", "staff gate rejects impersonation tokens (v3 ADM-2)"),
+    ("tests/Api.Tests/Architecture/CrossTenantWriteGuard.cs", "8.4", "EnterTenant required on set-based cross-tenant writes — tags don't render for ExecuteUpdate (v3/T7)"),
+    ("tests/Api.Tests/Architecture/CrossTenantWriteGuardTests.cs", "8.4", ""),
+    ("src/Shared.Ui/Auth/IOAuthResumeStore.cs", "A.2", "OAuth resume-across-process-death seam (NATIVE-12)"),
+    ("src/Shared.Ui/Auth/OAuthResumeResult.cs", "A.2", "resume outcome handed to Login/Settings (NATIVE-12)"),
+    ("tests/Api.Tests/OAuthResumeTests.cs", "A.2", "marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)"),
 ]
 
 
@@ -513,8 +676,83 @@ def classify(path: str) -> tuple[str, str] | None:
     return None
 
 
+LESSONS_DIR = "docs/tutorial/lessons"
+
+# A fenced block's first line names the file it quotes: `// src/Api/Program.cs`, `# docker-compose.yml`,
+# optionally followed by a note. `(yours)` marks a block the reader writes that the repo does not keep.
+QUOTE_HEAD = re.compile(r"^(?://|#|<!--)\s*([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:cs|razor|yml|yaml|json|env|sh|ps1|md|js|html|css|props|targets|csproj|txt|toml|xml))"
+                        r"(?:\s+(.*?))?\s*(?:-->)?\s*$")
+# What a C# block declares: a type, or a member with an access modifier. Names only — bodies are trimmed on purpose.
+CS_DECL = re.compile(
+    r"^\s*(?:\[[^\]]*\]\s*)*(?:public|internal|protected|private)\b[^=;{(]*?\b([A-Z][A-Za-z0-9_]*)\s*(?:\(|\{|=>|;|<[^>]*>\s*\()"
+    r"|^\s*(?:public|internal|private|protected|sealed|static|abstract|partial|\s)*\b(?:class|record|interface|enum|struct)\s+([A-Z][A-Za-z0-9_]*)",
+    re.M)
+CS_KEYWORDS = {"Task", "ValueTask", "IActionResult", "ActionResult", "IResult", "Guid", "String", "Boolean", "Int32", "List", "Dictionary",
+               "IEnumerable", "IReadOnlyList", "IDisposable", "IAsyncDisposable", "HttpResponseMessage", "DateTimeOffset", "TimeSpan"}
+
+
+def quoted_blocks(text: str):
+    """(path, note, body) for every fenced block whose first line is a repo-path header."""
+    for m in re.finditer(r"^```[^\n]*\n(.*?)^```", text, re.S | re.M):
+        body = m.group(1)
+        head, _, rest = body.partition("\n")
+        q = QUOTE_HEAD.match(head.strip())
+        if q:
+            yield q.group(1), (q.group(2) or ""), rest
+
+
+def check_quotes(root: Path) -> int:
+    stale: list[str] = []
+    blocks = 0
+    for lesson in sorted((root / LESSONS_DIR).glob("*.md")):
+        text = lesson.read_text(encoding="utf-8")
+        for path, note, body in quoted_blocks(text):
+            blocks += 1
+            where = f"{lesson.relative_to(root).as_posix()} -> {path}"
+            if note.startswith("(yours"):
+                continue
+            target = root / path
+            if not target.exists():
+                stale.append(f"{where}: the file does not exist (renamed? mark the block `(yours)` if the reader writes it)")
+                continue
+            if not path.endswith((".cs", ".razor")):
+                continue
+            source = target.read_text(encoding="utf-8", errors="replace")
+            words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", source))
+            declared = {a or b for a, b in CS_DECL.findall(body)} - CS_KEYWORDS
+            missing = sorted(n for n in declared if n not in words)
+            if missing:
+                stale.append(f"{where}: declares {', '.join(missing)}, which the file no longer has")
+    print(f"{blocks} quoted blocks checked, {len(stale)} stale")
+    for line in stale:
+        print("  " + line)
+    return 1 if stale else 0
+
+
+def orphans(root: Path, by_lesson: dict[str, list[tuple[str, str]]]) -> int:
+    """Files a lesson is credited with but never names — not a failure, a reading list for the next reconcile."""
+    count = 0
+    for lesson_id in LESSONS:
+        entries = by_lesson.get(lesson_id, [])
+        if not entries:
+            continue
+        texts = [f.read_text(encoding="utf-8") for f in (root / LESSONS_DIR).glob(f"{lesson_id}-*.md")]
+        text = "\n".join(texts)
+        unnamed = [f for f, _ in entries if Path(f).name not in text and f not in text]
+        if unnamed:
+            count += len(unnamed)
+            print(f"{lesson_id}: {len(unnamed)} of {len(entries)} files never named")
+            for f in sorted(unnamed):
+                print(f"  {f}")
+    print(f"{count} orphans")
+    return 0
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[2]
+    if "--check-quotes" in sys.argv:
+        return check_quotes(root)
+    check = "--check" in sys.argv
     files = subprocess.run(
         ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=True
     ).stdout.splitlines()
@@ -565,7 +803,12 @@ def main() -> int:
                f"{sum(len(by_lesson.get(b, [])) for b in BUCKETS)} bucketed · "
                f"{len(unmapped)} unmapped")
 
-    (root / "docs/tutorial/COVERAGE.md").write_text("\n".join(out) + "\n", encoding="utf-8")
+    rendered = "\n".join(out) + "\n"
+    manifest = root / "docs/tutorial/COVERAGE.md"
+    if "--orphans" in sys.argv:
+        return orphans(root, by_lesson)
+    if not check:
+        manifest.write_text(rendered, encoding="utf-8")
 
     print(f"{len(files)} files: {total_lesson_files} in lessons, "
           f"{sum(len(by_lesson.get(b, [])) for b in BUCKETS)} bucketed, {len(unmapped)} unmapped")
@@ -573,6 +816,9 @@ def main() -> int:
         print("\nUNMAPPED:")
         for f in sorted(unmapped):
             print(f"  {f}")
+        return 1
+    if check and manifest.read_text(encoding="utf-8").replace("\r\n", "\n") != rendered:
+        print("\nCOVERAGE.md is stale: run `python docs/tutorial/gen_coverage.py` and commit the result")
         return 1
     return 0
 

@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Entities;
+using Perezosoft.Core.Text;
 using Perezosoft.Infrastructure.Persistence;
 
 namespace Perezosoft.Infrastructure.Webhooks;
@@ -20,15 +22,22 @@ public sealed class WebhookOutboxHandler(
     AppDbContext db,
     IWebhookSender sender,
     IWebhookSecretProtector protector,
-    TimeProvider clock) : IOutboxHandler
+    TimeProvider clock,
+    IDbContextFactory<AppDbContext> dbFactory,
+    ILogger<WebhookOutboxHandler>? logger = null) : IOutboxHandler
 {
     public const string MessageType = "webhook";
     public string Type => MessageType;
+    public bool DissolvesWithItsTenant => true; // the household's event body, for a subscription the dissolve deletes
+    public bool KeepsPayloadWhenDone => false; // the delivery log (WebhookDelivery) keeps what replay needs
 
     public async Task HandleAsync(OutboxMessage message, CancellationToken cancellationToken = default)
     {
-        var payload = JsonSerializer.Deserialize<WebhookOutboxPayload>(message.Payload)
-            ?? throw new InvalidOperationException($"Outbox message {message.Id} has an unreadable webhook payload.");
+        WebhookOutboxPayload? payload;
+        try { payload = JsonSerializer.Deserialize<WebhookOutboxPayload>(message.Payload); }
+        catch (JsonException) { payload = null; }
+        if (payload is null) // no retry will make it readable (v4 audit H8)
+            throw new OutboxPermanentFailureException($"Outbox message {message.Id} has an unreadable webhook payload.");
 
         // The outbox is tenant-less, so bypass the tenant filter to load the target subscription by id.
         // (The RLS tag is belt-and-braces: the tenant-less system context already bypasses — ADR-020.)
@@ -40,21 +49,43 @@ public sealed class WebhookOutboxHandler(
         var secret = protector.Unprotect(subscription.EncryptedSecret);
 
         int? status = null;
-        string? transportError = null;
+        Exception? failure = null;
+        var refused = false;
         try
         {
             status = await sender.SendAsync(subscription.Url, secret, payload.EventType, payload.EventId, payload.Body, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw; // a shutdown, not a failed delivery: no attempt burnt, no bogus row (v4 T39)
+        }
+        catch (WebhookUrlRefusedException ex)
+        {
+            failure = ex; // the SSRF guard refused the URL — permanent, see below
+            refused = true;
+        }
         catch (Exception ex)
         {
-            transportError = ex.Message; // network/timeout — no HTTP status
+            failure = ex; // network / the sender's own timeout / DNS — no HTTP status
         }
 
         var success = status is >= 200 and < 300;
+        // The row (and the API that returns it) carries a reason CODE; the raw text — resolved addresses, DNS
+        // errors, the guard's verdict about the tenant's host — goes to the server log only (v4 T39, R89).
+        var reason = success ? null : SafeTruncation.Truncate(WebhookFailure.Reason(status, failure), 1000);
+        if (!success)
+            logger?.LogWarning(failure, "Webhook delivery for subscription {SubscriptionId} ({EventType}) failed: {Reason} (HTTP {Status})",
+                subscription.Id, payload.EventType, reason, status);
 
-        // Record the attempt (HOOKS-2). Added to the shared context; the OutboxProcessor's SaveChanges
-        // commits it together with the message's sent/retry outcome (whether we return or throw below).
-        db.Set<WebhookDelivery>().Add(new WebhookDelivery
+        // Record the attempt (HOOKS-2). Two paths, deliberately different:
+        //  - SUCCESS: staged on the shared context, so the row commits atomically with the message's
+        //    Sent flip — the log never shows a success the outbox didn't record.
+        //  - FAILURE: written through a FRESH out-of-band context (own connection, own SaveChanges)
+        //    BEFORE the throw. The OutboxProcessor rolls the ambient transaction back on failure and
+        //    clears the tracker, so a staged row would be silently discarded — which is exactly what
+        //    happened until 2026-08-24: the delivery log only ever recorded successes, leaving an
+        //    operator blind precisely when an endpoint was failing.
+        var delivery = new WebhookDelivery
         {
             TenantId = message.TenantId ?? subscription.TenantId,
             SubscriptionId = subscription.Id,
@@ -63,12 +94,26 @@ public sealed class WebhookOutboxHandler(
             Body = payload.Body,
             Success = success,
             StatusCode = status,
-            Error = success ? null : transportError ?? $"HTTP {status}",
+            Error = reason,
             CreatedAt = clock.GetUtcNow(),
-        });
+        };
 
-        if (!success)
-            throw new InvalidOperationException(
-                transportError ?? $"Webhook delivery to {subscription.Url} returned HTTP {status}."); // → outbox retry
+        if (success)
+        {
+            db.Set<WebhookDelivery>().Add(delivery);
+            return;
+        }
+
+        await using (var auditDb = await dbFactory.CreateDbContextAsync(cancellationToken))
+        {
+            auditDb.Set<WebhookDelivery>().Add(delivery);
+            await auditDb.SaveChangesAsync(cancellationToken);
+        }
+
+        // The outbox's LastError is operator-only: it keeps the detail the delivery row no longer carries.
+        if (refused) // a refusal won't change on retry: dead-letter now, one delivery row (v4 audit H8)
+            throw new OutboxPermanentFailureException(failure!.Message);
+        throw new InvalidOperationException(
+            failure?.Message ?? $"Webhook delivery to {subscription.Url} returned HTTP {status}.", failure); // → outbox retry
     }
 }

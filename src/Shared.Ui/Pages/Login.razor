@@ -198,6 +198,9 @@
         "external_failed" => Localizer["Login_ErrExternalFailed"],
         "email_unverified" => Localizer["Login_ErrEmailUnverified"],
         "invalid_link" => Localizer["Login_ErrInvalidLink"],
+        // GATES-2 (ADR-027): OAuth and magic link both land here after a refused signup. It is policy,
+        // not breakage, so it must not fall through to the catch-all below.
+        "signup_not_allowed" => Localizer["Login_ErrSignupNotAllowed"],
         _ => Localizer["Login_ErrSomethingWrong"]
     };
 
@@ -220,6 +223,20 @@
 
     protected override void OnInitialized()
     {
+        // A native sign-in resumed after process death (NATIVE-12) may need follow-up:
+        // enter the MFA step-up with the resumed challenge, or explain why it failed.
+        var resume = Auth.TakeOAuthResumeHandoff();
+        if (resume is { Outcome: OAuthResumeOutcome.MfaRequired, Challenge: not null })
+        {
+            _challenge = resume.Challenge;
+            _mode = Mode.MfaChallenge;
+            return;
+        }
+        if (resume is { Outcome: OAuthResumeOutcome.Expired })
+            _error = Localizer["Login_ErrOAuthResumeExpired"];
+        else if (resume is { Outcome: OAuthResumeOutcome.Failed })
+            _error = Localizer["Login_ErrOAuthCancelled"];
+
         // A redirect login (OAuth / magic link) that needs a second factor lands here with ?mfa=<challenge>.
         // Enter the step-up prompt directly — the user isn't signed in yet (no session was issued).
         if (!string.IsNullOrEmpty(MfaChallengeToken))
@@ -335,6 +352,11 @@
             {
                 System.Net.HttpStatusCode.Unauthorized => await OtpErrorAsync(res),
                 System.Net.HttpStatusCode.TooManyRequests => Localizer["Login_ErrTooManyRequests"],
+                // GATES-2 (ADR-027): the code was right; the deployment is not open to this address. A
+                // 401's "incorrect or expired" would send them hunting for a typo that isn't there.
+                // Mapped by the API's own error body, not by the status alone (R112): a proxy's or a WAF's
+                // 403 is not a signup refusal and must not be explained as one.
+                System.Net.HttpStatusCode.Forbidden => await ForbiddenErrorAsync(res),
                 _ => Localizer["Login_ErrVerificationFailed"],
             };
         }
@@ -350,6 +372,14 @@
         try { code = (await res.Content.ReadFromJsonAsync<ApiError>())?.Error; }
         catch { /* no/again-unreadable body → fall through to the generic message */ }
         return Localizer[AuthErrorCopy.OtpErrorKey(code)];
+    }
+
+    private async Task<string> ForbiddenErrorAsync(HttpResponseMessage res)
+    {
+        string? code = null;
+        try { code = (await res.Content.ReadFromJsonAsync<ApiError>())?.Error; }
+        catch { /* an HTML or empty body: not ours */ }
+        return Localizer[code == "signup_not_allowed" ? "Login_ErrSignupNotAllowed" : "Login_ErrVerificationFailed"];
     }
 
     private async Task VerifyMfa()

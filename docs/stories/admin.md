@@ -23,6 +23,24 @@
 > (in-app + email, `security.mfa_reset`). Console UI: confirm-gated **Reset MFA** button on the member
 > row. QA-ADMIN-07.
 
+> **2026-07-15 — admin-write correctness (v3 audit ADM-5 + LB-ADM-2).** (1) Comp/revert now keys its 409 on
+> subscription **liveness** (`Subscription.IsProviderManaged` = has a Stripe id **and** status ≠ canceled),
+> not id-presence — a canceled Stripe sub keeps its id forever, so the old check permanently locked a
+> churned tenant (the exact goodwill-comp target) out of a comp/cleanup. (2) `announce` with an
+> **explicitly-empty `user_ids: []`** now notifies **no one** (was: fell through to the whole tenant, max
+> blast radius) — a missing/null list still means every member. Tests: `AdminControllerTests`
+> (`Staff_CompCanceledSubscription…`, `Staff_RevertCanceledSubscription…`, `Staff_Announce_WithEmptyUserIds…`).
+
+> **2026-07-15 — MFA-reset session revocation + broadcast attribution (v3 audit ADM-7 / ADM-6 / ADM-11).**
+> (1) `DELETE /api/admin/users/{userId}/mfa` now **revokes the target's refresh tokens/sessions**
+> (`IRefreshTokenService.RevokeAllUserTokensAsync`, in the same transaction) — a reset is also a
+> compromise-recovery primitive, and an attacker's live sessions would otherwise survive the second-factor
+> wipe. (2) `announce-all` (largest blast radius, no in-tenant audit) now carries the acting **`StaffUserId`
+> in its durable outbox payload** so it's attributable. (3) A **tenant-less** user's MFA reset — which has
+> no tenant-scoped audit row — now leaves a structured `ILogger` warning (`admin.mfa.reset by staff … for
+> tenant-less user …`); a full platform-scoped audit sink stays deferred (the finding is Info-level).
+> Tests: `Staff_ResetMfa_RevokesTargetsRefreshTokens`, `Staff_AnnounceAll_Payload_CarriesTheActingStaffId`.
+
 **Epic key:** `ADMIN`
 
 **Prerequisites (external, before any code):**
@@ -113,6 +131,16 @@ a **short-lived** (15-min) token carrying the target's identity + provider `"imp
 token** (can't be extended), and records `admin.impersonation.started` **in the target's tenant** (via
 `EnterTenant`). Unknown target → 404. Tests `AdminControllerTests` (non-staff→403; token carries
 target + `impersonated_by` + `tenant_id`, 900s; audited in target's tenant; unknown→404).
+
+> **2026-07-15 — hardening (v3 audit ADM-2 / ADM-8 / LB-ADM-1).** (1) The staff gate now **rejects
+> impersonation tokens** (403 `impersonation_not_allowed`; the `/me` probe reports not-staff) — staff A
+> impersonating staff B could previously act on the whole admin surface attributed to B. (2) The
+> no-pref-writes-while-impersonating guard (ADR-022) is now **server-enforced** on `PUT /api/auth/theme|locale`
+> (was client-only). (3) Every audit row now carries **`AuditEvent.ImpersonatedBy`** (nullable, migration
+> `AuditEventImpersonatedBy`), stamped ambiently by `AuditLog` from the JWT claim via the new
+> `ICurrentImpersonation` seam — so writes made during an impersonation window are durably attributable to
+> the real actor (previously only the session *start* was recorded); the tenant export includes it. Tests:
+> `ImpersonationGuardTests` (integration, real tokens) + `AdminControllerTests` gate/probe cases.
 
 **As a** platform staff member
 **I want** a short-lived "sign in as" for a user

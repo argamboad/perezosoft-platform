@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Extensions;
 using Microsoft.OpenApi.Models;
+using Perezosoft.Api;
 using Perezosoft.Api.Authentication;
 using Perezosoft.Api.Configuration;
 using Perezosoft.Api.Endpoints;
-using Perezosoft.Api.Features.Notes;
 using Perezosoft.Api.Observability;
 using Perezosoft.Api.Services;
 using Perezosoft.Core.Abstractions;
@@ -14,22 +14,37 @@ using Perezosoft.Infrastructure;
 using Perezosoft.Infrastructure.Persistence;
 
 // Local dev: load secrets/config from the repo-root .env (the single local source of truth —
-// see docs/DECISIONS.md). TraversePath walks up to find it regardless of the working dir; the
-// try/catch makes it a no-op when there's no .env (e.g. production, which uses real env vars).
-try { DotNetEnv.Env.TraversePath().Load(); } catch { /* no .env present */ }
+// see docs/DECISIONS.md), walking up from the working dir; a no-op without one (production uses real env vars)
+// and skipped under SKIP_DOTENV=1, which the test assembly sets so test hosts never read a developer's .env.
+LocalDotEnv.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Structured logging with per-request scopes (OBS-1, ADR-008): readable single-line console in dev,
-// JSON in prod so a log aggregator can index the tenant_id/user_id scope. Swap in Serilog/OTel-logs
-// later without touching call sites.
+// JSON in prod so a log aggregator can index the tenant_id/user_id scope. AddAppTelemetry (below) adds the
+// OpenTelemetry log provider on top when an OTLP endpoint is configured, so the same records also reach the
+// collector next to their traces — the console stays for the host's own log stream.
 builder.Logging.ClearProviders();
 if (builder.Environment.IsDevelopment())
     builder.Logging.AddSimpleConsole(o => { o.IncludeScopes = true; o.SingleLine = true; });
 else
     builder.Logging.AddJsonConsole(o => { o.IncludeScopes = true; o.UseUtcTimestamp = true; });
 
-builder.Services.AddControllers();
+// GATES-1 (ADR-027): billing is config-gated, default OFF, so a deployment can run private and free.
+// Bound HERE (before AddControllers) because the gate is structural — the convention drops the billing
+// controllers out of the application model, so their routes are never built and answer 404 rather than
+// existing and refusing. The provider settings under the same section stay inert while this is off.
+var billingSettings = new BillingSettings();
+builder.Configuration.GetSection(BillingSettings.SectionName).Bind(billingSettings);
+builder.Services.AddSingleton(billingSettings);
+
+builder.Services.AddControllers(o => o.Conventions.Add(new BillingGateConvention(billingSettings)));
+
+// GATES-2 (ADR-027): the signup green list. Empty ⇒ open, which is the right default for a template but
+// also the one posture a typo can produce silently — so the startup log states which one is in effect.
+var signupSettings = new SignupSettings();
+builder.Configuration.GetSection(SignupSettings.SectionName).Bind(signupSettings);
+builder.Services.AddSingleton(signupSettings);
 
 // OpenAPI / Swagger UI. The "Authorize" button takes a JWT access token (get one
 // from POST /api/auth/refresh after signing in) so protected endpoints are testable.
@@ -73,7 +88,7 @@ builder.Services.AddSwaggerGen(o =>
 
 // Infrastructure: DbContext, Data Protection, email, repositories, and the
 // External cookie + OAuth provider schemes.
-builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment, billingSettings.Enabled);
 
 // OpenTelemetry traces + metrics (OBS-2). Exporter is config-gated (OTLP when configured); see
 // TelemetryExtensions. Spans are tagged with tenant_id/user_id.
@@ -99,11 +114,10 @@ builder.Services.AddPlatformAdminServices(builder.Configuration);
 builder.Services.AddRbacServices();
 builder.Services.AddBillingServices();
 
-// 🗑️ DELETE-ME: sample feature slice (Features/Notes) — the reference for how a vertical
-// slice wires up: a handler + a tenant-data contributor, with endpoints mapped below. Kept inline
-// here (not in ServiceRegistrationExtensions) because only Program.cs may reference Features.* (R8).
-builder.Services.AddScoped<NotesHandler>();
-builder.Services.AddScoped<ITenantDataContributor, NotesDataContributor>();
+// The app's half of composition (Arch A1, R159): every slice's services, registered in AppComposition.cs — the
+// one file outside Features/ that may name a slice (R8 as amended). This file is identical in the platform and
+// every app; a slice never edits it.
+builder.Services.AddAppServices(builder.Configuration);
 
 // Caches + session (LinkTokenService uses IMemoryCache; session backed by distributed cache).
 builder.Services.AddMemoryCache();
@@ -135,6 +149,9 @@ var publicApiSettings = new PublicApiSettings();
 builder.Configuration.GetSection(PublicApiSettings.SectionName).Bind(publicApiSettings);
 builder.Services.AddSingleton(publicApiSettings);
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+// API keys participate in tenant dissolve + export (LB-TEN-1) regardless of the PublicApi toggle — keys may
+// linger from when it was enabled, so a dissolved tenant must never orphan hashed key credentials.
+builder.Services.AddScoped<ITenantDataContributor, ApiKeyDataContributor>();
 if (publicApiSettings.Enabled)
     authBuilder.AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
         ApiKeyAuthenticationHandler.SchemeName, _ => { });
@@ -146,6 +163,9 @@ builder.Configuration.GetSection(WebhooksSettings.SectionName).Bind(webhooksSett
 builder.Services.AddSingleton(webhooksSettings);
 builder.Services.AddScoped<IWebhookSubscriptionService, WebhookSubscriptionService>();
 builder.Services.AddScoped<IWebhookPublisher, WebhookPublisher>();
+// Webhooks participate in tenant dissolve + export (LB-TEN-1) regardless of the Webhooks toggle — a
+// dissolved tenant must never orphan its encrypted signing secret or delivery logs.
+builder.Services.AddScoped<ITenantDataContributor, WebhookDataContributor>();
 
 // Single tenant-API authorization policy, shared by the platform controllers and feature groups.
 builder.Services.AddTenantApiAuthorization();
@@ -173,6 +193,17 @@ if (allowedOrigins.Length > 0)
 
 var app = builder.Build();
 
+// Say out loud which pre-launch posture this deployment booted with (GATES-1/2, ADR-027). Both gates are
+// invisible from inside the app when they are wrong: a misspelled Signup__AllowedEmails__0 leaves a
+// "private" deployment wide open, and a forgotten Billing__Enabled leaves a launched app with no way to
+// take money. One line at startup is the cheapest place to notice either.
+app.Logger.LogInformation(
+    "Pre-launch gates: billing {BillingState}; signup {SignupState}.",
+    billingSettings.Enabled ? "ENABLED" : "disabled (no /api/billing routes; every tenant without a granting subscription is Free)",
+    signupSettings.IsRestricted
+        ? $"RESTRICTED to {signupSettings.AllowedEmails.Length} address(es) + {signupSettings.AllowedDomains.Length} domain(s), plus their households' invitees"
+        : "open to anyone");
+
 // Apply EF migrations on startup so a freshly-created database (e.g. after a
 // `docker compose down -v && up`) gets its schema with no manual `dotnet ef database update`.
 // QA_TEST_PLAN documents "re-apply migrations by starting the API" — this is what does it.
@@ -194,6 +225,15 @@ using (var scope = app.Services.CreateScope())
             db.Database.SetConnectionString(migrationsConnection);
         db.Database.Migrate();
     }
+}
+
+// App startup tasks (Arch A1, IStartupTask): work that needs the schema and must precede the first request — a
+// curated catalog seed, an app-owned backfill — registered in AppComposition, run here in registration order in
+// one fresh scope (no ambient tenant). The platform registers none; the loop is the seam.
+using (var scope = app.Services.CreateScope())
+{
+    foreach (var task in scope.ServiceProvider.GetServices<IStartupTask>())
+        await task.RunAsync(app.Lifetime.ApplicationStopping);
 }
 
 // RLS posture guard (ADR-020, config-gated; prod activation enables it): refuse to start if the
@@ -218,6 +258,32 @@ app.UseProxyForwarding(app.Configuration);
 var serveWebClient = app.Configuration.GetValue("Hosting:ServeWebClient", false);
 if (serveWebClient)
 {
+    // The API became a browser HTML host in DEPLOY-1 but shipped with zero security/cache headers
+    // (v3 audit DEP-2/DEP-3). Add them for every response served from this origin:
+    //  • security headers — nosniff, clickjacking (frame-ancestors + X-Frame-Options), Referrer-Policy;
+    //  • cache policy — fingerprinted /_framework assets cache immutably; the SPA shell (and other
+    //    client routes) is `no-cache` so a post-deploy Blazor integrity mismatch can't pin a stale shell.
+    // HSTS is added separately below (production only — Development talks cleartext to the Android emulator).
+    app.Use(async (ctx, next) =>
+    {
+        var headers = ctx.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Content-Security-Policy"] = "frame-ancestors 'none'";
+        headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+        var path = ctx.Request.Path;
+        ctx.Response.OnStarting(() =>
+        {
+            if (path.StartsWithSegments("/_framework"))
+                ctx.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            else if (!path.StartsWithSegments("/api"))
+                ctx.Response.Headers.CacheControl = "no-cache";
+            return Task.CompletedTask;
+        });
+        await next();
+    });
+
     app.UseBlazorFrameworkFiles();
     app.UseStaticFiles();
 }
@@ -235,11 +301,17 @@ if (app.Environment.IsDevelopment())
 }
 
 // HTTPS redirect is a production concern. In Development we deliberately skip it so the
-// Android emulator can talk cleartext HTTP to the host (http://10.0.2.2:5238) without the
+// Android emulator can talk cleartext HTTP to the host (10.0.2.2, the API's http port) without the
 // request being 307'd to a port/cert it can't reach. Native auth uses body tokens (no
 // cookies), so none of the web client's HTTPS/SameSite requirements apply to that leg.
 if (!app.Environment.IsDevelopment())
+{
+    // HSTS pairs with the HTTPS redirect (DEP-2): tell browsers to stick to HTTPS. Production only —
+    // Development skips it for the same cleartext-emulator reason as the redirect.
+    if (serveWebClient)
+        app.UseHsts();
     app.UseHttpsRedirection();
+}
 
 if (allowedOrigins.Length > 0)
     app.UseCors("BlazorClient");
@@ -260,16 +332,20 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check 
 // Deployed build identity (DEPLOY-3). Anonymous; returns the commit this instance is running, from the
 // platform's env (Render sets RENDER_GIT_COMMIT) or an explicit APP_BUILD_COMMIT, else "unknown". The
 // post-deploy smoke polls this to wait for the NEW build to actually be live before asserting — the old
-// instance keeps serving during a build, so health alone can't tell old from new.
+// instance keeps serving during a build, so health alone can't tell old from new. `platform` is the
+// perezosoft-platform commit this build is synced to (Arch A2: platform-stamp.json, copied beside the
+// binaries; "platform" on the platform itself).
+var platformCommit = PlatformStamp.ReadCommit(Path.Combine(AppContext.BaseDirectory, "platform-stamp.json"));
 app.MapGet("/api/version", () => Results.Ok(new
 {
     commit = Environment.GetEnvironmentVariable("APP_BUILD_COMMIT")
              ?? Environment.GetEnvironmentVariable("RENDER_GIT_COMMIT")
              ?? "unknown",
+    platform = platformCommit,
 })).AllowAnonymous().WithTags("Platform");
 
-// 🗑️ DELETE-ME: sample feature slice endpoints (remove with Features/Notes).
-app.MapNotes();
+// The app's endpoint groups (Arch A1): AppComposition.MapAppEndpoints, each through MapTenantFeatureGroup (R6).
+app.MapAppEndpoints();
 // Billing is a platform controller (BillingController) — auto-mapped by MapControllers above.
 
 // PUBAPI (ADR-015): map key management + the public routes only when enabled — off ⇒ they don't exist.
@@ -302,4 +378,7 @@ if (serveWebClient)
     app.MapFallbackToFile("index.html");
 }
 
+// Refuse to boot on two endpoints with the same method and pattern (v4 T13): they would start fine and then
+// answer every request to that route with a 500. Last before Run, so every mapping above is in the table.
+RouteTableGuard.EnsureUnique(((IEndpointRouteBuilder)app).DataSources.SelectMany(d => d.Endpoints));
 app.Run();

@@ -21,7 +21,8 @@ custom-scheme); the two-HttpClient pattern (auth vs Bearer); every-platform-regi
 
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/Auth/SecureStorageSessionStore.cs`,
 `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`, `LoopbackOAuthInitiator.cs`,
-`NativeAuthHeaderHandler.cs`, `src/Maui/MauiProgram.cs`.
+`src/Shared.Ui/Auth/BearerScopedHandler.cs`, `src/Maui/MauiProgram.cs` (the API base, #230),
+`src/Api/Controllers/NativeAuthController.cs` (the exchange; `signup_not_allowed`, GATES-2).
 
 **Prerequisites:** 2.7 (JWT access + refresh-cookie rotation — the model being bridged), 2.5 (OAuth
 providers), 6.5 (MFA step-up choke point — reused here), A.1 (the shell hosting this).
@@ -98,8 +99,12 @@ The native shell wires **two HttpClients** (mirroring the web host) to avoid a D
 - an **auth client** with *no* Bearer handler — refresh/logout/otp are anonymous or carry the body
   token, so they need no access token (and the Bearer handler would depend on the very service that
   owns them);
-- a **default client** whose `NativeAuthHeaderHandler` attaches the in-memory JWT as a `Bearer`
-  header, so `[Authorize]` endpoints (household, settings) work.
+- a **default client** whose `BearerScopedHandler` — the same one the web host installs (3.4) —
+  attaches the in-memory JWT as a `Bearer` header to the API's own origin only, so `[Authorize]`
+  endpoints (household, settings) work and a foreign URL never sees the token;
+- and, since v4 T49, a **plain client** for `ShareFileDownloadLauncher`: the export download is either
+  the API's anonymous tokenized `/api/files/{token}` or a presigned S3 link, which AWS refuses when an
+  Authorization header rides along.
 
 Both carry `X-Native-Client`. This two-client split is the same shape the web host uses (Api /
 ApiAuth) — parity in the plumbing, not just the UI.
@@ -119,7 +124,11 @@ OAuth is a browser redirect flow; native has no browser in-process, so each plat
 ```
 
 - **Windows** uses a **loopback HTTP listener**: it opens the system browser at the provider, and a
-  tiny local `http://localhost:<port>/` server captures the redirect.
+  tiny local `http://127.0.0.1:<port>/` server captures the redirect. That listener accepts *whatever*
+  hits its port, so the flow carries a per-request random **`state` nonce** (v3 NAT-9): the app puts it
+  on the login URL, the API threads it through the provider round-trip and echoes it on the redirect
+  (`NativeAuthUrls`), and the app rejects any callback whose state doesn't match — otherwise a local
+  process or a malicious page could inject an attacker's `?code=` and sign you into *their* account.
 - **Android/iOS/macCatalyst** use **`WebAuthenticator`** with a **custom URL scheme**
   (`perezosoft://auth`): the OS routes the provider's redirect back to the app via a registered
   scheme (Android intent-filter, Apple `CFBundleURLSchemes`).
@@ -135,6 +144,70 @@ compile error, it's a *crash at first resolve* (how iOS/macCatalyst were dead-on
 initiator was generalized across the three custom-scheme platforms). Fail-fast DI turns a missing
 implementation into an immediate, obvious failure — but only if you actually *run* the platform,
 which is why the smoke harness (A.1 §6) matters.
+
+Two edges of the same round-trip were found later, downstream, and both are one line each. The
+first is the API base the initiators build their URL from. `MauiProgram` normalizes it:
+
+```csharp
+// src/Maui/MauiProgram.cs
+// Normalized: no trailing slash. The OAuth initiators build the browser URL by concatenating
+// "/api/auth/native/login/…" onto this, and a base passed as "https://host/" produced
+// "https://host//api/…" — which the API serves as the web client's fallback page instead of the
+// OAuth challenge, so the browser signed the user into the WEB app and the native app never got
+// its code (found downstream in y-el-vuelto, 2026-09-14, Windows + Android against staging).
+// HttpClient tolerated the slash; the concatenation did not.
+private static string ApiBaseUrl => RawApiBaseUrl.TrimEnd('/');
+```
+
+Read that failure again, because it is a single-origin (8.1) consequence: `//api/...` is not an
+API route, so the SPA fallback served the *web app*, which happily completed the OAuth flow — in the
+wrong client. Nothing errored; the user was simply signed in somewhere else (#230). The second edge
+is the sign-up green list (GATES-2, ADR-027): the native exchange goes through the same
+`UserService.CreateUserWithTenantAsync` choke point as every other sign-in, so a refused founder
+must land on the app's error page with a *policy* code, not a failure:
+
+```csharp
+// src/Api/Controllers/NativeAuthController.cs — the callback's catch ladder
+catch (SignupNotAllowedException)
+{
+    return Redirect(To("error", "signup_not_allowed")); // GATES-2 (ADR-027) — policy, not failure
+}
+```
+
+The `AuthError` page (3.4) already maps that code to the same copy the web flow shows; the native
+bridge only had to carry it across the redirect.
+
+### Surviving process death mid-round-trip (NATIVE-12)
+
+The external-browser flow has a failure mode the desktop never taught you: while the user is off in
+the consent tab, **your app is backgrounded — and the OS is free to kill it**. `WebAuthenticator`'s
+pending state is in-memory, so on Android the kill used to be fatal: the `perezosoft://` redirect
+cold-started a fresh process with no idea a sign-in was in flight — the app flashed open and closed,
+and the one-time code died with it. (Seen live on a tablet emulator; Custom Tabs shrink the window
+but can't close it.)
+
+The fix is a persistence bracket around the round-trip, behind one more optional seam:
+
+- **`IOAuthResumeStore`** (RCL) — before launching the browser, `AuthService` stashes a marker
+  (provider, optional link token, started-at). MAUI implements it on OS `Preferences`
+  (`PreferencesOAuthResumeStore`); web passes `null` and the whole mechanism no-ops.
+- **The cold-started callback** — Android's `WebAuthenticatorCallbackActivity` detects the
+  no-pending-auth case, stashes the full redirect URI beside the marker, and relaunches
+  `MainActivity` instead of dying.
+- **`TryCompletePendingOAuthAsync`** — on the next startup (`MainLayout`, before the preference
+  reconcile), `AuthService` finds marker + stashed callback, finishes the code exchange, and hands
+  outcomes to the UI: signed in, an MFA challenge (the choke point again — §5), an expired stash
+  (5-minute TTL, matched to the code's own lifetime), or a friendly failure. One-shot semantics:
+  the marker is cleared *before* acting on it, so a crash during resume can't loop.
+
+Two design notes worth stealing. The seam is an **optional constructor parameter** defaulting to
+null — the web build carries zero native machinery, same trick as `IOAuthInitiator`. And the resume
+completes through the same `CompleteFromResponseAsync` path as a live sign-in, so everything wired
+to that choke point (MFA step-up, the `SignedIn` event, session persistence) works on the resumed
+path *by construction* — no parallel code path to forget. The logic is unit-tested from `Api.Tests`
+(`OAuthResumeTests` — the RCL's first unit coverage, written before the RCL had a test host of its
+own; the bUnit component chassis in `tests/Ui.Tests` arrived later, in the v3 audit), and the
+on-device kill drill is QA-AND-15.
 
 ## 5. MFA step-up — free, because of the choke point
 

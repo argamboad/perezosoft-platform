@@ -30,6 +30,9 @@
 | 8 | ~~Admin back-office + impersonation~~ → **✅ DONE** (ADR-014, `stories/admin.md`) | `ADMIN` | Support/debugging at scale | Audit (ADR-008) required |
 | 9 | Distributed cache (Redis) | `CACHE` | Only once you scale past one node | none (defer hard) |
 | 10 | ~~Postgres RLS tenancy backstop~~ (§11) → **✅ DONE** (ADR-020 + addendum) | `RLS` | Was the prod-activation prerequisite; built 2026-07-06 | none |
+| 11 | Local + self-hosted CI (§13) → **PLANNED** (ROADMAP post-terminal wave, 2026-09-08) | `LOCALCI` | Actions minutes are the finished platform's only running cost pressure | none (repo private) |
+| 12 | Stack flavors — spec + conformance kit + React/Angular/Flutter fronts, Node/Go/Spring/FastAPI backs, tiered DBs (§14) → **PLANNED** (ROADMAP flavors wave, 2026-09-08) | `FLAVORS` | The platform's value is its contract, not its C#; other stacks' devs get nothing from it today | `SPEC` epic first |
+| — | Multi-household membership (§16) → **DECIDED: DEFERRED** (ADR-029, 2026-09-16) | `MULTIHOME` | Re-opens the one-tenant-per-user assumption every tenancy gate is proven against; one persona, nobody asking; two accounts model it today | none (trigger: real users ask) |
 
 ---
 
@@ -222,6 +225,280 @@ config now, a data migration with a rollback plan after live tenants exist.
   staging/prod, `.env.example`, `DEPLOYMENT.md`.
 **Scope guard:** no per-user RLS, no tenant-timezone quota resets, no policy-based admin scoping.
 **Deps:** none. **Size:** ~1–2 slices (2–4 days), plumbing-first.
+
+---
+
+## 12. Explicit system scope (`EnterSystem` / `ISystemScope`) — `SYSSCOPE` → **DECIDED: DEFERRED (v3 T43, 2026-07-27)**
+Make tenantless system paths (auth endpoints, background jobs, dispatchers, the webhook before
+`EnterTenant`) **declare** themselves the way tenant paths declare via `EnterTenant` — so code that
+accidentally touches a tenant-scoped table from a tenantless context **throws loudly** instead of
+silently seeing 0 rows (the RLS-2/RLS-8 bug shape).
+- **Design:** `ITenantContext.EnterSystem()` returns a scope marking "intentionally no tenant";
+  grants **no access** — tenant-table reads inside it still require `QueryAllTenants()`, writes
+  `EnterTenant`. Repository access to an `ITenantScoped` set outside ANY declared scope throws.
+  Pair with an arch scan enumerating entry points so a missed adoption is caught at build, not 500.
+- **Why deferred (the v3 T43 decision, user-approved):** every concrete instance the audit found is
+  fixed individually with tests; the silent-no-op class is caught structurally today — the whole
+  integration harness runs **RLS-enforced as the runtime role**, so a tenantless read of a tenant
+  table surfaces as red tests (how the RLS-2 shape was caught). Retrofitting the declaration across
+  the most availability-critical paths (sign-in, refresh) inverts risk/benefit: one missed call
+  site turns a working auth endpoint into a production 500. Adopt seam-first in a downstream
+  greenfield or a future major refactor, not as a retrofit.
+- **Deps:** none. **Size:** ~1 slice + an adoption sweep; the sweep is the risk.
+
+## 13. Local + self-hosted CI — `LOCALCI` → **PLANNED (ROADMAP post-terminal wave, 2026-09-08; stories written: `docs/stories/localci.md`)**
+
+> **2026-10-02 — ADR-030: GitHub is the forge again.** Forgejo is archived and its runners stopped; the
+> notes below are history.
+>
+> **2026-09-16 — LOCALCI-4 (ADR-028) changed the shape:** the repo now lives on a self-hosted Forgejo that
+> runs the whole pipeline itself (`.forgejo/workflows/`, R80), so piece (a) below is superseded for this
+> repo. Piece (b) and LOCALCI-3 stand.
+**What:** run the CI gates on the maintainer's own hardware — (a) self-hosted GitHub runners that
+`ci.yml` selects through repo variables, hosted runners as the always-available fallback; (b) a local
+pre-push gate runner that mirrors the PR-blocking jobs with GitHub uninvolved.
+**Why:** Actions minutes. macOS jobs bill at 10×, Windows at 2×; the Apple build + smoke pair on every
+develop push is the bulk of the spend. A free-tier project shouldn't pay hosted rates for platform CI
+it can run on a desk — and the switch-back must be a settings toggle, not a commit.
+**Sketch / hooks:**
+- **Piece 1 — switchable `runs-on` (the saving; LOCALCI-1).** One edit to `ci.yml`: each hosted label
+  becomes `${{ vars.CI_<OS>_RUNNER || '<hosted-label>' }}` — `CI_LINUX_RUNNER` / `CI_WINDOWS_RUNNER` /
+  `CI_MACOS_RUNNER`, each flipping independently (the `native-build` matrix `os` values go through the
+  same expression). Runner agents: Windows desktop for the Windows leg (a WSL- or Docker-based Linux
+  runner covers the Ubuntu jobs if wanted), MacBook for the Apple legs (launchd service — jobs queue
+  while the lid is shut, expire after 24 h, re-run is one click). `deploy-staging` / `deploy-prod` keep
+  hosted labels: short, and must not depend on a desk being awake. Switching back = delete the
+  variable; the workflow file never changes again.
+- **Piece 2 — local gate runner (LOCALCI-2).** Already prototyped on the unpushed branch
+  `ci/local-gates` (commit a624329): `ci-local.ps1`, a native mirror of build-test / qa-artifacts
+  (+ append-only guard) / secret-scan (gitleaks via docker) / license-scan, opt-in `-E2E` /
+  `-DockerBuild` / `-NativeWindows` / `-All`; all four defaults ran in ~2 min on the dev box. Needs a
+  **drift tripwire** before landing — e.g. a test asserting the script's gate list matches the `ci.yml`
+  job list, or extracting the shared steps into composite actions both consume. Rejected alternative:
+  `nektos/act` (faithful, but on this stack it re-downloads the SDK per run inside Docker, ~10 min+,
+  can't run the Windows leg, and the Postgres/Mailpit service containers need privileged fiddling).
+- **Piece 3 — trigger diet (LOCALCI-3).** `native-paths` already skips the Apple/smoke legs on
+  docs-only pushes; extend the same paths gate to the remaining non-deploy jobs, and consider moving
+  the Apple smoke to `workflow_dispatch` + a weekly `schedule`.
+**Constraints:** the repo **must stay private** while self-hosted runners are attached (a fork PR
+would otherwise execute on the desk); self-hosted machines are not clean — `global.json`
+(`rollForward: disable`) + the committed lockfiles + the CLAUDE.md bump-together playbook stay the
+toolchain-drift authority; runner registration tokens and labels live in GitHub settings, never in
+the repo.
+**Deps:** none. **Size:** M — LOCALCI-1 ≈ 1 slice + two runner registrations; LOCALCI-2 ≈ 1 slice
+(mostly landed); LOCALCI-3 ≈ S.
+
+---
+
+## 14. Stack flavors — `FLAVORS` → **PLANNED (ROADMAP flavors wave, 2026-09-08; stories written: `docs/stories/flavors.md`)**
+**What:** ship the platform for other stacks as *flavors* — template repos that implement the same
+contract — plus interchangeable pieces (backend × frontend × DB) composed by a scaffold CLI. Decided
+set (2026-09-08): fronts **React, Angular, Flutter** (+ Blazor); backs **Node/NestJS, Go, Spring,
+FastAPI** (+ ASP.NET Core); **Expo/React Native** as true-native mobile for the React family; DBs
+tiered (below). Sequencing + support matrix + native/desktop table: `ROADMAP.md` flavors wave.
+**Why:** Vuelto proved clone-and-rebrand works for a .NET shop only. The durable asset is the contract
+(decisions, R1–R76, data model, flows, Postman collection, stories, QA plan, audit suite). A JS/Java/
+Go/Python dev should inherit it too — and a downstream app should be able to say ".NET back, React
+front, SQL Server".
+**Sketch / hooks:**
+- **`SPEC` first (the enabler).** Extract the stack-neutral docs from this repo into a `spec` repo,
+  semver-tagged. Restate every rule as an **outcome**, not a Postgres/.NET mechanism — e.g. R-RLS
+  becomes "a second tenant wall exists *below application code* and the adversarial tenant tests prove
+  it". Classify R1–R76: **HTTP-observable** (→ the conformance kit: Newman over the Postman collection,
+  the Playwright journeys, the §14a adversarial tenant-isolation cases) vs **code-structural** (→ each
+  flavor re-implements as arch tests with its stack's tool: NetArchTest / dependency-cruiser +
+  eslint-boundaries / ArchUnit / import-linter / go-arch-lint). Add a **test-id contract**: every element
+  the journeys touch has a spec-named `data-testid`; the suite selects only by those, so one suite runs
+  against every DOM frontend (retrofit Blazor in `FRONT-REACT`). The kit must pass against
+  `platform-dotnet` before anything else claims a spec version. A **conformance-matrix workflow** in
+  `spec` boots every supported combo from its compose file and runs the kit — a red cell = a flavor
+  lagging a spec bump ("chained for changes", made mechanical). Fan-out rule: a spec change opens one
+  port issue per flavor; no flavor claims the new version until its cell is green.
+- **Repo layout (repo per piece, not a monorepo):** `spec` · `platform-dotnet` (this repo — the
+  integrated reference: backend + Blazor + MAUI stay together, Blazor shares types with the backend and
+  does not split cleanly) · `backend-node` / `backend-go` / `backend-spring` / `backend-fastapi` ·
+  `frontend-react` / `frontend-angular` / `frontend-flutter` · `native-rn` · `scaffold`. Each piece pins
+  `SPEC_VERSION` and runs the kit in its own CI. Why not subfolders: "use this template" must yield ONE
+  stack; per-stack toolchains/lockfiles/Dependabot/CLAUDE.md collide in one repo; this repo's history
+  and audit trail (commit/PR references) must stay put.
+- **Per-stack tooling (the choices, so they aren't re-debated):**
+
+  | Backend | Web framework | Data / migrations | Validation | Arch tests |
+  |---|---|---|---|---|
+  | Node | NestJS on Fastify (DI/modules mirror ASP.NET) | Drizzle (SQL-close → per-tx `SET LOCAL` for RLS is trivial; Prisma fights it) | Zod | dependency-cruiser |
+  | Go | chi | pgx + sqlc + goose/Atlas; **repository layer is the first tenant wall** (no ORM filter) + ban raw pgx outside it | — | go-arch-lint |
+  | Spring | Spring Boot (Java/Kotlin) | Hibernate filters (≡ EF global filters) + Flyway | Bean Validation | ArchUnit |
+  | FastAPI | FastAPI | SQLAlchemy 2 + Alembic | Pydantic | import-linter |
+
+  Fronts: React = Vite + TS + TanStack Query/Router (Next.js rejected: its server blurs the API
+  boundary, golden rule 2); Angular = closest paradigm to Blazor (DI, services, typed forms, i18n) →
+  most mechanical port, ships with Spring for enterprise shops; Flutter = per-app only (below).
+- **DB tiers (the tenancy defense lives here — never free-choice):**
+
+  | Tier | Engines | Second wall | Queue claim | Wake |
+  |---|---|---|---|---|
+  | A | Postgres + real Postgres services (Neon, Supabase, RDS/Aurora, Azure, Cloud SQL, AlloyDB) | RLS policies | SKIP LOCKED | NOTIFY |
+  | A | SQL Server / Azure SQL | security policies (filter + block predicates), `SESSION_CONTEXT` read-only; applies to every user incl. dbo | READPAST + UPDLOCK | poll |
+  | A (request) | Oracle (VPD), IBM Db2 (RCAC) | native | SKIP LOCKED / engine-specific | AQ / poll |
+  | A by proof | CockroachDB (RLS 2025), YugabyteDB | Postgres-syntax RLS | SKIP LOCKED | changefeeds (no NOTIFY) — only if the kit's RLS + SKIP LOCKED probes pass |
+  | B (signed downgrade) | MySQL / MariaDB / TiDB | none native — app filter only | SKIP LOCKED | poll |
+  | Isolation-shaped | MongoDB (DB per tenant), SQLite via Turso/D1 (DB per tenant), DynamoDB (IAM leading keys per scoped STS credential) | physical / credential | findOneAndUpdate lease / n/a | change streams / n/a |
+  | Not applicable | Firestore rules (bypassed by server SDKs), Redis, Cassandra/Scylla, Elasticsearch, analytics engines | — | — | — |
+
+  **Ask-for-Mongo playbook:** (1) offer Postgres **JSONB** for the app's domain documents on the
+  platform's relational skeleton — zero platform change, ~80 % of the DX; (2) **Mongo Isolated**
+  (database per tenant, JSON-schema validators requiring the tenant field, multi-document transactions
+  ⇒ replica set mandatory incl. local compose, change streams for wake, RBAC insert+find-only role for
+  the append-only audit log, migrate-mongo + validator-drift test) = Tier A; (3) **Mongo Shared** (tenant
+  field + driver command interceptor rejecting unscoped filters + arch ban on raw driver use) = Tier B,
+  downgrade signed in the app brief. SQL Server trap to record in `DB-SQLSERVER`: session context is
+  session-scoped, so the interceptor must set it on **every connection open** (pool reset is the net,
+  the interceptor is the wall); upside: `ExecuteUpdate` needs no tags (the Npgsql tag-rendering gap
+  disappears).
+- **Native/desktop tiers:** *hybrid shell* (web UI in a native shell — MAUI Blazor Hybrid ✅,
+  Capacitor for React/Angular mobile, Tauri for desktop; shares the web code and the Playwright suite)
+  vs *true native* (Expo/React Native for the React family — shares the TS API client + hooks; Flutter
+  for all six targets; each with its own journey suite). Electron rejected (size vs Tauri); NativeScript
+  rejected (niche). **Flutter is per-app, mobile-first only:** Flutter web is canvas-rendered
+  (bundle, SEO, a11y) so golden rule 5 (web-first) is waived in that app's brief, and Playwright can't
+  drive it → it is the one frontend outside the shared-suite economy.
+- **Rejected (don't re-explore):** Vue/Svelte (audience overlap, no structural edge), Next.js, Django
+  (built-in auth pulls toward the Identity-style model ADR-002 rejected), Rust/Axum (no audience yet),
+  a monorepo, a free-choice DB.
+**Constraints:** a flavor is "supported" only while its matrix cell is green at the current spec
+version (else demoted to "community"); the reference implementation gates the spec (nothing merges to
+`spec` until `platform-dotnet` passes it); the DB-tier rule and the web-first waiver are ADRs in `spec`.
+**Deps:** `SPEC` before everything; `SCAFFOLD` after ≥ 2 backends and ≥ 2 frontends exist.
+**Size:** SPEC L; each backend flavor L (≈ 40–60 % of the original build — the design is done; the
+persistence/outbox/auth layers are the bulk); each DOM frontend L (every screen + native shells; the
+test-id contract is what makes the *second* one cheaper); Flutter L; RN M; SQL Server M; Scaffold M.
+**The real cost is not building — it is keeping N flavors at the Definition of Solid** (the v3 audit
+alone was 62 tasks). Only the spec + kit + matrix make that affordable; without all three the flavors
+drift into separate products within a quarter.
+
+---
+
+## 15. Downstream-app ergonomics — `DOWNSTREAM` (from the first downstream app, JiggerJot, 2026-09-08)
+
+**Why:** standing JiggerJot up on this template surfaced friction every downstream app will hit. The doc
+side is fixed (`NEW_APP_GUIDE.md` Phase 2 + "Phase 3 → ports", `REBRANDING.md` §0/§6/verify,
+`docs/brand/build_assets.py`, ADR-C11/C13 amendments); these are the **code-level** follow-ups.
+
+1. **Single-sourced app ports.** Today the API/Web ports are pinned in `launchSettings.json` and
+   mirrored in ~40 files; a side-by-side app re-pins them all by hand. Options: derive everything from
+   two values in `.env` (`API_PORT`, `WEB_PORT`) — `launchSettings` can't read env, but a tiny
+   `Directory.Build.targets` could rewrite it, and the dev `appsettings`, the Web client config, the
+   MAUI fallbacks, E2E defaults and CI could all read the same two variables. Even shipping a
+   `scripts/repin-ports.py` with the exact file list would do. **Size:** S.
+2. **Shared catalog + tenant rows under the global filter.** Any app with seed data (a recipe catalog, a
+   template library, a product list) wants `tenant_id = null` rows readable by every tenant next to
+   tenant-owned rows — and the global query filter + RLS (ADR-003/020) hide null-tenant rows. The
+   platform should offer one sanctioned shape: a `ISharedOrTenantScoped` marker whose filter is
+   `tenant_id IS NULL OR tenant_id = current`, mirrored in `RlsDdl`, plus an export/dissolve contract
+   that ignores shared rows. Without it every app re-derives this in Phase 5. **Size:** M; needs an ADR.
+
+   > **Built and field-tested downstream (2026-09-09).** JiggerJot shipped exactly this shape in its
+   > CKTL-1 slice, under its own `JJ-031`. It works, and building it turned up **three traps that are
+   > not visible from reading the platform's own policy** — every one of them because the platform's
+   > `TenantId` is non-nullable, which makes the hazard structurally impossible here. Any platform
+   > version of this must carry all three, or it ships a primitive that is less safe than the
+   > hand-rolled version it replaces.
+   >
+   > **① One `FOR ALL` policy leaves the shared rows deletable by every tenant.** The obvious mirrored
+   > policy — `USING (tenant_id IS NULL OR tenant_id = current OR bypass)` `FOR ALL` — is correct for
+   > reading and wrong for everything else. Postgres checks `DELETE` against `USING` and **never**
+   > against `WITH CHECK`, so that policy lets any tenant delete or rewrite any shared row: the single
+   > guarantee a shared catalog exists to provide. The working shape is **four command-scoped policies
+   > per table** — `SELECT` admits shared rows, `INSERT`/`UPDATE`/`DELETE` admit the tenant's own only.
+   > A welcome side effect is that writing a shared row then requires the bypass GUC, which makes
+   > seeding a deliberate, greppable act instead of the default for an unset `tenant_id`.
+   >
+   > **② The write-stamping interceptor should not be taught to handle these rows at all.** The sketch
+   > above proposed making it "refuse to stamp a null-tenant row from a tenant context". Downstream
+   > found the simpler answer is to leave `ISharedOrTenantScoped` out of the interceptor entirely and
+   > let the `INSERT` policy from ① do the refusing — at the database, where a raw-SQL path cannot
+   > route around it. The cost is that call sites must set `tenant_id` explicitly on an owned row,
+   > which the interface's doc comment has to say plainly.
+   >
+   > **③ `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` goes blind.** The canary selected entities
+   > whose `TenantId` is a **non-nullable** `Guid` — deliberately, so `OutboxMessage`'s optional handler
+   > context was excluded. *(2026-09-24, v4 audit H6: widened to nullable keys, with the outbox wired in —
+   > so an `ISharedOrTenantScoped` entity would now fail it until handled, which resolves this point.)* Every `ISharedOrTenantScoped` entity has a nullable one by construction, so the
+   > canary cannot see them, and a missing `ITenantDataContributor` would orphan a dissolved tenant's
+   > rows with nothing failing anywhere. Whichever way the platform resolves this — widening the canary
+   > to "nullable `TenantId` **and** `ISharedOrTenantScoped`", or shipping a second canary beside it —
+   > it must be resolved in the same slice that introduces the marker, not left to each app.
+   >
+   > Reference implementation and its tests: `jigger-jot` `src/Core/Entities/ISharedOrTenantScoped.cs`,
+   > `RlsDdl.SharedOrTenantStatementsFor`, and the four suites that replace the guarantees these tables
+   > do not inherit (`SharedCatalogFilterTests`, `SharedCatalogRlsTests`,
+   > `SharedOrTenantRlsMigrationGateTests`, `SharedOrTenantDissolutionTests`). The RLS suite includes the
+   > mirror case — a tenant **can** delete its own row — so the policies cannot pass by forbidding
+   > everything, which is the failure mode ① invites when it is fixed carelessly.
+3. **Don't re-model Tenant/User in conceptualization.** `_PLATFORM_PRIMER.md` should state that the
+   Phase-1 `DATA_MODEL.md` references the platform's `Tenant`/`User`/`TenantMembership` and only adds
+   per-user preference fields; JiggerJot's first draft carried a `tenant_id` column on `User`
+   (contradicting ADR-003) and had to be corrected. **Size:** XS (primer text).
+4. **Adoption path into an existing repo.** Phase 2 assumed a fresh clone; a Phase-1 docs repo with a
+   remote and branches is the more common starting point. The `git ls-files | tar` adoption is now in
+   the guide; a `scripts/adopt.sh` would make it one command. **Size:** XS.
+5. **`seed/` convention.** Raw source material (PDFs, scraped JSON) needs a home: `seed/` with
+   `seed/sources/` gitignored (GitHub's 100 MB file limit bites on scanned books). Worth a line in
+   `WAYS_OF_WORKING.md` and the `.gitignore` template. **Size:** XS.
+
+6. **Fail closed when connected to another app's database.** Every app from this platform shares the
+   base schema, so a connection string naming a *different* app's database starts cleanly and reports
+   healthy — nothing in the stack notices. It cost the first downstream app a full debugging session
+   (2026-09-09) and is only visible by inspecting the provider. A cheap guard: have the app stamp its
+   own identity once (a row in a `PlatformApp` table, or a well-known key written by the first
+   migration) and refuse to boot when the value present disagrees with the running assembly. Same
+   fail-closed shape as the Stripe-key and `Rls__EnforceRuntimeRole` guards, both of which have already
+   paid for themselves. **Size:** S.
+
+**Dependencies:** none. Items 1, 3, 4, 5 are doc/script work; items 2 and 6 are real platform
+primitives — 2 is the one to schedule, and its design is no longer speculative (a downstream app has
+built and tested it, traps and all), 6 is small and prevents a whole class of silent misconfiguration.
+
+---
+
+## 16. Multi-household membership — `MULTIHOME` → **DECIDED: DEFERRED (ADR-029, 2026-09-16)**
+**What:** one user in several tenants — owner of their own household *and* member of another — with a
+household picker and an active-household switch. The persona (from `vuelto`): a son who runs his own
+money in a household he owns while keeping access to the family budget. Today ADR-003 forbids it
+(`TenantMembership` unique on `UserId`; invitation accept *moves*, never adds).
+
+**Why deferred (ADR-029):** it re-opens the one assumption every tenancy gate was proven against, for
+one persona in one app with nobody asking; two accounts model it today. Trigger: real users ask.
+
+**Design (binding if built — the constraints are in ADR-029):**
+- **Token:** the JWT still carries exactly one `tenant_id`, the *active* household.
+  `POST /api/auth/switch-household/{tenantId}` verifies membership and re-mints the access token.
+  Never a per-request header — the RLS backstop, query filter, stamping interceptor and quotas all
+  anchor on the claim.
+- **Schema:** unique index `user_id` → `(user_id, tenant_id)`. Role stays per membership (owner of
+  one, member of another; RBAC unchanged). `User.LastTenantId` (nullable, a preference → ADR-C2
+  carve-out) picks the landing household at sign-in; oldest membership when null.
+  `Notification.TenantId` nullable so a family announcement doesn't surface inside another household.
+- **Invitations:** accept = **add**, not move. Seat re-check (BILLING-9) unchanged per tenant.
+  `ReHomeAsync` only when the departing user would be left with *no* membership.
+- **Leave / remove:** with another membership held, just drop the row — simpler than today's
+  re-home. Sole owner of a solo tenant still dissolves.
+- **Found another household:** a new action for a signed-in user (today only signup founds one via
+  `UserService.CreateUserWithTenantAsync`). ⚠️ Second front door for the **GATES-2 green list** —
+  must run the same check or a non-listed invitee founds households through the side.
+- **Erasure:** walk all memberships (solo owner → dissolve, member → drop) — per-user AND per-tenant
+  completeness.
+- **Billing:** untouched in principle — each household is its own tenant/plan; a person is one seat
+  in each.
+- **`ITenantRepository.GetMembershipAsync(userId)`** (the single-membership overload LB-ADM-3
+  already flagged) goes away; every caller moves to the `(userId, tenantId)` overload.
+
+**Slice ladder (≈5):** MULTIHOME-1 schema + resolution + switch endpoint → MULTIHOME-2 invite add-not-move +
+leave/erasure rewrite → MULTIHOME-3 found-another-household + green-list gate → MULTIHOME-4 header picker +
+notification tenant tag + native shells → MULTIHOME-5 E2E/QA/Postman/lessons/diagrams sync (real work
+here, not a footnote). Then **re-run AUDIT_SUITE Phase 4** (adversarial slice pass) before trusting it.
+**Deps:** none. **Size:** M–L; the sync + re-audit is most of it. **Ports:** `vuelto` needs it;
+decide up front whether `jigger-jot` takes it or stays one-tenant.
 
 ---
 

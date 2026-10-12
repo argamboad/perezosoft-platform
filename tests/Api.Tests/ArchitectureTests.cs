@@ -1,12 +1,16 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Perezosoft.Api.Configuration;
 using Perezosoft.Api.Controllers;
 using Perezosoft.Api.Tests.Infrastructure;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Entities;
 using Perezosoft.Infrastructure.Persistence;
+
+using Perezosoft.Api.Tests.App;
 
 namespace Perezosoft.Api.Tests;
 
@@ -21,36 +25,78 @@ public class ArchitectureTests
     [Fact]
     public void FeatureSlices_DoNotBypassTheTenantFilter()
     {
-        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        // R5/R38/S0-G2/RLS-6: request-path tenant-scoped code — feature slices AND the config-gated
+        // platform surfaces under Endpoints/ (PUBAPI/HOOKS: /api/webhooks, /api/apikeys, /api/public) —
+        // must not reach past the tenant filter / RLS backstop. The guard bans IgnoreQueryFilters and the
+        // RLS bypass tag (both the RlsTags identifier AND the raw "rls:cross-tenant" literal — RLS-6)
+        // outright, and QueryAllTenants except in a *DataContributor.cs (dissolve/export). QueryAllTenants
+        // internally applies the tag; writing either directly self-sanctions to the DB-level backstop.
+        var sources = SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Features"))
+            .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Endpoints")))
+            .Select(f => (f, File.ReadAllText(f)));
 
-        // IgnoreQueryFilters is never allowed in feature code — even contributors go through QueryAllTenants().
-        var ignoreOffenders = SourceFiles(featuresDir)
-            .Where(f => File.ReadAllText(f).Contains("IgnoreQueryFilters"))
-            .Select(Path.GetFileName)
-            .ToList();
-        Assert.True(ignoreOffenders.Count == 0,
-            $"Feature code must not call IgnoreQueryFilters — use IRepository<T>.QueryAllTenants(). Offenders: {string.Join(", ", ignoreOffenders)}");
+        var offenders = Architecture.TenantHatchGuard.FindOffenders(sources);
+        Assert.True(offenders.Count == 0,
+            "Request-path code (Features/ + Endpoints/) must not bypass the tenant filter — use "
+            + $"IRepository<T>.QueryAllTenants() only in a *DataContributor:\n - {string.Join("\n - ", offenders)}");
+    }
 
-        // QueryAllTenants is the sanctioned cross-tenant hatch, but ONLY inside *DataContributor.cs
-        // (dissolve/export). In request-path slice code it bypasses tenancy identically to
-        // IgnoreQueryFilters, so it is banned there too (v2 audit ADV-2).
-        var queryAllOffenders = SourceFiles(featuresDir)
-            .Where(f => !Path.GetFileName(f)!.EndsWith("DataContributor.cs", StringComparison.Ordinal))
-            .Where(f => File.ReadAllText(f).Contains("QueryAllTenants"))
-            .Select(Path.GetFileName)
-            .ToList();
-        Assert.True(queryAllOffenders.Count == 0,
-            $"Request-path feature code must not call QueryAllTenants (allowed only in *DataContributor.cs). Offenders: {string.Join(", ", queryAllOffenders)}");
+    [Fact]
+    public void QueryAllTenants_IsNotComposedWithSetBasedWrites()
+    {
+        // R39/RLS-4/RLS-8: QueryAllTenants()'s cross-tenant sanction is a query tag, which EF does not
+        // reliably render into ExecuteUpdate/ExecuteDelete (renders for Delete, NOT Update — see
+        // RlsBackstopTests — and either can change). Composing them reads as sanctioned but silently affects
+        // the wrong rows under the DB RLS policy. Set-based writes must EnterTenant(target) and use Query()/
+        // IgnoreQueryFilters instead. Cross-tenant READS via QueryAllTenants() are fine.
+        var sources = SourceFiles(Path.Combine(RepoRoot(), "src", "Api"))
+            .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Infrastructure")))
+            .Select(f => (f, File.ReadAllText(f)));
 
-        // The RLS bypass tag (ADR-020) self-sanctions a query to the DB-level backstop — feature
-        // code must never apply it directly; the only sanctioned uses are QueryAllTenants() and the
-        // enumerated Infrastructure escape hatches.
-        var rlsTagOffenders = SourceFiles(featuresDir)
-            .Where(f => File.ReadAllText(f).Contains("RlsTags"))
-            .Select(Path.GetFileName)
-            .ToList();
-        Assert.True(rlsTagOffenders.Count == 0,
-            $"Feature code must not use RlsTags — go through IRepository<T>.QueryAllTenants(). Offenders: {string.Join(", ", rlsTagOffenders)}");
+        var offenders = Architecture.CrossTenantWriteGuard.FindOffenders(sources);
+        Assert.True(offenders.Count == 0,
+            $"QueryAllTenants() must not be composed with a set-based write:\n - {string.Join("\n - ", offenders)}");
+    }
+
+    [Fact]
+    public void EnterTenant_WithARequestSuppliedTenantId_ChecksTheTenantExists() // R129 (v4 T24)
+    {
+        // EnterTenant makes the interceptor stamp and the RLS backstop scope every write to THAT tenant — it does not
+        // ask whether the tenant exists. A tenant id that arrives with a request (a signed webhook, an admin route)
+        // must be looked up first, or a write lands for a dissolved tenant that nothing will ever clean up again
+        // (LB-BILL-23: a late customer.subscription.deleted re-created the projection with the Stripe ids).
+        // Every file that enters a tenant is classified here; a new site must say where its id comes from.
+        var requestSupplied = new Dictionary<string, string>
+        {
+            ["BillingWebhookHandler.cs"] = "tenants.GetByIdAsync(evt.TenantId", // signed payload → looked up after the claim, Ignored if gone
+            ["AdminController.cs"] = "tenants.GetByIdAsync(id",                  // route id → looked up inside the scope, 404 if gone
+        };
+        var rowSupplied = new Dictionary<string, string>
+        {
+            ["ApiKeyService.cs"] = "the key row's TenantId — the key was resolved by hash from the table first",
+            ["FilesController.cs"] = "a signed download token the app issued; a dissolved tenant's files are wiped, the lookup returns nothing",
+            ["HttpCurrentTenant.cs"] = "the implementation, not a caller",
+            ["SubscriptionLapseSweepJob.cs"] = "the subscription row's TenantId, read from the table",
+            ["TenantDissolutionService.cs"] = "the dissolve's own target, resolved by the caller from a membership",
+            ["TenantInvitationService.cs"] = "the invitation row's TenantId, read from the table",
+        };
+
+        foreach (var (file, reason) in AppAllowlists.EnterTenantRowSupplied) rowSupplied[file] = reason; // the app's (Arch A1)
+
+        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure") };
+        var sites = dirs.SelectMany(d => SourceFiles(d)).Where(f => File.ReadAllText(f).Contains("EnterTenant(")).Select(Path.GetFileName).ToList();
+        Assert.Contains("BillingWebhookHandler.cs", sites); // probe alive
+
+        var unclassified = sites.Where(f => !requestSupplied.ContainsKey(f!) && !rowSupplied.ContainsKey(f!)).ToList();
+        Assert.True(unclassified.Count == 0,
+            $"New EnterTenant sites must say where the tenant id comes from (request ⇒ look the tenant up first): {string.Join(", ", unclassified)}");
+
+        foreach (var (file, lookup) in requestSupplied)
+        {
+            var text = File.ReadAllText(dirs.SelectMany(d => SourceFiles(d)).Single(f => Path.GetFileName(f) == file));
+            Assert.True(text.Contains(lookup, StringComparison.Ordinal),
+                $"{file} enters a tenant named by the request but no longer looks it up ({lookup}) — a write for a dissolved tenant is orphaned forever.");
+        }
     }
 
     [Fact]
@@ -62,13 +108,13 @@ public class ArchitectureTests
         using var ctx = new AppDbContext(options, new TestCurrentTenant());
 
         var missing = ctx.Model.GetEntityTypes()
-            .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType))
+            .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType) || typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType)) // both markers (Arch A4)
             .Where(e => e.GetDeclaredQueryFilters().Count == 0)
             .Select(e => e.ClrType.Name)
             .ToList();
 
         Assert.True(missing.Count == 0,
-            $"ITenantScoped entities missing the global tenant query filter: {string.Join(", ", missing)}");
+            $"ITenantScoped / ISharedOrTenantScoped entities missing their global query filter: {string.Join(", ", missing)}");
     }
 
     [Fact]
@@ -86,6 +132,7 @@ public class ArchitectureTests
             nameof(UserMfa), nameof(MfaRecoveryCode),          // MfaUserDataContributor
             nameof(Notification), nameof(NotificationPreference), // NotificationUserDataContributor
         };
+        handled.UnionWith(AppAllowlists.ErasureHandled); // the app's slices (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -100,6 +147,116 @@ public class ArchitectureTests
 
         Assert.True(uncovered.Count == 0,
             $"User-keyed entities not wired into account erasure — add an IUserDataContributor (or identity-core delete) and list it: {string.Join(", ", uncovered)}");
+    }
+
+    [Fact]
+    public void EveryTenantOwnedEntity_IsWiredIntoTenantDissolution()
+    {
+        // The tenant-axis mirror of EveryUserKeyedEntity_IsWiredIntoAccountErasure (R43, v3 LB-TEN-1):
+        // every entity carrying a tenant-owned key ("TenantId") must be torn down when a tenant is dissolved
+        // — by an ITenantDataContributor's WipeAsync, or the platform's core teardown
+        // (ITenantRepository.WipeDataAsync). ITenantScoped entities have no FK to Tenants (ADR-003 plain-Guid
+        // tenancy) so NOTHING cascades; this canary fails when a NEW tenant-owned entity appears, forcing its
+        // author to wire the teardown (and, for GDPR-1, the export) and list it here — so a downstream slice
+        // can't silently orphan a tenant's rows the way ApiKey/UsageCounter/WebhookSubscription/WebhookDelivery
+        // did before LB-TEN-1 was fixed. Covers TenantId-carrying non-ITenantScoped entities too (WebhookDelivery).
+        var handled = new HashSet<string>
+        {
+            nameof(AuditEvent),                             // AuditDataContributor
+            nameof(Subscription),                           // BillingDataContributor
+            nameof(ApiKey),                                 // ApiKeyDataContributor
+            nameof(UsageCounter),                           // UsageCounterDataContributor
+            nameof(WebhookSubscription), nameof(WebhookDelivery), // WebhookDataContributor
+            nameof(TenantInvitation), nameof(TenantMembership),   // core teardown (WipeDataAsync)
+            nameof(OutboxMessage),                          // OutboxDataContributor — the types that dissolve with their tenant
+        };
+        handled.UnionWith(AppAllowlists.DissolutionHandled); // the app's slices (Arch A1)
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
+            .Options;
+        using var ctx = new AppDbContext(options, new TestCurrentTenant());
+
+        // A nullable Guid? TenantId counts too (v4 audit H6, R145). It was excluded as "handler context on
+        // drained infrastructure" — and so the outbox, which carries households' mail, attachments and webhook
+        // bodies, survived every dissolve. A tenant-less row (a sign-in code, a platform broadcast) simply has no
+        // tenant to be dissolved with; a row that names one is that tenant's, and needs a teardown decision.
+        var uncovered = ctx.Model.GetEntityTypes()
+            .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType is { } key && (key == typeof(Guid) || key == typeof(Guid?)))
+            .Select(e => e.ClrType.Name)
+            .Where(name => !handled.Contains(name))
+            .ToList();
+
+        Assert.True(uncovered.Count == 0,
+            "Tenant-owned entities not wired into tenant dissolution — add an ITenantDataContributor (or "
+            + $"core teardown) and list it here (they will otherwise orphan on dissolve): {string.Join(", ", uncovered)}");
+    }
+
+    [Fact]
+    public void EveryNullableTenantIdEntity_ShipsItsLifecycleSpec()
+    {
+        // R145 (v4 audit T27, TB-TEN-20..23): a table whose TenantId is nullable holds rows that belong to a
+        // household beside rows that belong to nobody, and no filter, policy or cascade decides which is which.
+        // So each such entity ships its lifecycle spec as four tests named <Entity>_Lifecycle_<Facet>_*: what a
+        // dissolve removes, what an account erasure removes, that the household export leaves it out, and which
+        // origins may write a row with no tenant. A new nullable-TenantId entity fails here until it has all four.
+        string[] facets = ["Dissolve", "Erasure", "ExportExclusion", "TenantlessOrigins"];
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
+            .Options;
+        using var ctx = new AppDbContext(options, new TestCurrentTenant());
+        var entities = ctx.Model.GetEntityTypes()
+            .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType == typeof(Guid?))
+            .Where(e => !typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType)) // the shared-or-tenant shape has its own facets (below, Arch A4)
+            .Where(e => !AppAllowlists.LifecycleSpecExceptions.ContainsKey(e.ClrType.Name)) // pinned elsewhere, with a reason (Arch A1)
+            .Select(e => e.ClrType.Name).ToList();
+        Assert.Contains(nameof(OutboxMessage), entities); // probe alive
+
+        var tests = string.Join('\n', SourceFiles(Path.Combine(RepoRoot(), "tests")).Select(File.ReadAllText));
+        var missing = entities.SelectMany(e => facets.Select(f => $"{e}_Lifecycle_{f}_"))
+            .Where(prefix => !Regex.IsMatch(tests, $@"\b(?:Task|void)\s+{prefix}\w+\("))
+            .ToList();
+        Assert.True(missing.Count == 0,
+            "nullable-TenantId entities missing a lifecycle test (name it <Entity>_Lifecycle_<Facet>_…): " + string.Join(", ", missing));
+    }
+
+    [Fact]
+    public void EverySharedOrTenantEntity_ShipsItsLifecycleSpec() // Arch A4 (#364), R145 as amended
+    {
+        // The R145 facets describe drained infrastructure whose rows are never exported; a shared-or-tenant table's
+        // tenant rows ARE exported and its shared rows belong to nobody, so it has facets of its own: what a dissolve
+        // removes and keeps (Dissolve), what the export carries (Export), who may write a shared row (SharedWrites), and
+        // that an account erasure leaves the tenant's rows (Erasure — the one that had no test anywhere before A4).
+        // Read on the TEST context so the platform's fixture (TestSharedWidget) keeps the probe alive.
+        string[] facets = ["Dissolve", "Export", "SharedWrites", "Erasure"];
+        var options = new DbContextOptionsBuilder<TestAppDbContext>()
+            .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
+            .Options;
+        using var ctx = new TestAppDbContext(options, new TestCurrentTenant());
+        var entities = ctx.Model.GetEntityTypes()
+            .Where(e => typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType))
+            .Select(e => e.ClrType.Name).ToList();
+        Assert.Contains(nameof(TestSharedWidget), entities); // probe alive
+
+        var tests = string.Join('\n', SourceFiles(Path.Combine(RepoRoot(), "tests")).Select(File.ReadAllText));
+        var missing = entities.SelectMany(e => facets.Select(f => $"{e}_SharedOrTenant_{f}_"))
+            .Where(prefix => !Regex.IsMatch(tests, $@"\b(?:Task|void)\s+{prefix}\w+\("))
+            .ToList();
+        Assert.True(missing.Count == 0,
+            "shared-or-tenant entities missing a lifecycle facet test (name it <Entity>_SharedOrTenant_<Facet>_…): " + string.Join(", ", missing));
+    }
+
+    [Fact]
+    public void TenantDissolution_EntersTheTargetTenant()
+    {
+        // RLS-2/R44: DissolveAsync runs set-based deletes that the Postgres RLS backstop (ADR-020) scopes to
+        // the AMBIENT tenant. To stay correct when a caller dissolves a tenant other than its ambient one
+        // (account erasure of a solo tenant that isn't the JWT-current tenant, admin paths), the service must
+        // enter the target so every delete is scoped to it — instead of relying on the CrossTenant-tag bypass
+        // (which renders for ExecuteDelete but not ExecuteUpdate) and the Tenants FK cascade. Pin that it does.
+        var file = Path.Combine(RepoRoot(), "src", "Api", "Services", "TenantDissolutionService.cs");
+        var text = File.ReadAllText(file);
+        Assert.Contains("EnterTenant(", text);
     }
 
     [Fact]
@@ -129,6 +286,7 @@ public class ArchitectureTests
         // an explicit allowlist of by-convention exceptions, so a new tenant-relevant table can't quietly
         // rely on hand-written filtering.
         var allow = new HashSet<string> { nameof(TenantMembership), nameof(WebhookDelivery) };
+        allow.UnionWith(AppAllowlists.TenantIdByConvention); // the app's (Arch A1)
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=arch-check") // model-only; never connects
@@ -143,6 +301,19 @@ public class ArchitectureTests
 
         Assert.True(offenders.Count == 0,
             $"Entities with a TenantId must implement ITenantScoped or be allowlisted: {string.Join(", ", offenders)}");
+
+        // The nullable sibling (Arch A4): a Guid? TenantId is either the shared-or-tenant shape (ISharedOrTenantScoped,
+        // with its filter and its four policies) or infrastructure that carries a tenant as context and ships the R145
+        // lifecycle spec instead — by name, so a new nullable column is a decision, not an accident.
+        var nullableByConvention = new HashSet<string> { nameof(OutboxMessage) }; // handler context on drained infrastructure (R145)
+        nullableByConvention.UnionWith(AppAllowlists.TenantIdByConvention);
+        var nullableOffenders = ctx.Model.GetEntityTypes()
+            .Where(e => e.ClrType.GetProperty("TenantId")?.PropertyType == typeof(Guid?))
+            .Where(e => !typeof(ISharedOrTenantScoped).IsAssignableFrom(e.ClrType) && !nullableByConvention.Contains(e.ClrType.Name))
+            .Select(e => e.ClrType.Name)
+            .ToList();
+        Assert.True(nullableOffenders.Count == 0,
+            $"Entities with a nullable TenantId must implement ISharedOrTenantScoped or be allowlisted as infrastructure: {string.Join(", ", nullableOffenders)}");
     }
 
     [Fact]
@@ -156,7 +327,11 @@ public class ArchitectureTests
             // AuthControllerBase — an anonymous/JWT auth surface, not a tenant-scoped one.
             nameof(AuthController), nameof(AccountController), nameof(MfaController), nameof(NativeAuthController),
             "FilesController", nameof(BillingWebhookController), nameof(NotificationsController),
+            // GATES-1 (ADR-027): an anonymous, read-only report of which config gates this deployment has
+            // switched on. Nothing tenant-scoped to protect — the client asks it before it has an identity.
+            nameof(FeaturesController),
         };
+        allow.UnionWith(AppAllowlists.ControllersOutsideTheBases); // the app's (Arch A1)
 
         var offenders = typeof(TenantApiControllerBase).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ControllerBase).IsAssignableFrom(t))
@@ -168,6 +343,49 @@ public class ArchitectureTests
 
         Assert.True(offenders.Count == 0,
             $"Controllers must derive from TenantApiControllerBase/AdminApiControllerBase or be allowlisted: {string.Join(", ", offenders)}");
+    }
+
+    [Fact]
+    public void EveryRclPage_HasAComponentTest() // v4 audit T56 (TOOL-7): the per-page floor, R70 as amended
+    {
+        // R70 asked for bUnit coverage and was met by testing a single component; the five heaviest pages were
+        // reached only when a browser journey happened to pass through them. The floor: every routable page
+        // under src/Shared.Ui/Pages is rendered by at least one test in tests/Ui.Tests. It does not measure
+        // depth — it stops a new page from shipping with none.
+        var pages = Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src", "Shared.Ui", "Pages"), "*.razor")
+            .Select(Path.GetFileNameWithoutExtension).ToList();
+        Assert.True(pages.Count >= 8, "probe: src/Shared.Ui/Pages moved");
+
+        var tests = string.Join('\n', SourceFiles(Path.Combine(RepoRoot(), "tests", "Ui.Tests")).Select(File.ReadAllText));
+        var untested = pages.Where(p => !Regex.IsMatch(tests, $@"Render<(?:[\w.]+\.)?{p}>")).ToList();
+        Assert.True(untested.Count == 0, "pages no component test renders (add one under tests/Ui.Tests/Pages): " + string.Join(", ", untested));
+    }
+
+    [Fact]
+    public void RclComponents_ScheduleOnTheInjectedClock() // R148 (v4 audit T57, TOOL-7/8)
+    {
+        // The notification bell polled on a real 60-second PeriodicTimer and stamped "read" and "time ago"
+        // from the wall clock, so its poll lifecycle could only be tested by waiting real minutes — and was not.
+        // In the RCL: no ambient UtcNow/Now, and every timer or delay names the clock it runs on.
+        var files = SourceFiles(Path.Combine(RepoRoot(), "src", "Shared.Ui"))
+            .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Shared.Ui"), "*.razor")).ToList();
+        Assert.True(files.Count > 30, "probe: src/Shared.Ui moved");
+
+        var offenders = new List<string>();
+        foreach (var file in files)
+        {
+            var lines = File.ReadAllLines(file);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (line.TrimStart().StartsWith("//", StringComparison.Ordinal) || line.TrimStart().StartsWith("///", StringComparison.Ordinal)) continue;
+                var ambient = Regex.IsMatch(line, @"\bDateTime(?:Offset)?\.(?:UtcNow|Now)\b");
+                var unclockedTimer = Regex.IsMatch(line, @"new PeriodicTimer\((?![^;]*,\s*\w*[Tt]ime)") || Regex.IsMatch(line, @"Task\.Delay\((?![^;]*,\s*\w*[Tt]ime)");
+                if (ambient || unclockedTimer) offenders.Add($"{Path.GetFileName(file)}:{i + 1}");
+            }
+        }
+        Assert.True(offenders.Count == 0,
+            "RCL code reads the wall clock or schedules without the injected TimeProvider: " + string.Join(", ", offenders));
     }
 
     [Fact]
@@ -189,6 +407,57 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void ServerCode_FormatsYearsWithTheInvariantCulture() // R134 (v4 T44)
+    {
+        // A "yyyy" format follows the CURRENT culture's calendar: th-TH renders 2026 as 2569, ar-SA as 1448.
+        // A storage key, a period bucket or a file name built that way changes meaning with the request's
+        // culture — the quota's monthly counter split per calendar (LB-BILL-26). Every yyyy format in server
+        // code names CultureInfo.InvariantCulture on the same line; comments and migrations are outside the scan.
+        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure"), Path.Combine(RepoRoot(), "src", "Core") };
+        var offenders = new List<string>();
+        foreach (var f in dirs.SelectMany(d => SourceFiles(d)).Where(f => !f.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}")))
+        {
+            var lines = File.ReadAllLines(f);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var code = lines[i].TrimStart();
+                if (code.StartsWith("//")) continue;
+                var comment = code.IndexOf(" //", StringComparison.Ordinal);
+                if (comment >= 0) code = code[..comment];
+                if (IsCultureSensitiveYearFormat(code))
+                    offenders.Add($"{Path.GetFileName(f)}:{i + 1}");
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            $"Format years with CultureInfo.InvariantCulture (a yyyy format follows the request culture's calendar): {string.Join(", ", offenders)}");
+    }
+
+    /// <summary>
+    /// A format string in a <c>ToString()</c> with no culture argument, or an interpolation hole (<c>{x:yyyy-MM}</c>,
+    /// which can't take one). A message that merely NAMES the format, a parse-format list, or a <c>ToString</c> handed
+    /// an explicit culture (a localized report) is not a hit — the downstream apps have all three.
+    /// </summary>
+    private static bool IsCultureSensitiveYearFormat(string code)
+    {
+        var bareToString = Regex.IsMatch(code, @"ToString\(\s*""[^""]*yyyy[^""]*""\s*\)");
+        var interpolated = Regex.IsMatch(code, @"\{[^{}""]*:[^{}""]*yyyy[^{}""]*\}");
+        return (bareToString || interpolated) && !code.Contains("InvariantCulture");
+    }
+
+    [Fact]
+    public void YearFormatGate_SeesFormats_NotMessages() // self-test of the predicate above
+    {
+        Assert.True(IsCultureSensitiveYearFormat("""var period = now.ToString("yyyy-MM");"""));
+        Assert.True(IsCultureSensitiveYearFormat("""var renews = $" It renews on {end:yyyy-MM-dd}.";"""));
+        Assert.True(IsCultureSensitiveYearFormat("""var key = $"exports/{clock.GetUtcNow():yyyyMMddTHHmmssZ}-{id:N}.json";"""));
+        Assert.False(IsCultureSensitiveYearFormat("""var period = now.ToString("yyyy-MM", CultureInfo.InvariantCulture);"""));
+        Assert.False(IsCultureSensitiveYearFormat("""return BadRequest(new ErrorResponse("invalid_request", "date is required (yyyy-MM-dd)"));"""));
+        Assert.False(IsCultureSensitiveYearFormat("""private static readonly string[] Formats = ["d/M/yyyy", "d-M-yy"];"""));
+        Assert.False(IsCultureSensitiveYearFormat("""private string Date(DateOnly d) => d.ToString("d MMM yyyy", _c);"""));
+    }
+
+    [Fact]
     public void PlatformTests_DoNotDependOnTheDeleteMeNotesSample()
     {
         // R9/TR-1: the tenancy/GDPR/outbox tests use the harness TestWidget fixture, not the DELETE-ME
@@ -196,8 +465,9 @@ public class ArchitectureTests
         var testsDir = Path.Combine(RepoRoot(), "tests");
         string[] banned = ["Features.Notes", "Set<Note>", "new Note", "EfRepository<Note>", "IRepository<Note>"];
 
-        // NotesSliceTests legitimately tests the sample; this file lists the banned patterns as literals.
-        var exempt = new HashSet<string> { "NotesSliceTests.cs", "ArchitectureTests.cs" };
+        // NotesSliceTests legitimately tests the sample; this file and the composition-seam gate in EnforcementGateTests
+        // (CompositionFiles_AreFreeOfTheSampleSlice, Arch A1) list the banned patterns as literals.
+        var exempt = new HashSet<string> { "NotesSliceTests.cs", "ArchitectureTests.cs", "EnforcementGateTests.cs" };
         var offenders = SourceFiles(testsDir)
             .Where(f => !exempt.Contains(Path.GetFileName(f)!))
             .Where(f => File.ReadAllText(f) is var t && Array.Exists(banned, t.Contains))
@@ -251,35 +521,30 @@ public class ArchitectureTests
     [Fact]
     public void RouteGroupPrefixes_AreUnique()
     {
-        // R35 (route half)/ADV-4: no two slices claim the same /api/<x> prefix. Collect controller [Route]
-        // templates and minimal-API MapGroup("…") literals; assert the full route strings are distinct.
-        var controllersDir = Path.Combine(RepoRoot(), "src", "Api", "Controllers");
-        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        // R35 (route half)/R36/ADV-P4-1: no two slices claim the same /api/<x> prefix. Collect controller
+        // [Route] templates and minimal-API group literals; assert the full route strings are distinct.
+        // The collector matches BOTH raw MapGroup("…") (the platform Endpoints/ surfaces) and the mandated
+        // MapTenantFeatureGroup("…") (feature slices) — the old gate matched only the raw form, so feature
+        // prefixes were invisible and two slices could share a prefix green (v3 ADV-P4-1). It now scans
+        // Endpoints/ as well as Features/, closing Step-0 gap S0-G1.
+        // v4 T67: ANY directory under src/Api — a [Route] attribute or a Map*Group literal in Services/ or
+        // Program.cs collides just the same; the directory convention is not what keeps prefixes unique.
+        var apiDir = Path.Combine(RepoRoot(), "src", "Api");
+        var apiSources = SourceFiles(apiDir).Select(File.ReadAllText).ToList();
+        var controllerSources = apiSources;
+        var groupSources = apiSources;
 
-        // A single logical surface may be split across several focused controllers that share one [Route]
-        // prefix (e.g. the /api/auth family, B9-1/SOLID-2) — that's SRP, not a collision. Distinct the
-        // controller prefixes so a shared prefix counts once; the guard still catches a feature-group
-        // MapGroup colliding with a controller prefix, or two feature groups sharing a prefix.
-        var controllerRoutes = SourceFiles(controllersDir)
-            .SelectMany(f => Regex.Matches(File.ReadAllText(f), @"\[Route\(""([^""]+)""\)\]").Select(m => m.Groups[1].Value))
-            .Select(r => "/" + r.Trim('/').ToLowerInvariant())
-            .Distinct(StringComparer.Ordinal);
-        var groupRoutes = SourceFiles(featuresDir)
-            .SelectMany(f => Regex.Matches(File.ReadAllText(f), @"MapGroup\(""([^""]+)""\)").Select(m => m.Groups[1].Value))
-            .Select(r => "/" + r.Trim('/').ToLowerInvariant());
-
-        var all = controllerRoutes.Concat(groupRoutes)
-            .ToList();
-
-        var dupes = all.GroupBy(r => r, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
-        Assert.True(dupes.Count == 0, $"Route prefixes must be unique across controllers and feature groups: {string.Join(", ", dupes)}");
+        var dupes = Architecture.RoutePrefixInspector.FindDuplicatePrefixes(controllerSources, groupSources);
+        Assert.True(dupes.Count == 0,
+            $"Route prefixes must be unique across controllers, feature groups, and endpoint groups: {string.Join(", ", dupes)}");
     }
 
     [Fact]
     public void FeatureFolders_DoNotReferenceEachOthersNamespaces()
     {
         // R7/TR-9: a vertical slice under Features/<X>/ must stay self-contained — it may not reference
-        // another slice's Features.<Y> namespace. Keeps slices independently deletable.
+        // another slice's Features.<Y> namespace. Keeps slices independently deletable. The match is
+        // boundary-aware (v4 ADV-P4-12), so slices named Reports and Reports2 can live side by side.
         var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
         var slices = Directory.Exists(featuresDir)
             ? Directory.GetDirectories(featuresDir).Select(Path.GetFileName).ToList()
@@ -288,11 +553,10 @@ public class ArchitectureTests
         var offenders = new List<string>();
         foreach (var slice in slices)
         {
-            var others = slices.Where(s => !string.Equals(s, slice, StringComparison.Ordinal));
+            var others = slices.Where(s => !string.Equals(s, slice, StringComparison.Ordinal)).ToList();
             foreach (var file in SourceFiles(Path.Combine(featuresDir, slice!)))
             {
-                var text = File.ReadAllText(file);
-                if (others.Any(o => text.Contains($"Perezosoft.Api.Features.{o}", StringComparison.Ordinal)))
+                if (Architecture.SliceReferenceInspector.ReferencedSlices(File.ReadAllText(file), others!).Count > 0)
                     offenders.Add(Path.GetFileName(file)!);
             }
         }
@@ -302,22 +566,72 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void OnlyProgram_ReferencesFeatureNamespaces_FromOutsideFeatures()
+    public void EveryEntity_HasOneWritingSlice() // Arch A8 (#367), R162
     {
-        // R8: the clean state is that composition happens in one place — only Program.cs wires the feature
-        // endpoints. Nothing else outside src/Api/Features/ may reach into Perezosoft.Api.Features.*.
+        // Slices were vertical at the HTTP layer only: every entity sits in Core and any slice could inject IRepository<T>
+        // for any of them, so nothing stopped a slice from writing another slice's rows (vuelto's Dashboard reads eleven
+        // slices' entities, which is its point; it must write none). Now each entity has ONE writing slice, declared in
+        // AppAllowlists.EntityWriters; other slices read it, or call a Core contract the owner implements. Platform
+        // entities are written by platform services, never by a slice. Reads are free (SliceWriteInspector decides).
+        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        var slices = Directory.Exists(featuresDir) ? Directory.GetDirectories(featuresDir).Select(d => Path.GetFileName(d)!).ToList() : [];
+        var writers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal); // entity → slices that write it
+        foreach (var slice in slices)
+        {
+            var texts = SourceFiles(Path.Combine(featuresDir, slice)).Select(File.ReadAllText).ToList();
+            // A generic base (class CatalogHandler<TEntry>) writes its type parameter; the entities are the type arguments
+            // its concrete subclasses in the slice pass (: CatalogHandler<Bank>(...)).
+            var typeArgs = texts.SelectMany(t => Regex.Matches(t, @":\s*(?<base>\w+)<(?<arg>\w+)>"))
+                .GroupBy(m => m.Groups["base"].Value, m => m.Groups["arg"].Value)
+                .ToDictionary(g => g.Key, g => g.Distinct().ToList());
+            foreach (var text in texts)
+            {
+                var generic = Regex.Matches(text, @"\bclass\s+(?<name>\w+)<(?<param>\w+)>")
+                    .ToDictionary(m => m.Groups["param"].Value, m => m.Groups["name"].Value);
+                foreach (var (written, _) in Architecture.SliceWriteInspector.Writes(text))
+                {
+                    var entities = generic.TryGetValue(written, out var baseName) && typeArgs.TryGetValue(baseName, out var args) ? args : [written];
+                    foreach (var entity in entities)
+                        (writers.TryGetValue(entity, out var set) ? set : writers[entity] = new HashSet<string>(StringComparer.Ordinal)).Add(slice);
+                }
+            }
+        }
+
+        var declared = AppAllowlists.EntityWriters;
+        var problems = new List<string>();
+        foreach (var (entity, set) in writers.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!declared.TryGetValue(entity, out var owner))
+                problems.Add($"{entity} is written by {string.Join(", ", set.Order())} but has no declared writer — declare it in AppAllowlists.EntityWriters, or write it through a Core contract the owner implements");
+            else foreach (var other in set.Where(s => s != owner).Order())
+                problems.Add($"{entity} is written by {other}, but its declared writer is {owner} — read it, or go through a Core contract");
+        }
+        foreach (var (entity, owner) in declared.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!slices.Contains(owner)) problems.Add($"{entity}: declared writer {owner} is not a slice under src/Api/Features/");
+            else if (!writers.TryGetValue(entity, out var set) || !set.Contains(owner)) problems.Add($"{entity}: declared writer {owner} writes it nowhere — drop the entry, or the owner lost its write");
+        }
+        Assert.True(problems.Count == 0, "one owning slice writes an entity (Arch A8):\n  " + string.Join("\n  ", problems));
+    }
+
+    [Fact]
+    public void OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures()
+    {
+        // R8, as amended by Arch A1 (R159): composition happens in one app-owned place — AppComposition.cs registers
+        // and maps the slices. Nothing else outside src/Api/Features/ may reach into Perezosoft.Api.Features.*, and
+        // Program.cs in particular names no slice, which is what lets it stay identical in every app.
         var apiDir = Path.Combine(RepoRoot(), "src", "Api");
         var featuresPath = $"{Path.DirectorySeparatorChar}Features{Path.DirectorySeparatorChar}";
 
         var offenders = SourceFiles(apiDir)
             .Where(f => !f.Contains(featuresPath))                     // scope: outside the Features tree
-            .Where(f => Path.GetFileName(f) != "Program.cs")           // Program.cs is the sanctioned composer
+            .Where(f => Path.GetFileName(f) != "AppComposition.cs")    // the app's composition file is the sanctioned composer
             .Where(f => File.ReadAllText(f).Contains("Perezosoft.Api.Features", StringComparison.Ordinal))
             .Select(Path.GetFileName)
             .ToList();
 
         Assert.True(offenders.Count == 0,
-            $"Only Program.cs may reference Perezosoft.Api.Features.* from outside Features/: {string.Join(", ", offenders)}");
+            $"Only AppComposition.cs may reference Perezosoft.Api.Features.* from outside Features/ (R8 as amended, Arch A1): {string.Join(", ", offenders)}");
     }
 
     [Fact]
@@ -348,6 +662,7 @@ public class ArchitectureTests
         // `*Models.cs`, plus the two named aggregations. Enforced as a source scan rather than the
         // Meziantou MA0048 analyzer, which would enable ~150 unrelated rules under warnings-as-error.
         var allow = new HashSet<string>(StringComparer.Ordinal) { "SettingsProvider", "WebhookService" };
+        allow.UnionWith(AppAllowlists.TypeNameExceptions); // the app's (Arch A1)
         var typeDecl = new Regex(
             @"\b(?:public|internal)\s+(?:sealed\s+|abstract\s+|static\s+|partial\s+|readonly\s+|ref\s+)*(?:class|record|interface|enum|struct)\s+([A-Za-z_][A-Za-z0-9_]*)",
             RegexOptions.Compiled);
@@ -358,6 +673,7 @@ public class ArchitectureTests
             if (file.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}")) continue;
             var name = Path.GetFileNameWithoutExtension(file);           // Foo.cs → Foo
             if (name.EndsWith(".xaml", StringComparison.Ordinal)) name = name[..^5]; // App.xaml.cs → App
+            if (name.EndsWith(".App", StringComparison.Ordinal)) name = name[..^4];   // AppDbContext.App.cs → the app's half of a partial class (Arch A1)
             if (name.EndsWith("Models", StringComparison.Ordinal) || allow.Contains(name)) continue;
 
             var types = typeDecl.Matches(File.ReadAllText(file))
@@ -368,6 +684,91 @@ public class ArchitectureTests
 
         Assert.True(offenders.Count == 0,
             $"Each source file must declare a type matching its name (or be a *Models aggregation): {string.Join(", ", offenders)}");
+    }
+
+    [Fact]
+    public void IntegrationFactory_DoesNotBackfillRlsPolicies()
+    {
+        // v3 audit RLS-1: the migration-parity gate (RlsMigrationGateTests) is only honest if the database
+        // it inspects gets its RLS policies from MIGRATIONS, not back-filled from the model. So the
+        // migration-based harness must provision the runtime ROLE only — never RlsDdl.StatementsFor, and
+        // never the policy-applying RlsTestSetup.ProvisionAsync. If it did, a slice could ship an
+        // ITenantScoped table with no RLS migration and still pass CI, reaching production unprotected.
+        var factory = Path.Combine(RepoRoot(), "tests", "Api.Tests", "Infrastructure", "IntegrationTestFactory.cs");
+        var text = File.ReadAllText(factory);
+
+        Assert.DoesNotContain("RlsDdl.StatementsFor", text);
+        Assert.DoesNotContain("RlsTestSetup.ProvisionAsync", text);
+    }
+
+    [Fact]
+    public void OutboundHttpSenders_RouteThroughTheUrlGuard_OrAreAllowlisted()
+    {
+        // R76 machine half (v3 audit S0-G4, T48): server-initiated HTTP to a DYNAMIC URL is the SSRF
+        // surface (v2 GAP-2) — every server-side file that actually SENDS via HttpClient must either
+        // reference IOutboundUrlGuard (WebhookSender is the model) or be allowlisted here with a
+        // rationale saying why its destinations are not attacker-influenced. Registration-only files
+        // (AddHttpClient with no send call) pass automatically. File-level granularity, matching the
+        // other source scans in this class.
+        var allowlisted = new Dictionary<string, string>(AppAllowlists.OutboundHttpSenders); // the app's fixed-host senders (Arch A1)
+        // (the platform has none — WebhookSender, the only dynamic-URL sender, injects the guard)
+
+        var send = new Regex(
+            @"\.(SendAsync|PostAsync|PostAsJsonAsync|GetAsync|GetStringAsync|GetFromJsonAsync|GetByteArrayAsync|PutAsync|PutAsJsonAsync|PatchAsync|DeleteAsync)\s*\(");
+        var offenders = new List<string>();
+        foreach (var dir in new[] { "Api", "Infrastructure", "Core" }) // server-side; the client talks only to its own API
+        foreach (var f in SourceFiles(Path.Combine(RepoRoot(), "src", dir)))
+        {
+            var text = File.ReadAllText(f);
+            if (!text.Contains("HttpClient") || !send.IsMatch(text))
+                continue; // not an HTTP sender
+            if (text.Contains("IOutboundUrlGuard") || allowlisted.ContainsKey(Path.GetFileName(f)))
+                continue;
+            offenders.Add(Path.GetFileName(f));
+        }
+
+        Assert.True(offenders.Count == 0,
+            "Server-side HTTP senders that neither use IOutboundUrlGuard nor carry an allowlist rationale "
+            + $"(SSRF surface — route tenant-supplied URLs through the guard): {string.Join(", ", offenders)}");
+    }
+
+    [Fact]
+    public void OtpNet_IsConfinedToMfaService()
+    {
+        // v3 audit TOOL-4 (T50, R66): Otp.NET is effectively single-maintainer AND on the MFA path —
+        // accepted (tiny RFC-6238 surface, no I/O), but only while it stays a ONE-FILE dependency:
+        // confined to MfaService so it can be swapped for another implementation (or inline HMAC)
+        // behind IMfaService without touching anything else. Tests may reference it freely (they
+        // generate codes to drive the real service). See docs/TECH_STACK.md.
+        var offenders = SourceFiles(Path.Combine(RepoRoot(), "src"))
+            .Where(f => File.ReadAllText(f).Contains("OtpNet"))
+            .Select(f => Path.GetFileName(f))
+            .Where(name => name != "MfaService.cs")
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            $"Otp.NET must stay confined to MfaService (swappable-seam contract, TOOL-4): {string.Join(", ", offenders)}");
+    }
+
+    [Fact]
+    public void FeatureErrors_UseTheSharedErrorResponse_NotAdHocShapes()
+    {
+        // R76 (v3 audit TR-5, T53): slice error bodies must be the shared ErrorResponse record —
+        // clients key their copy off `error` codes with a stable contract, and Phase 4 proved the
+        // ad-hoc `new { error … }` shape propagates: copying the Notes exemplar reproduced it
+        // verbatim. Banned across the whole HTTP surface — Features/ + Endpoints/ AND Controllers/
+        // (the post-campaign reconcile found a straggler in BillingWebhookController the narrower
+        // scope missed); the exemplar models the right shape.
+        var anonError = new Regex(@"new\s*\{\s*error\b");
+        var offenders = SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Features"))
+            .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Endpoints")))
+            .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Controllers")))
+            .Where(f => anonError.IsMatch(File.ReadAllText(f)))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            $"Ad-hoc anonymous error shapes in the slice surface — use the shared ErrorResponse record: {string.Join(", ", offenders)}");
     }
 
     private static IEnumerable<string> SourceFiles(string dir, string pattern = "*.cs") =>

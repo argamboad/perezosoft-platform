@@ -57,6 +57,35 @@ app-specific docs; after that it's your feature slices, with per-epic user stori
 > Then propose the first feature epic from `docs/FEATURES.md` (the `Notes` sample slice gets
 > deleted when the first real feature lands).
 
+## Local ports
+
+The three apps run side by side on one machine, each on its own block, so a stack never answers for another. This
+table is the same in all three repos. A repo states its block ONCE, in `local-ports.props`: code reads it through the
+generated `LocalPorts` class, `pwsh tools/ports.ps1 -Apply` writes it into the files that cannot read MSBuild (compose
+defaults, launch profiles, appsettings, `.env.example`, the Postman environment, this row), and `LocalPortsTests` fails
+on any file that disagrees, on a port number in code, and if two apps share a port.
+API http is the port the Android emulator uses; the app container is `docker compose --profile app up`.
+
+| App | Postgres | Mailpit SMTP | Mailpit UI | API https | API http | Web https | Web http | app container |
+|---|---|---|---|---|---|---|---|---|
+| **perezosoft-platform** (this repo) | 5433 | 1025 | 8025 | 7160 | 5238 | 7008 | 5169 | 8080 |
+| y-el-vuelto | 5434 | 1026 | 8026 | 7260 | 5338 | 7108 | 5269 | 8180 |
+| jigger-jot | 5435 | 1027 | 8027 | 7360 | 5438 | 7208 | 5369 | 8280 |
+
+## Reading order
+
+For a newcomer, motivation first, mechanics last:
+
+1. [`docs/OVERVIEW.md`](docs/OVERVIEW.md) — what the platform is and why it saves months; no codebase knowledge assumed.
+2. [`docs/PROJECT_BRIEF.md`](docs/PROJECT_BRIEF.md) — what *this* app is for, and (as important) the OUT list.
+3. [`docs/NEW_APP_GUIDE.md`](docs/NEW_APP_GUIDE.md) — the end-to-end path from idea to production, phase by phase.
+4. [`docs/DECISIONS.md`](docs/DECISIONS.md) — the "why" behind every settled choice; read before disagreeing with any of them.
+5. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the shape in diagrams: projects, seams, subsystems.
+6. [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) — entities, ER diagrams, invariants, lifecycles.
+7. [`docs/FLOWS.md`](docs/FLOWS.md) — the call stacks that matter, traced through the code.
+8. [`docs/WAYS_OF_WORKING.md`](docs/WAYS_OF_WORKING.md) — how work actually lands: slices, stories, TDD, PR conventions.
+9. [`CONTRIBUTING.md`](CONTRIBUTING.md) — the frozen quality bar and the machine-enforced rules behind it.
+
 ## What's constant vs. per-project
 
 - **Constant (don't re-decide):** the stack, the clean-API-boundary + RCL architecture,

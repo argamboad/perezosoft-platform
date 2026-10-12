@@ -46,6 +46,38 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
     }
 
     [Fact]
+    public async Task ImpersonationToken_AtStaffGate_Returns403_EvenWhenTargetIsStaff()
+    {
+        // v3 ADM-2: staff A impersonating staff B (both allowlisted) must NOT reach the staff surface —
+        // otherwise every audited action attributes B. The caller IS staff by allowlist; the
+        // impersonated_by claim alone must trip the gate.
+        var staffId = await SeedUserAsync(StaffEmail);
+        var (controller, db) = BuildController(staffId, impersonatedBy: Guid.CreateVersion7());
+        await using (db)
+        {
+            var result = await controller.ListTenants(default);
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status403Forbidden, obj.StatusCode);
+            Assert.Equal("impersonation_not_allowed", Assert.IsType<ErrorResponse>(obj.Value).Error);
+        }
+    }
+
+    [Fact]
+    public async Task ImpersonationToken_StaffProbe_ReportsNotStaff()
+    {
+        // The Me probe mirrors the gate: an impersonation session never advertises staff powers (the
+        // client already hides the admin UI while impersonating — the server now agrees).
+        var staffId = await SeedUserAsync(StaffEmail);
+        var (controller, db) = BuildController(staffId, impersonatedBy: Guid.CreateVersion7());
+        await using (db)
+        {
+            var result = await controller.Me(default);
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.False(Assert.IsType<AdminStatusResponse>(ok.Value).IsStaff);
+        }
+    }
+
+    [Fact]
     public async Task Staff_ListTenants_ReturnsAllTenantsWithCounts()
     {
         var staffId = await SeedUserAsync(StaffEmail);
@@ -274,6 +306,58 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
     }
 
     [Fact]
+    public async Task Staff_Announce_WithEmptyUserIds_NotifiesNoOne()
+    {
+        // v3 LB-ADM-2: a present-but-empty user_ids is an explicit "target this (empty) set" — it must reach
+        // NO ONE, not fall through to the whole tenant (the max-blast-radius bug).
+        var staffId = await SeedUserAsync(StaffEmail);
+        var tenantId = await SeedTenantAsync("ThetaEmpty", members: 3);
+        var title = $"Empty {Guid.NewGuid():N}";
+
+        var (controller, db) = BuildController(staffId);
+        await using (db)
+        {
+            var ok = Assert.IsType<OkObjectResult>(await controller.Announce(
+                tenantId, new AdminAnnounceRequest { Title = title, Body = "b", UserIds = [] }, default));
+            Assert.Equal(0, Assert.IsType<AdminAnnounceResponse>(ok.Value).NotifiedCount);
+        }
+
+        await using var read = Fixture.CreateContext(tenantId);
+        Assert.Equal(0, await read.Set<Notification>().CountAsync(n => n.Title == title));
+    }
+
+    [Fact]
+    public async Task Staff_Announce_WithForeignOrUnknownUserIds_NotifiesNoOne_Anywhere()
+    {
+        // v3 TB-ADM-8 (T45a): user_ids is intersected with ACTUAL membership of the target tenant, so an
+        // id belonging to another tenant (or a random guid) must reach no one — neither in the target
+        // tenant nor, crucially, in the foreign user's own tenant.
+        var staffId = await SeedUserAsync(StaffEmail);
+        var targetTenant = await SeedTenantAsync("Xi", members: 2);
+        var otherTenant = await SeedTenantAsync("Omicron", members: 1);
+        var title = $"Foreign {Guid.NewGuid():N}";
+
+        Guid foreignUserId;
+        await using (var seed = Fixture.CreateContext(otherTenant))
+            foreignUserId = await seed.Set<TenantMembership>()
+                .Where(m => m.TenantId == otherTenant).Select(m => m.UserId).SingleAsync();
+
+        var (controller, db) = BuildController(staffId);
+        await using (db)
+        {
+            var ok = Assert.IsType<OkObjectResult>(await controller.Announce(
+                targetTenant,
+                new AdminAnnounceRequest { Title = title, Body = "b", UserIds = [foreignUserId, Guid.CreateVersion7()] },
+                default));
+            Assert.Equal(0, Assert.IsType<AdminAnnounceResponse>(ok.Value).NotifiedCount);
+        }
+
+        // No rows with this title exist ANYWHERE — not in the target tenant, not in the foreign one.
+        await using var read = Fixture.CreateContext();
+        Assert.Equal(0, await read.Set<Notification>().IgnoreQueryFilters().CountAsync(n => n.Title == title));
+    }
+
+    [Fact]
     public async Task NonStaff_AnnounceAll_Returns403()
     {
         var callerId = await SeedUserAsync("normal2@corp.com");
@@ -319,7 +403,7 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
         await handler.HandleAsync(new OutboxMessage
         {
             Type = AdminBroadcastOutboxHandler.MessageType,
-            Payload = JsonSerializer.Serialize(new AdminBroadcastPayload(title, "Everyone gets this.")),
+            Payload = JsonSerializer.Serialize(new AdminBroadcastPayload(title, "Everyone gets this.", Guid.CreateVersion7())),
         });
         await db.SaveChangesAsync(); // handler stages; the outbox processor's tx commits in prod
 
@@ -327,6 +411,48 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
             .Where(n => n.Title == title).Select(n => n.UserId).ToListAsync();
         Assert.Contains(u1, recipients);
         Assert.Contains(u2, recipients); // fan-out reached every user
+    }
+
+    [Fact]
+    public async Task AdminBroadcast_ThroughTheRealProcessor_IsExactlyOnce_EvenWhenPolledAgain()
+    {
+        // v3 TB-BILL backfill (T45b): the broadcast's idempotency is BY CONSTRUCTION — the per-user
+        // rows commit atomically with the message's Sent flip inside the processor's transaction. Pin
+        // it at the machinery level: run the real OutboxProcessor over the broadcast message twice;
+        // the second pass must find nothing to do, and every user has exactly ONE notification row.
+        var u1 = await SeedUserAsync($"bc-a-{Guid.NewGuid():N}@x.com");
+        var u2 = await SeedUserAsync($"bc-b-{Guid.NewGuid():N}@x.com");
+        var title = $"OnceOnly {Guid.NewGuid():N}";
+
+        await using (var seed = Fixture.CreateContext())
+        {
+            seed.Set<OutboxMessage>().Add(new OutboxMessage
+            {
+                Type = AdminBroadcastOutboxHandler.MessageType,
+                Payload = JsonSerializer.Serialize(new AdminBroadcastPayload(title, "b", Guid.CreateVersion7())),
+                Status = OutboxStatus.Pending,
+                CreatedAt = DateTimeOffset.UtcNow, NextAttemptAt = DateTimeOffset.UtcNow,
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        async Task<int> PollAsync()
+        {
+            await using var db = Fixture.CreateContext();
+            var handler = new AdminBroadcastOutboxHandler(new UserRepository(db), new NotificationService(
+                new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
+                new UserRepository(db), _email, TimeProvider.System));
+            return await new Perezosoft.Infrastructure.Outbox.OutboxProcessor(
+                db, [handler], TimeProvider.System, new Perezosoft.Infrastructure.Outbox.OutboxOptions(),
+                NullLogger<Perezosoft.Infrastructure.Outbox.OutboxProcessor>.Instance).ProcessDueAsync();
+        }
+
+        Assert.Equal(1, await PollAsync()); // delivered + Sent, atomically
+        Assert.Equal(0, await PollAsync()); // an at-least-once re-poll finds nothing pending
+
+        await using var read = Fixture.CreateContext();
+        Assert.Equal(1, await read.Set<Notification>().IgnoreQueryFilters().CountAsync(n => n.Title == title && n.UserId == u1));
+        Assert.Equal(1, await read.Set<Notification>().IgnoreQueryFilters().CountAsync(n => n.Title == title && n.UserId == u2));
     }
 
     [Fact]
@@ -369,6 +495,30 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
             e => e.Action == "admin.subscription.comped" && e.ActorUserId == staffId));
     }
 
+    [Fact]
+    public async Task Staff_CompForTenantA_LeavesTenantBUntouched()
+    {
+        // v3 TB-TEN-10 (T45a): the comp is an ENUMERATED cross-tenant write (ADR-021) that enters the
+        // target tenant — it must land in that tenant only. Tenant B keeps its own subscription
+        // byte-for-byte, and A's new projection is stamped to A.
+        var staffId = await SeedUserAsync(StaffEmail);
+        var tenantA = await SeedTenantAsync("Pi", members: 1);
+        var tenantB = await SeedTenantAsync("Rho", members: 1);
+        await SeedSubscriptionAsync(tenantB, stripeSubscriptionId: "sub_b_live", status: SubscriptionStatus.PastDue);
+
+        var (controller, db) = BuildController(staffId);
+        await using (db)
+            Assert.IsType<OkObjectResult>(await controller.SetSubscription(
+                tenantA, new AdminSetSubscriptionRequest { PlanKey = PlanKeys.Pro }, default));
+
+        await using var read = Fixture.CreateContext();
+        var subA = await read.Set<Subscription>().IgnoreQueryFilters().SingleAsync(s => s.TenantId == tenantA);
+        Assert.Equal(SubscriptionStatus.Active, subA.Status); // the comp, in A
+        var subB = await read.Set<Subscription>().IgnoreQueryFilters().SingleAsync(s => s.TenantId == tenantB);
+        Assert.Equal(SubscriptionStatus.PastDue, subB.Status);    // B untouched —
+        Assert.Equal("sub_b_live", subB.StripeSubscriptionId);    // — provider linkage intact
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -402,6 +552,39 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
 
         await using var read = Fixture.CreateContext(tenantId);
         Assert.Equal("sub_live_123", (await read.Set<Subscription>().SingleAsync(s => s.TenantId == tenantId)).StripeSubscriptionId);
+    }
+
+    [Fact]
+    public async Task Staff_CompCanceledSubscription_IsAllowed_EvenThoughItKeptItsStripeId()
+    {
+        // v3 ADM-5: a canceled Stripe sub keeps its id forever; keying the 409 on id-PRESENCE would lock a
+        // churned tenant (the exact goodwill-comp target) out permanently. Liveness, not id-presence.
+        var staffId = await SeedUserAsync(StaffEmail);
+        var tenantId = await SeedTenantAsync("MuCanceled", members: 1);
+        await SeedSubscriptionAsync(tenantId, stripeSubscriptionId: "sub_dead_123", status: SubscriptionStatus.Canceled);
+
+        var (controller, db) = BuildController(staffId);
+        await using (db)
+        {
+            var ok = Assert.IsType<OkObjectResult>(await controller.SetSubscription(
+                tenantId, new AdminSetSubscriptionRequest { PlanKey = PlanKeys.Pro }, default));
+            Assert.Equal(SubscriptionStatus.Active, Assert.IsType<AdminSubscriptionResponse>(ok.Value).Status);
+        }
+    }
+
+    [Fact]
+    public async Task Staff_RevertCanceledSubscription_IsAllowed_NotBlockedByTheDeadStripeId()
+    {
+        var staffId = await SeedUserAsync(StaffEmail);
+        var tenantId = await SeedTenantAsync("MuCanceledRevert", members: 1);
+        await SeedSubscriptionAsync(tenantId, stripeSubscriptionId: "sub_dead_456", status: SubscriptionStatus.Canceled);
+
+        var (controller, db) = BuildController(staffId);
+        await using (db)
+            Assert.IsType<NoContentResult>(await controller.RemoveSubscription(tenantId, default)); // cleaned up, not 409
+
+        await using var read = Fixture.CreateContext(tenantId);
+        Assert.False(await read.Set<Subscription>().AnyAsync(s => s.TenantId == tenantId)); // gone
     }
 
     [Fact]
@@ -483,6 +666,41 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
     }
 
     [Fact]
+    public async Task Staff_ResetMfa_RevokesTargetsRefreshTokens()
+    {
+        // v3 ADM-7: a reset is also compromise recovery — an attacker's live sessions must not survive the
+        // second-factor wipe.
+        var staffId = await SeedUserAsync(StaffEmail);
+        var (targetId, tenantId) = await SeedUserInTenantWithIdAsync();
+        await SeedMfaAsync(targetId);
+        await SeedRefreshTokenAsync(targetId);
+
+        var (controller, db) = BuildController(staffId);
+        await using (db)
+            Assert.IsType<NoContentResult>(await controller.ResetMfa(targetId, default));
+
+        await using var read = Fixture.CreateContext(tenantId);
+        Assert.False(await read.Set<RefreshToken>().AnyAsync(t => t.UserId == targetId && !t.IsRevoked)); // all revoked
+    }
+
+    [Fact]
+    public async Task Staff_AnnounceAll_Payload_CarriesTheActingStaffId()
+    {
+        // v3 ADM-6: the platform-wide broadcast has no in-tenant audit, so the durable outbox message must
+        // attribute the acting staff.
+        var staffId = await SeedUserAsync(StaffEmail);
+        var (controller, db) = BuildController(staffId);
+        await using (db)
+            Assert.IsType<AcceptedResult>(await controller.AnnounceAll(
+                new AdminAnnounceRequest { Title = "All hands", Body = "Please read." }, default));
+
+        await using var read = Fixture.CreateContext();
+        var message = await read.Set<OutboxMessage>().SingleAsync(m => m.Type == AdminBroadcastOutboxHandler.MessageType);
+        var payload = System.Text.Json.JsonSerializer.Deserialize<AdminBroadcastPayload>(message.Payload)!;
+        Assert.Equal(staffId, payload.StaffUserId);
+    }
+
+    [Fact]
     public async Task Staff_ResetMfa_UnknownUser_Returns404()
     {
         var staffId = await SeedUserAsync(StaffEmail);
@@ -514,7 +732,7 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
     // Captures the email copies NotifyAsync sends, so tests can assert delivery (e.g. the MFA reset).
     private readonly CapturingEmailSender _email = new();
 
-    private (AdminController controller, AppDbContext db) BuildController(Guid callerId)
+    private (AdminController controller, AppDbContext db) BuildController(Guid callerId, Guid? impersonatedBy = null, bool billingEnabled = true)
     {
         var ctx = new HttpCurrentTenant(new HttpContextAccessor { HttpContext = new DefaultHttpContext() });
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(Fixture.ConnectionString).Options;
@@ -526,16 +744,24 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
             new UserRepository(db), _email, TimeProvider.System);
         var mfaService = new MfaService(
             new EfRepository<UserMfa>(db), new EfRepository<MfaRecoveryCode>(db), new UserRepository(db),
-            new EphemeralDataProtectionProvider(), new TokenHasher(), TimeProvider.System);
+            new EphemeralDataProtectionProvider(), new RecoveryCodeHasher(new TestJwtSettings()), new TestMfaSettings(), TimeProvider.System);
         var controller = new AdminController(
             staff, new TenantRepository(db), ctx,
             new AuditLog(new EfRepository<AuditEvent>(db), TimeProvider.System),
             new EfRepository<Subscription>(db), new EfRepository<AuditEvent>(db),
             new UserRepository(db),
             new JwtTokenService(new TestJwtSettings(), TimeProvider.System, NullLogger<JwtTokenService>.Instance),
-            notifications, mfaService, new EfOutbox(db, TimeProvider.System), new EfUnitOfWork(db), TimeProvider.System);
+            notifications, mfaService,
+            new RefreshTokenService(new RefreshTokenRepository(db, TimeProvider.System), new TokenGenerator(),
+                new TokenHasher(), new TestRefreshSettings(), TimeProvider.System),
+            new EfOutbox(db, TimeProvider.System), new EfUnitOfWork(db),
+            new BillingSettings { Enabled = billingEnabled },
+            NullLogger<AdminController>.Instance, TimeProvider.System);
 
-        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, callerId.ToString())], "test"));
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, callerId.ToString()) };
+        if (impersonatedBy is { } staffId)
+            claims.Add(new Claim(JwtClaims.ImpersonatedBy, staffId.ToString())); // an impersonation session
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
         return (controller, db);
     }
@@ -590,13 +816,24 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
         await db.SaveChangesAsync();
     }
 
-    private async Task SeedSubscriptionAsync(Guid tenantId, string? stripeSubscriptionId = null)
+    private async Task SeedRefreshTokenAsync(Guid userId)
+    {
+        await using var db = Fixture.CreateContext();
+        db.Set<RefreshToken>().Add(new RefreshToken
+        {
+            UserId = userId, TokenHash = Guid.NewGuid().ToString("N"), IssuedFromIp = "127.0.0.1", Provider = "test",
+            IssuedAt = DateTimeOffset.UtcNow, ExpiresAt = DateTimeOffset.UtcNow.AddDays(30), IsRevoked = false,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private async Task SeedSubscriptionAsync(Guid tenantId, string? stripeSubscriptionId = null, string? status = null)
     {
         await using var db = Fixture.CreateContext(tenantId); // interceptor stamps TenantId
         db.Set<Subscription>().Add(new Subscription
         {
             PlanKey = PlanKeys.Pro,
-            Status = SubscriptionStatus.Active,
+            Status = status ?? SubscriptionStatus.Active,
             StripeCustomerId = "cus_x",
             StripeSubscriptionId = stripeSubscriptionId,
             CreatedAt = DateTimeOffset.UtcNow,

@@ -19,19 +19,20 @@ var apiBase = builder.Configuration["ApiBaseUrl"] is { Length: > 0 } configured
 
 // Delegating handlers:
 //  - CookieHandler includes browser credentials (the HttpOnly refresh cookie).
-//  - AuthHeaderHandler attaches the in-memory JWT as a Bearer header.
+//  - BearerScopedHandler (shared with the native host) attaches the in-memory JWT as a Bearer header —
+//    to the API's own origin only, never to a foreign absolute URL (v4 T49).
 // Use IHttpClientFactory so the framework supplies the browser HTTP handler as the
 // primary handler (you cannot `new HttpClientHandler()` in Blazor WASM).
 builder.Services.AddScoped<CookieHandler>();
-builder.Services.AddScoped<AuthHeaderHandler>();
+builder.Services.AddScoped(sp => new BearerScopedHandler(sp.GetRequiredService<AuthService>(), new Uri(apiBase)));
 
 // "Api" — the general-purpose client used by components: credentials + Bearer token.
 builder.Services.AddHttpClient("Api", client => client.BaseAddress = new Uri(apiBase))
     .AddHttpMessageHandler<CookieHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<BearerScopedHandler>();
 
 // "ApiAuth" — used only by AuthService for refresh/logout. Credentials only (no
-// Bearer handler) to avoid a DI cycle (AuthHeaderHandler depends on AuthService).
+// Bearer handler) to avoid a DI cycle (BearerScopedHandler depends on AuthService).
 builder.Services.AddHttpClient("ApiAuth", client => client.BaseAddress = new Uri(apiBase))
     .AddHttpMessageHandler<CookieHandler>();
 
@@ -49,9 +50,11 @@ builder.Services.AddSingleton<AppResumeNotifier>();
 
 // Web session store: the browser owns the HttpOnly refresh cookie, so this is a no-op.
 builder.Services.AddSingleton<ISessionStore, CookieSessionStore>();
+// The clock RCL components schedule with (R148): the bell's poll, the billing refetch. Tests swap it.
+builder.Services.AddSingleton(TimeProvider.System);
 
 // Auth. AuthService is a SINGLETON: IHttpClientFactory resolves message handlers
-// (AuthHeaderHandler) in a separate DI scope, so a scoped AuthService would give the
+// (BearerScopedHandler) in a separate DI scope, so a scoped AuthService would give the
 // handler a different instance with no token — and the Bearer header would never be
 // attached. Singleton guarantees the app and the handler share one token store.
 builder.Services.AddSingleton(sp => new AuthService(

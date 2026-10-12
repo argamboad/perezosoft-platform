@@ -72,7 +72,7 @@
             <p class="small text-muted mb-3">@Localizer["Settings_PreferencesHint"]</p>
             <div class="row g-3">
                 <div class="col-12 col-sm-6">
-                    <label class="form-label small fw-medium mb-1">@Localizer["Language"]</label>
+                    <label class="form-label small fw-medium mb-1">@Localizer["Common_Language"]</label>
                     <LanguageSwitcher />
                 </div>
                 <div class="col-12 col-sm-6">
@@ -140,6 +140,9 @@
             _banner = (Localizer["Settings_LinkErrInUse"], false);
         else if (LinkError == "expired")
             _banner = (Localizer["Settings_LinkErrExpired"], false);
+        else if (!string.IsNullOrEmpty(LinkError))
+            // Any other error key (e.g. a link resumed after process death, NATIVE-12).
+            _banner = (Localizer["Settings_LinkFailed"], false);
     }
 
     private async Task LoadLogins()

@@ -1,5 +1,8 @@
-# Local dev environment — never commit secrets
+# Local dev environment — never commit secrets.
+# `.env` alone does NOT match names like `myapp-staging.env`, so match any *.env too
+# (`.env.example` is unaffected — it ends in .example — and stays committed).
 .env
+*.env
 
 # .NET build output
 bin/
@@ -22,3 +25,19 @@ node_modules/
 
 # MAUI lockfile — excluded by design (NATIVE-1): platform-conditional restore makes it churn
 src/Maui/packages.lock.json
+
+# VS Code: launch.json + tasks.json are shared (F5 API + Web, Android tasks); per-user preferences stay local
+.vscode/settings.json
+
+# Native installables (DEPLOYMENT §9 publishes to out/android and out/windows)
+out/
+
+# Signing material (v4 audit NAT-15, R104): a keystore or certificate IS the app's identity. Keep it
+# outside the repo; these patterns are the net under that habit.
+*.jks
+*.keystore
+*.p12
+*.pfx
+
+# Python bytecode (the docs/ generator scripts)
+__pycache__/

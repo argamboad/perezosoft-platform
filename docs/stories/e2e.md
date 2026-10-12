@@ -7,6 +7,18 @@
 > covered; `/health` liveness belongs to the DEPLOY-3 smoke step, not a browser test. Stories use
 > Gherkin acceptance criteria. **Status: ✅ COMPLETE — E2E-1..5** (4 and 5 added after review
 > showed magic-link + destructive flows were automatable after all).
+>
+> **Current suite size: 41 tests** — 41 browser journeys; the count excludes the one `[Explicit]` native
+> smoke (`NativeSmokeTests`), which runs only on the device legs, so the tree holds 42 `[Test]` methods (v4 audit T48, 2026-10-05:
+> +4 gate journeys in `GateJourneyTests`, run in their own gates-off lane — billing unset, a one-domain green
+> list — `pwsh tools/e2e.ps1 -Gates` locally, the "gates off" step in CI; v4 audit T58, 2026-10-03: +3 session journeys in `SessionJourneyTests` —
+> Back after sign-out with the back/forward cache really on, keep-alive past the access token's expiry on
+> Playwright's clock, and a theme save while a renewal is in flight; 34 at the v3 audit T59 reconcile,
+> 2026-07-27).
+> The epic itself grew the suite 7→26; later slices kept adding: NATIVE-4b (→28), NATIVE-3 (→29),
+> THEME-1 (→31), PREFS-1 (→32), BILLING-8 (→33), and v3 T45c's locale-mismatch × invite-acceptance
+> journey (→34). This line is the running total the historical arrows elsewhere add up to — update
+> it when a slice adds a journey.
 
 **Epic key:** `E2E`
 
@@ -304,7 +316,7 @@ Ordered, each a mergeable vertical slice. TDD throughout — the failing Playwri
   is part of each slice, not a separate refactor.
 - **Seats count pending invites** — E2E-2 depends on that `QuotaService` rule; if the seat rule
   changes, this journey is the canary.
-- **Free-plan `SeatLimit: 3` is an EXAMPLE quota** (`PlanCatalog.cs` says "tune per app") — the
+- **The Free-plan `SeatLimit` is an EXAMPLE quota** (5 since GATES-1; was 3) (`PlanCatalog.cs` says "tune per app") — the
   test should read failure gracefully: if a downstream app retunes the catalog, the test's invite
   count must follow. Keep the limit referenced in one constant in the test file.
 - **No notification producer is browser-reachable** — don't be tempted to add a test-only endpoint

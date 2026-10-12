@@ -16,6 +16,17 @@
 > follow-up (optional):* advance trial-ending nudge. Design decision and constraints in **ADR-006**.
 > Stories use Gherkin acceptance criteria.
 
+> **2026-07-15 — billing edge-case correctness (v3 audit LB-BILL-1/3/4).** (1) The webhook **recency guard**
+> now rejects only *strictly* older events (`OccurredAt < last`, was `<=`) — Stripe's `Created` is
+> whole-second, so two DISTINCT events in the same second (checkout `created`+`updated`, a rapid plan change)
+> must both apply; exact redelivery is still caught by the inbox EventId. (2) **Dunning** fires only on a
+> transition *out of a granting status* (`SubscriptionStatus.IsGranting`) — a first-ever event carrying
+> `past_due`/`canceled` (failed first invoice, abandoned checkout) no longer duns a tenant that never had a
+> live subscription. (3) `QuotaService` first-consume retry now catches **only** the unique-violation
+> (`SqlState 23505`); any other `DbUpdateException` propagates instead of being misread as a benign insert
+> race (which could spuriously deny a request with headroom). Tests in `BillingWebhookHandlerTests` +
+> `QuotaServiceTests`.
+
 **Epic key:** `BILLING`
 
 **Prerequisites (external, before any code):**
@@ -244,7 +255,7 @@ Scenario: Cancellation propagates via webhook
 > → **402 `seat_limit_reached`** (Household invite UI shows an upgrade message). **Metered usage** =
 > `TryConsumeAsync(key)` against a monthly `UsageCounter` (per `{tenant, key, yyyy-MM}` — self-resetting,
 > no sweep job); returns false without incrementing at the cap. Limits are `PlanCatalog` example data
-> (Free seats=3/export=3, Pro seats=10/export=100); **null/absent = unlimited** so it's inert until set.
+> (Free seats=5 — raised from 3 by GATES-1, ADR-027 — /export=3, Pro seats=10/export=100); **null/absent = unlimited** so it's inert until set.
 > Tests: `tests/Api.Tests/Billing/QuotaServiceTests.cs` (seat boundaries incl. pending-invite counting +
 > upgrade; usage within/at-limit/unlimited/month-reset; invite-flow 402). `TryConsumeAsync` is the seam —
 > call it at any metered action (e.g. an export) to enforce a per-month cap.
@@ -264,7 +275,7 @@ limit; checked when inviting (extends
 
 ```gherkin
 Scenario: Inviting beyond the seat limit is blocked
-  Given my Free plan allows 3 seats and my tenant already has 3 members
+  Given my Free plan's seats are all used by members
   When I invite a 4th member
   Then the invite is rejected 402 with an upgrade prompt
   And no TenantInvitation is created
@@ -310,6 +321,29 @@ sweep is a scheduled job (JOBS-3).
 > **without fabricating a status** (Stripe stays source of truth; entitlements already fail closed on a
 > lapsed period). Tests: `BillingWebhookHandlerTests` (past-due notifies once; no-change doesn't) +
 > `SubscriptionLapseSweepJobTests` (nudge-once + stamp; in-period ignored).
+>
+> **Addendum (2026-09-07, first real checkout on a downstream app):** the lifecycle also gets its one
+> good-news notice — `billing.activated` ("Subscription active", plan + renewal date) on a transition
+> **into** `active`/`trialing` from nothing or from a lapsed state (first activation, resubscribe). A renewal
+> and a trial converting are silent. Payment *receipts* stay Stripe's job (Customer emails → Successful
+> payments). `BillingWebhookHandlerTests.SubscriptionActivated_*` / `Resubscribe_*` / `TrialConverting_*`.
+>
+> **Addendum (2026-09-28, v4 T24 — R129):** the webhook handler looks the tenant up **after the inbox claim
+> and before `EnterTenant`**: a dissolved household's provider subscription is cancelled after its rows are
+> gone, and the `customer.subscription.deleted` that follows re-created the projection — Stripe ids and all —
+> for a tenant no export, erasure or dissolve would ever reach again. Now claimed (a redelivery is a
+> `Duplicate`), logged at Warning, nothing written. `BillingWebhookHandlerTests.Webhook_ForUnknownTenant_*`;
+> `ArchitectureTests.EnterTenant_WithARequestSuppliedTenantId_ChecksTheTenantExists` classifies every
+> `EnterTenant` site by where its id comes from.
+>
+> **Addendum (2026-09-28, v4 T43 — R133):** each tenant's nudge and stamp are **one transaction**
+> (`IUnitOfWork`). The owner's email copy is enqueued by `OutboxEmailSender` with a SaveChanges of its own
+> before the stamp, so without it a stamp that failed left the nudge committed and re-sent it every six
+> hours until a stamp landed — invisible to the job tests, which used a no-op sender. They now run the real
+> outbox sender (`EnforcementGateTests.JobTests_UseTheRealOutboxEmailSender` holds every `*JobTests`
+> to that) and inject the fault at the repository: `StampFailure_AfterTheNotification_LeavesNeither`.
+> With the billing gate off (GATES-1) the sweep returns at once — there is no billing page to send the owner
+> to — `BillingOff_LapsedSubscription_IsNotNudged`.
 
 **Acceptance criteria**
 
@@ -414,7 +448,8 @@ accepting invitations issued while the tenant was on a bigger plan
 
 **Context / notes:** BILLING-5 enforces seats only at invitation **creation** (pending invites
 reserve seats, so the cap holds while the plan is stable). But nothing sweeps pending invites on a
-downgrade and `AcceptAsync` never re-checked — so Pro (10 seats) → invite 7 → drop to Free (3)
+downgrade and `AcceptAsync` never re-checked — so Pro (10 seats) → invite 7 → drop to Free (3 seats then;
+raised to 5 by GATES-1)
 left 7 valid invites that could each still join, actively growing the tenant past its cap
 (found 2026-07-14 while reasoning about the ADR-021 comp/revert writes; applies equally to real
 Stripe downgrades). The accept itself is **seat-neutral** — the joiner consumes the seat their
@@ -436,7 +471,7 @@ Scenario: accept blocked when the tenant is over its downgraded cap
   And no membership was moved and the invitation stays pending
 
 Scenario: accept at exactly the cap still works (seat-neutral swap)
-  Given a Free tenant with 2 members and 1 pending invitation (3/3 seats used)
+  Given a Free tenant whose seats are all used by members plus 1 pending invitation
   When the invitee redeems the token
   Then they join and the tenant has 3 members
 

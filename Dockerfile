@@ -1,17 +1,17 @@
-# syntax=docker/dockerfile:1
-#
 # Production image (DEPLOY-2, ADR-017). Single container that serves BOTH the ASP.NET Core API and the
 # Blazor WASM client — single-origin (see DEPLOY-1). Mirrors CI: restore/build only Api + Web (which pull
 # in Core/Infrastructure/Shared.Ui via ProjectReference); Maui is never built here.
 
 # ---- build ---------------------------------------------------------------------------------------
-# Pin the SDK to the version that generated the committed packages.lock.json files (TECH_STACK: 10.0.301).
-# The WASM SDK injects patch-sensitive implicit package refs, so a floating tag breaks --locked-mode.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.301 AS build
+# Pin the SDK to the single source of truth — global.json (10.0.401) — which generated the committed
+# packages.lock.json files. The WASM SDK injects patch-sensitive implicit package refs, so a floating tag
+# breaks --locked-mode. Keep this tag == global.json's version (see the bump-together playbook in CLAUDE.md).
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 WORKDIR /src
 
 # Solution-wide build config (warnings-as-error) + Central Package Management + the committed lockfiles.
-COPY Directory.Build.props Directory.Packages.props ./
+# Directory.Build.props imports local-ports.props (Arch A10) and ships platform-stamp.json beside the API (Arch A2).
+COPY Directory.Build.props Directory.Packages.props local-ports.props platform-stamp.json ./
 
 # Project manifests + their lockfiles first, so `dotnet restore` caches as its own layer and only re-runs
 # when a dependency actually changes (not on every source edit).
@@ -42,13 +42,23 @@ RUN dotnet publish src/Web/Perezosoft.Web.csproj -c Release --no-restore -o /pub
  && echo '{}' > /publish/api/wwwroot/appsettings.json
 
 # ---- runtime -------------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# Pin the runtime to the exact patch of the ASP.NET Core package line the app compiles against (10.0.11,
+# enforced by the R61 gate against Directory.Packages.props), not the
+# floating :10.0 tag — a reproducible runtime layer, same discipline as the build stage (v3 audit DEP-11).
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.11 AS runtime
 WORKDIR /app
 
 # curl for the container/compose health probe. The .NET image already ships a non-root `app` user; run as it.
+# /app itself is created by root (WORKDIR above), so give `app` the local-disk file storage folder
+# (ADR-010's default, ./storage under the app base dir) BEFORE switching user — otherwise the first stored
+# file (CSV export, report PDF, household export) fails with "Access to the path '/app/storage' is denied".
+# The folder lives in the container: on a free host it is ephemeral, which suits short-lived download links;
+# set Storage:S3 for anything that must survive a restart.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /app/storage \
+ && chown app:app /app/storage
 USER app
 
 COPY --from=build --chown=app:app /publish/api ./

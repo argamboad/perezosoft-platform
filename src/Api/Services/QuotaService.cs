@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Billing;
 using Perezosoft.Core.Entities;
@@ -25,10 +26,10 @@ public sealed class QuotaService(
         var plan = await ResolvePlanAsync(cancellationToken);
         var tenantId = currentTenant.TenantId ?? Guid.Empty;
 
-        // Seats = current members + still-pending invites (a pending invite is a reserved seat, so N
-        // invites can't over-provision past the cap).
+        // Seats = current members + still-VALID invites (a live invite is a reserved seat, so N invites can't
+        // over-provision past the cap; a lapsed one reserves nothing — v4 T34, R127).
         var members = (await tenants.GetMembersAsync(tenantId, cancellationToken)).Count;
-        var pending = (await invitations.GetPendingForTenantAsync(tenantId, cancellationToken)).Count;
+        var pending = await invitations.CountValidForTenantAsync(tenantId, clock.GetUtcNow(), cancellationToken);
         return new SeatUsage(members + pending, plan.SeatLimit);
     }
 
@@ -46,7 +47,9 @@ public sealed class QuotaService(
             return false; // a single request already exceeds the cap
 
         var now = clock.GetUtcNow();
-        var period = now.ToString("yyyy-MM");
+        // One calendar for the key (v4 T44, R134): under a Thai or Hijri request culture a bare "yyyy-MM" names
+        // another year, and the tenant gets a counter per calendar — a multiple of the monthly cap.
+        var period = now.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
 
         // Atomic path: a single conditional UPDATE increments the existing counter only if it stays within
         // the cap. Postgres row-locks the counter, so concurrent consumers serialize and there is no
@@ -68,8 +71,12 @@ public sealed class QuotaService(
             await usage.SaveChangesAsync(cancellationToken);
             return true;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" })
         {
+            // ONLY a unique-(TenantId,Key,Period) violation means a concurrent request created the row first
+            // — retry the conditional increment against it. Any OTHER DbUpdateException (serialization/
+            // deadlock, timeout, a future check-constraint) is a real failure: it must propagate, not be
+            // reinterpreted as a benign race that could spuriously deny a request with headroom (LB-BILL-3).
             usage.Remove(row); // detach the failed insert so it doesn't linger in the change tracker
             return await TryIncrementAsync(usageKey, period, amount, limit, now, cancellationToken);
         }

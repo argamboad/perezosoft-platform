@@ -10,20 +10,55 @@ public static class MauiProgram
 {
 	// Base address for the API, per platform.
 	//  - Windows desktop reaches localhost directly over HTTPS (machine-trusted dev cert).
-	//  - Android uses http://localhost:5238 via `adb reverse tcp:5238 tcp:5238`, which maps
+	//  - Android uses the API's local http port via `adb reverse` (the csproj bridges it), which maps
 	//    the device's localhost to the host. Using "localhost" (not 10.0.2.2) is what makes
 	//    OAuth work: Google/Microsoft accept localhost as a redirect host but reject raw IPs,
-	//    so the provider redirect_uri http://localhost:5238/signin-google is valid (and is
+	//    so the provider redirect_uri http://localhost:<api http port>/signin-google is valid (and is
 	//    the same one already registered for the desktop/web flow). See docs/MOBILE_TESTING.md.
 	//  - PEREZOSOFT_API_BASE_URL overrides both (dev builds): the CI native smoke (NATIVE-7)
 	//    points the app at its plain-HTTP stack, and a physical device can target a LAN API
 	//    without recompiling.
-	private static string ApiBaseUrl =>
+	//
+	// The localhost fallback + env override are DEBUG-ONLY (v3 NAT-3): a Release build must not ship
+	// the dev localhost base (it would send OTP codes + refresh tokens cleartext to whatever binds
+	// device-localhost). Release compiles in the real base from the $(ApiBaseUrl) build property —
+	// the csproj fails the build if it's unset — surfaced here via AssemblyMetadata.
+	// Normalized: no trailing slash. The OAuth initiators build the browser URL by concatenating
+	// "/api/auth/native/login/…" onto this, and a base passed as "https://host/" produced
+	// "https://host//api/…" — which the API serves as the web client's fallback page instead of the
+	// OAuth challenge, so the browser signed the user into the WEB app and the native app never got
+	// its code (found downstream in y-el-vuelto, 2026-09-14, Windows + Android against staging).
+	// HttpClient tolerated the slash; the concatenation did not.
+	private static string ApiBaseUrl => RawApiBaseUrl.TrimEnd('/');
+
+	private static string RawApiBaseUrl =>
+#if DEBUG
 		Environment.GetEnvironmentVariable("PEREZOSOFT_API_BASE_URL") is { Length: > 0 } o ? o :
 #if ANDROID
-		"http://localhost:5238";
+		LocalPorts.ApiHttpUrl;   // local-ports.props
 #else
-		"https://localhost:7160";
+		LocalPorts.ApiHttpsUrl;  // local-ports.props
+#endif
+#else
+		ReleaseApiBaseUrl;
+
+	// Release only: the base URL compiled in from $(ApiBaseUrl). Never throws in a real Release build —
+	// the csproj's RequireApiBaseUrlInRelease target fails the build before we get here if it's unset.
+	// (No LINQ: the using would be unused in Debug and trip warnings-as-errors.)
+	private static string ReleaseApiBaseUrl
+	{
+		get
+		{
+			foreach (var attr in typeof(MauiProgram).Assembly
+				.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false))
+			{
+				if (attr is System.Reflection.AssemblyMetadataAttribute { Key: "ApiBaseUrl", Value: { Length: > 0 } value })
+					return value;
+			}
+			throw new InvalidOperationException(
+				"Release build has no ApiBaseUrl compiled in — build with -p:ApiBaseUrl=https://your-api-host (v3 NAT-3).");
+		}
+	}
 #endif
 
 	// Custom URL scheme the Android app registers for the OAuth callback (perezosoft://auth).
@@ -64,12 +99,19 @@ public static class MauiProgram
 		// Theme needs no Preferences bootstrap: it's pure DOM, and theme.js reads the
 		// WebView's own localStorage before first paint (THEME-1).
 		builder.Services.AddSingleton<IThemePersistence, LocalStorageThemePersistence>();
+#if ANDROID
+		// The status and navigation bars are the OS's, not the page's: paint them to match the theme the
+		// page applies (SystemBarThemeSync). Other hosts register none.
+		builder.Services.AddSingleton<ISystemBarTheme, AndroidSystemBarTheme>();
+#endif
 
 		// Signed-URL downloads can't ride a WebView navigation — fetch + OS share sheet instead
-		// (NATIVE-3). Uses the default (Bearer) client registered below: the signed URL itself
-		// needs no auth, but absolute URLs bypass BaseAddress so the same client serves both.
-		builder.Services.AddSingleton<IFileDownloadLauncher>(sp =>
-			new ShareFileDownloadLauncher(sp.GetRequiredService<HttpClient>()));
+		// (NATIVE-3). A PLAIN client (v4 T49): the URL is either the API's tokenized /api/files/{token}
+		// (anonymous; relative, hence the BaseAddress) or a presigned S3/MinIO link, which AWS refuses when
+		// an Authorization header rides along — and the default client's handler would also spend a
+		// refresh on the file host's behalf. Nothing here needs the bearer.
+		builder.Services.AddSingleton<IFileDownloadLauncher>(_ =>
+			new ShareFileDownloadLauncher(new HttpClient { BaseAddress = new Uri(ApiBaseUrl) }));
 
 		// Fired by the window's Resumed lifecycle event (App.CreateWindow) so pages can refresh
 		// after an external round-trip returns to the app (NATIVE-4, G2).
@@ -94,9 +136,16 @@ public static class MauiProgram
 #else
 		builder.Services.AddSingleton<ISessionStore, SecureStorageSessionStore>();
 #endif
+		// The clock RCL components schedule with (R148): the bell's poll, the billing refetch. Same line in src/Web.
+		builder.Services.AddSingleton(TimeProvider.System);
 #if ANDROID || IOS || MACCATALYST
 		builder.Services.AddSingleton<IOAuthInitiator>(sp =>
 			new WebAuthenticatorOAuthInitiator(ApiBaseUrl, CallbackScheme, sp.GetRequiredService<ILogger<WebAuthenticatorOAuthInitiator>>()));
+		// WebAuthenticator's pending state is in-memory only — persist an in-flight marker
+		// (+ a stashed callback on Android cold starts) so OAuth survives the OS killing
+		// the process during the browser round-trip (NATIVE-12). Windows' loopback flow
+		// blocks in-process and has no custom-scheme relaunch, so it registers no store.
+		builder.Services.AddSingleton<IOAuthResumeStore, PreferencesOAuthResumeStore>();
 #elif WINDOWS
 		builder.Services.AddSingleton<IOAuthInitiator>(sp =>
 			new LoopbackOAuthInitiator(ApiBaseUrl, sp.GetRequiredService<ILogger<LoopbackOAuthInitiator>>()));
@@ -108,7 +157,9 @@ public static class MauiProgram
 		//    exchange are anonymous or carry the body refresh token — they need no Bearer,
 		//    and this is what the handler below would depend on, so keep them separate.
 		//  - The default HttpClient (what the RCL pages inject) attaches the in-memory JWT
-		//    as a Bearer header so [Authorize] endpoints (household, linked logins) work.
+		//    as a Bearer header so [Authorize] endpoints (household, linked logins) work —
+		//    through the shared BearerScopedHandler, so only requests to the API's own origin
+		//    carry it (v4 T49).
 		//
 		// The X-Native-Client header on both selects the API's body-token transport.
 		builder.Services.AddSingleton(sp =>
@@ -119,12 +170,13 @@ public static class MauiProgram
 				authClient,
 				sp.GetRequiredService<ILogger<AuthService>>(),
 				sp.GetRequiredService<ISessionStore>(),
-				sp.GetRequiredService<IOAuthInitiator>());
+				sp.GetRequiredService<IOAuthInitiator>(),
+				sp.GetService<IOAuthResumeStore>()); // null on Windows (loopback flow)
 		});
 
 		builder.Services.AddSingleton(sp =>
 		{
-			var handler = new NativeAuthHeaderHandler(sp.GetRequiredService<AuthService>())
+			var handler = new BearerScopedHandler(sp.GetRequiredService<AuthService>(), new Uri(ApiBaseUrl))
 			{
 				InnerHandler = new HttpClientHandler()
 			};

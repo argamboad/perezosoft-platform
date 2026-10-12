@@ -7,6 +7,13 @@ delete/clear), billing (+ the fake-provider webhook that simulates payment compl
 Notes sample slice, the staff admin surface (announce/broadcast/comp — ADR-021), and the
 config-gated Public API + outbound webhooks.
 
+**"Every HTTP surface" is machine-enforced** (v3 audit TR-6): the CI parity gate
+(`tests/Api.Tests/Integration/PostmanParityTests.cs`) reads the app's real route table and fails
+when a mapped `/api` endpoint has no matching request here. Browser-flow endpoints (OAuth
+redirects/callbacks, the emailed magic-link verify, provider linking, signed file downloads) are
+included as **`(doc-only)`** requests — they document the contract but aren't runnable from
+Postman; everything else is executable and chained.
+
 ## Files
 
 | File | Becomes in Postman |
@@ -22,14 +29,17 @@ a mirror kept fresh by CI. The `postman-sync` workflow pushes the collection + e
 `*postman_environment.json` to the workspace (matched **by name**: update if present, create if
 not) on any change to `docs/postman/**` on `develop` — so the team never imports JSON by hand.
 
+It runs on GitHub whenever `develop` moves — every merged pull request that touched `docs/postman/` — and
+from *Run workflow* (ADR-030/031).
+
 **One-time setup** (until then the job skips with a notice):
-1. Postman → avatar → **Settings → API keys** → generate a key → GitHub repo →
-   **Settings → Secrets → Actions** → secret `POSTMAN_API_KEY`.
-2. Postman → workspace **Overview** → copy the workspace **ID** → GitHub →
-   **Settings → Variables → Actions** → variable `POSTMAN_WORKSPACE_ID`.
+1. Postman → avatar → **Settings → API keys** → generate a key → GitHub → repo →
+   **Settings → Secrets and variables → Actions → Secrets** → secret `POSTMAN_API_KEY`.
+2. Postman → workspace **Overview** → copy the workspace **ID** → GitHub → repo →
+   **Settings → Secrets and variables → Actions → Variables** → variable `POSTMAN_WORKSPACE_ID`.
 3. Delete any duplicate same-name collections/environments in the workspace once (with
-   duplicates, the first name-match wins). Trigger the first run via **Actions →
-   postman-sync → Run workflow** (or merge any `docs/postman/` change).
+   duplicates, the first name-match wins). Trigger the first run from GitHub: repo →
+   **Actions → postman-sync → Run workflow** (or merge any `docs/postman/` change).
 
 **Direction is one-way.** Edits made in the Postman UI are overwritten on the next sync — change
 the JSON here (PR-reviewed, versioned) instead. Postman's built-in "connect repository" (API
@@ -95,6 +105,7 @@ instead). **Admin** requires your email in that environment's `Admin__StaffEmail
 | 8 · Admin | your email in `Admin__StaffEmails__0` (repo `.env`) + API restart |
 | 9 · Public API | `PublicApi__Enabled=true` + restart (`404` when off) |
 | 10 · Webhooks | `Webhooks__Enabled=true` + restart; target URL must be public-routable (SSRF guard) |
+| 6 · Billing (every request) | `Billing__Enabled=true` + restart — gated OFF by default (GATES-1); while off every billing route is `404`, webhook included |
 | 6 · Billing webhook | fake provider (dev default); header `Stripe-Signature: valid` |
 
 ## Notes

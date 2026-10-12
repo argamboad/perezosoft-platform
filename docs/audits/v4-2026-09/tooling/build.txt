@@ -1,0 +1,10 @@
+# dotnet build Perezosoft.slnx -c Release (warnings-as-errors on) — SHA 8c8ed4a, 2026-09-23
+
+0 Warning(s)
+2 Error(s)
+C:\Users\argam\source\repos\Personal\perezosoft-platform\src\Maui\Perezosoft.Maui.csproj(146,9): error : Release builds require -p:ApiBaseUrl=https://your-api-host — refusing to ship the dev localhost API base (v3 NAT-3). Set it in your release pipeline. [TargetFramework=net10.0-android]
+C:\Users\argam\source\repos\Personal\perezosoft-platform\src\Maui\Perezosoft.Maui.csproj(146,9): error : Release builds require -p:ApiBaseUrl=https://your-api-host — refusing to ship the dev localhost API base (v3 NAT-3). Set it in your release pipeline. [TargetFramework=net10.0-windows10.0.19041.0]
+Time Elapsed 00:00:28.07
+
+Verdict: the only errors are the R67 (v3 NAT-3) guard refusing a Release MAUI build without -p:ApiBaseUrl — the gate firing as designed. Every other project built with 0 warnings.
+MAUI Android Release build with -p:ApiBaseUrl=https://audit.invalid:     0 Warning(s)     0 Error(s) exit=0 

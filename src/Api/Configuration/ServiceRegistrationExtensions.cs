@@ -16,6 +16,8 @@ public static class ServiceRegistrationExtensions
     public static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         services.AddScoped<IUserService, UserService>();
+        // GATES-2 (ADR-027): decides who may create an account. Scoped — it reads invitations + memberships.
+        services.AddScoped<ISignupGate, SignupGate>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<ISessionService, SessionService>();
@@ -26,6 +28,9 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<ICookieService, CookieService>();
         services.AddScoped<ITokenGenerator, TokenGenerator>();
         services.AddScoped<ITokenHasher, TokenHasher>();
+        // Recovery codes are low-entropy, so they get a PEPPERED HMAC (ADM-4) instead of the plain hash the
+        // high-entropy tokens use. Singleton: the key is derived from Jwt:Secret once.
+        services.AddSingleton<IRecoveryCodeHasher, RecoveryCodeHasher>();
         services.AddSingleton<ILinkTokenService, LinkTokenService>();
         services.AddSingleton<INativeAuthCodeService, NativeAuthCodeService>();
         return services;
@@ -42,6 +47,9 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<HttpCurrentTenant>();
         services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<HttpCurrentTenant>());
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<HttpCurrentTenant>());
+        // Ambient impersonation attribution (LB-ADM-1): the audit log stamps AuditEvent.ImpersonatedBy from
+        // the impersonated_by JWT claim on every event — per-request, null for jobs/system contexts.
+        services.AddScoped<ICurrentImpersonation, HttpCurrentImpersonation>();
         services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<ITenantInvitationService, TenantInvitationService>();
         // Shared tenant-dissolve sequence (DEBT-7): contributors first, then core WipeDataAsync. Used by
@@ -89,7 +97,7 @@ public static class ServiceRegistrationExtensions
         // Platform-staff admin surface (ADMIN, ADR-014). Staff is an out-of-band config allowlist; the admin
         // endpoints gate on it per-request. Cross-tenant reads use EnterTenant / non-scoped tables — the global
         // filter is never loosened.
-        services.Configure<PlatformAdminSettings>(config.GetSection("Admin"));
+        services.Configure<PlatformAdminSettings>(config.GetSection(PlatformAdminSettings.SectionName));
         services.AddScoped<IPlatformStaffService, PlatformStaffService>();
         return services;
     }
@@ -115,6 +123,8 @@ public static class ServiceRegistrationExtensions
         // scheduled sweep that nudges once when a paid period lapses without a webhook.
         services.AddScoped<IBillingNotifier, BillingNotifier>();
         services.AddScoped<IScheduledJob, SubscriptionLapseSweepJob>();
+        // Says at startup when the gate is off but Stripe-managed rows linger (v4 T46): resolution is gate-blind.
+        services.AddHostedService<BillingPostureCheck>();
         // Billing checkout orchestration (BILLING-2), behind the platform BillingController. The
         // IBillingProvider (Stripe or fake) is registered in AddInfrastructure.
         services.AddScoped<IBillingService, BillingService>();
@@ -123,6 +133,9 @@ public static class ServiceRegistrationExtensions
         // Billing participates in tenant dissolve (BILLING-7): wipe the Subscription projection + cancel the
         // provider subscription (via the outbox) so a dissolved tenant stops being billed.
         services.AddScoped<ITenantDataContributor, BillingDataContributor>();
+        // Metered-usage counters (BILLING-5) participate in dissolve + export (LB-TEN-1) so a dissolved
+        // tenant's usage rows don't orphan and the export doesn't silently omit them.
+        services.AddScoped<ITenantDataContributor, UsageCounterDataContributor>();
         return services;
     }
 }

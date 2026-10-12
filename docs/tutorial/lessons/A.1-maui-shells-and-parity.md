@@ -22,7 +22,9 @@ compile + smoke CI gate across four platforms.
 
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/MauiProgram.cs`, `src/Maui/wwwroot/index.html`,
 `docs/NATIVE_PARITY.md`, `docs/MOBILE_TESTING.md`, `src/Maui/PreferencesCulturePersistence.cs`,
-`src/Maui/ShareFileDownloadLauncher.cs`.
+`src/Maui/ShareFileDownloadLauncher.cs`, `src/Maui/Platforms/Android/MainActivity.cs`,
+`AndroidSystemBarTheme.cs` (#231), `src/Shared.Ui/Components/SystemBarThemeSync.razor`; tests
+`tests/Ui.Tests/SystemBarThemeSyncTests.cs`, `tests/Api.Tests/NativeChromeGateTests.cs`.
 
 **Prerequisites:** 3.3/3.4 (the RCL + web client — the shared UI), 3.5 (`ICulturePersistence` — a
 native seam designed web-first), 6.3 (`IFileDownloadLauncher` — likewise), 8.3 (the CI the native
@@ -134,10 +136,39 @@ verdicts and the smoke harness (§6) exist to close.
 
 Some gaps can't be fixed in the shared RCL at all, because they're *below* the web platform. The
 sharpest example: Android's edge-to-edge display laid the WebView under the transparent status bar, so
-the clock drew over the app header. The instinct is `env(safe-area-inset-top)` in CSS — but **Android
-WebView always resolves `env()` to 0** (it's a WKWebView/iOS mechanism). So the fix is *native*:
-`MainActivity` pads the content by the status-bar inset via `ViewCompat.SetOnApplyWindowInsetsListener`
-and paints the strip brand green. The lesson: a hybrid app has a floor of genuinely
+the clock drew over the app header. The instinct is `env(safe-area-inset-top)` in CSS — but **you
+can't rely on Android WebView for it**: older versions resolve `env()` to 0, and current ones report the
+inset. So the fix is *native*: `MainActivity` pads the content by the status-bar inset via
+`ViewCompat.SetOnApplyWindowInsetsListener` and hands the WebView insets with the top already spent, so
+the header's `env()` is 0 on every WebView and the height is never added twice. The strip behind the
+clock is the OS's, too, so no stylesheet colours it: `SystemBarThemeSync` (RCL) relays each theme
+`theme.js` applies (its `watch` hook, 3.4 §5a) to an `ISystemBarTheme` that only the Android host
+registers, and `SystemBarColors` paints the header's colour, or the page's ground on the sign-in
+screens and the boot state, which have no header (#231):
+
+```csharp
+// src/Maui/Platforms/Android/AndroidSystemBarTheme.cs — follows the page's theme (SystemBarThemeSync)
+public sealed class AndroidSystemBarTheme : ISystemBarTheme
+{
+    public Task ApplyAsync(string resolvedTheme, bool ground) =>
+        MainThread.InvokeOnMainThreadAsync(() =>
+            SystemBarColors.Paint(Platform.CurrentActivity, resolvedTheme == "dark", ground));
+}
+```
+
+Two details are the kind that only a device pass finds. `MainActivity` declares
+`ConfigChanges.UiMode` in its `ConfigurationChanges` (alongside orientation and screen size) so a
+dark-mode flip at the OS level *reconfigures* the activity instead of recreating it — otherwise the
+WebView, and the signed-in session inside it, restart every time the phone crosses dusk. And until
+the page reports its theme, `OnCreate` paints from the phone's own night mode on the page ground —
+the boot state has no header. The colours are `app.css` tokens by construction:
+`NativeChromeGateTests` (`SystemBarColors_AreAppCssTokens_InEachTheme`,
+`MainActivity_CarriesNoLiteralColour`, `ThemeJs_TellsAWatcherEveryThemeItApplies`,
+`Rebranding_NamesTheAndroidSystemBars`) fails while this file disagrees with the stylesheet, and
+`SystemBarThemeSyncTests` (Ui.Tests, bUnit) proves the relay itself —
+`WithNativeSystemBars_ItWatchesTheTheme_AndPassesEachOneOn`, `AnythingButDark_ReadsAsLight`,
+`WithNoHeader_TheBarTakesThePageGround_AndFollowsWhenThatChanges`, `OnTheWeb_ItStaysOutOfTheWay`.
+The lesson: a hybrid app has a floor of genuinely
 platform-native concerns (insets, back button, window lifecycle, secure storage) that no amount of
 shared web code reaches — and recognizing which layer a gap lives in is half of fixing it. The seams
 handle the "same behavior, different mechanism" gaps; the native floor handles the "the OS itself is
@@ -147,13 +178,27 @@ different" ones.
 
 Native support that isn't exercised *rots* — a refactor breaks a platform nobody built locally, and
 you find out in a store review. So the CI (8.3) grows a **compile gate for all four TFMs** plus a
-**boot smoke** per platform: Windows drives the real MAUI app via WebView2's CDP endpoint; Android
-runs it on a real emulator; iOS-simulator and Mac Catalyst assert boot-to-login canaries (WKWebView
-has no CDP, so they prove process-alive + a provider probe returns 200, not full UI driving). It's
+**boot smoke** per platform: Windows boots the real MAUI app and probes that it reached the login
+screen (it originally drove the UI via WebView2's CDP endpoint, but WebView2 150 stopped exposing
+CDP under the elevated CI runner, so the leg was rescoped to a boot-probe); Android runs the full
+OTP sign-in journey on a real emulator; iOS-simulator and Mac Catalyst assert boot-to-login
+canaries (WKWebView has no CDP, so they prove process-alive + a provider probe returns 200, not
+full UI driving). It's
 tiered by cost (macOS runners bill 10×, so the Apple legs run only on native-relevant develop pushes)
-and gated so docs-only changes skip the native legs entirely. This is the DevOps discipline of Part 8
+and gated so docs-only changes skip the native legs entirely — the `native` flag of 1.6's `changes`
+classifier, whose regex is narrower than `code` on purpose: only what the expensive legs can actually
+be broken by. (On the platform's own forge, 8.3 §5, the native *builds* still run per push while the
+*smokes* wait for the `smokes` dispatch input or the Monday schedule.) This is the DevOps discipline of Part 8
 extended to the hardest-to-test surface: even a canary that only proves "the Apple app still boots to
 a login screen" would have caught G7 the day it landed.
+
+One more thing the smoke does not cover, because it installs through `adb`: **the package installer's
+own rules.** A Release APK built without a keystore is signed by the old jarsigner path — APK
+Signature Scheme v1 only — and Android 11+ refuses it *silently*: tap the file, nothing happens. The
+first downstream app hit this on its first sideload. The csproj now forces the `apksigner` path in
+Release (v2 + v3), using the developer's debug key unless the store keystore properties are supplied,
+and `docs/DEPLOYMENT.md` §9 is the "build me an installable against host X" recipe (Android APK,
+Windows unpackaged folder, the `ApiBaseUrl` rule, the native callback scheme the host must allow).
 
 > **A red build you'll hit the moment you add `src/Maui` — the arch test vs XAML code-behind.** The
 > `SourceFile_DeclaresATypeMatchingItsName` arch test (3.3) — "a file `Foo.cs` should declare a type
@@ -179,6 +224,23 @@ Worth stating because they're easy to violate silently:
   round-trip (payment, OAuth-like flow) needs a *return-trip story* on native, not just a redirect
   URL — because unlike a browser tab, a native app that navigates away doesn't automatically come
   back to your state.
+
+### Posture and hygiene, held as files (v4 audit, 2026-10)
+
+Three things about the native shell used to live in someone's memory and are now gates that need no MAUI
+workload to run (`NativeShellGateTests`, `ToolsScriptsTests`):
+
+- **Nothing the app stores leaves the device.** `allowBackup="false"` covers Android 11 and older;
+  Android 12+ ignores that attribute for device-to-device transfer, so `data_extraction_rules.xml` excludes
+  everything there too. Cleartext is permitted only to the dev loopback (`10.0.2.2`, `localhost`).
+- **Signing material and its passwords.** `.gitignore` covers `*.jks`, `*.keystore`, `*.p12` and `*.pfx`,
+  and a signing password is never a `-p:` literal in a doc, script or workflow: the Android SDK reads
+  `env:NAME` itself, so the command line names a variable. `publish-native.ps1 -KeyStore … -KeyAlias …`
+  does exactly that. A build signed with a different key than the installed one will not install over it —
+  uninstall first.
+- **The operator scripts have a contract.** Every `tools/*.ps1` starts with `#Requires -Version 7.0`, is
+  ASCII or carries a BOM, and sets `$ErrorActionPreference = 'Stop'`. `publish-native.ps1` is also *run*, with
+  a fake `dotnet` and a fake `apksigner`: a v1-only verdict or a failed publish exits 1 and hands nothing out.
 
 ## 8. Architecture Decision
 

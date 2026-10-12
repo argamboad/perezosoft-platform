@@ -14,7 +14,16 @@ namespace Perezosoft.E2E.Tests;
 ///
 /// [Explicit] keeps it out of the default `dotnet test` run (the browser e2e job); the CI native
 /// smoke selects it with <c>--filter "Category=NativeSmoke"</c>. Config via env:
-/// NATIVE_SMOKE_CDP (default http://localhost:9223), MAILPIT_BASE_URL (the Mailpit helper).
+/// NATIVE_SMOKE_CDP (default http://127.0.0.1:9223 — IPv4 literal, not localhost: WebView2 150+
+/// binds CDP on IPv4 loopback only), MAILPIT_BASE_URL (the Mailpit helper).
+///
+/// NOT CURRENTLY CI-WIRED (2026-07-17). WebView2 Runtime 150 strips <c>--remote-debugging-port</c>
+/// under an elevated host (GitHub Windows runners run elevated), so the CDP endpoint never binds and
+/// this can't attach there (MicrosoftEdge/WebView2Feedback#5640). The <c>native-smoke-windows</c> CI
+/// leg was de-scoped to a process-alive + provider-probe boot check (matching the Apple leg); the
+/// full UI-driving journey still runs on the Android leg (<c>tests/native-smoke-android/smoke.js</c>).
+/// This fixture stays for LOCAL use on a NON-elevated box, and is the target to re-wire if the Windows
+/// leg later pins Fixed-Version WebView2 149 or launches the app de-elevated.
 /// </summary>
 [TestFixture]
 [Explicit("Needs a running native app with CDP enabled — launched by the native-smoke CI job")]
@@ -22,7 +31,7 @@ namespace Perezosoft.E2E.Tests;
 public class NativeSmokeTests
 {
     private static string CdpUrl =>
-        Environment.GetEnvironmentVariable("NATIVE_SMOKE_CDP") ?? "http://localhost:9223";
+        Environment.GetEnvironmentVariable("NATIVE_SMOKE_CDP") ?? "http://127.0.0.1:9223";
 
     [Test]
     public async Task Native_App_Boots_SignsIn_And_LoadsHousehold()
@@ -56,10 +65,12 @@ public class NativeSmokeTests
         var email = $"native-smoke-{Guid.NewGuid():N}@example.com";
         await Mailpit.ClearAsync();
         await emailBox.FillAsync(email);
-        await page.GetByTestId("login-send-otp").ClickAsync();
+        await page.GetByTestId("login-send-otp").ClickAsync(new() { Timeout = 60_000 });
         var code = await Mailpit.WaitForOtpAsync(email, TimeSpan.FromSeconds(60));
         await page.GetByTestId("login-otp-code").FillAsync(code);
-        await page.GetByTestId("login-verify-otp").ClickAsync();
+        // Both buttons are disabled while the page is busy; a slow WebView can keep them so past
+        // Playwright's default 30 s click wait (seen on the Android leg) — same 60 s as every other wait here.
+        await page.GetByTestId("login-verify-otp").ClickAsync(new() { Timeout = 60_000 });
         // Attached, not Visible: the CI runner opens the app window narrow enough that the
         // responsive header collapses sign-out behind the hamburger. Its presence in the DOM
         // proves the authenticated shell rendered; the household assertions below prove the rest.

@@ -13,19 +13,21 @@
 - **Run the Smoke suite (§4) first.** It's the ~15-minute critical path. If any smoke case fails,
   stop and report — deeper suites will likely cascade.
 - **Each case has an ID** (e.g. `QA-AUTH-03`). Record the result against the ID using the
-  **sign-off sheet (§14)**: Pass / Fail / Blocked / N-A, plus tester, build/commit, date, notes.
+  **sign-off sheet (§16)**: Pass / Fail / Blocked / N-A, plus tester, build/commit, date, notes.
 - **Priority:** 🔴 Smoke (critical path) · 🟠 Core (run every regression) · 🟢 Edge (run on full
   regression or when the area changed).
 - **⚙️ Automated in CI** on a case title means a Playwright journey in `tests/E2E.Tests` now exercises
   the same path on every push (the `e2e` job in `.github/workflows/ci.yml`). Human QA can **spot-check**
   these rather than run them in full each cycle; they still need a manual pass on Desktop/Android (the
-  E2E job runs Web only) and whenever the area changes. See §15 for the exact list and §17 for the run
+  E2E job runs Web only) and whenever the area changes. The ⚙️ marker on each case title is authoritative (≈35 cases); §15 maps the major journeys. See §17 for the run
   procedure.
 - **Both formats describe the same test.** Read whichever suits you; the Gherkin is the source of
   truth for automation.
 - **"App" = whichever client the suite header names.** Most behavior is identical across clients
-  (same API, same shared RCL UI); the per-client suites (§11–12) only cover what genuinely
-  differs — the auth transport and session persistence.
+  (same API, same shared RCL UI); the per-client suites (§12–§13) cover the auth transport and
+  session persistence **plus the full per-feature native parity added by NATIVE-6** (share-sheet
+  downloads, hardware back, refresh-on-return, theme/locale persistence — QA-DSK-08..15,
+  QA-AND-07..15).
 
 ---
 
@@ -121,11 +123,13 @@ Neon Postgres and Brevo email. Point the browser at the staging URL (e.g.
 - **Billing** uses Stripe **test mode** — exercise webhooks with `stripe trigger …` against the staging
   `/api/billing/webhook`.
 
-**Auto-deploy + smoke gate.** A merge to `develop` that passes CI auto-deploys staging, waits for the new
-build to be live (`/api/version` reports the pushed commit), and runs an automated post-deploy smoke
-(liveness/readiness, SPA shell + deep-link, `/api` returns an API-shaped 404, `/api/auth/providers`). A red
-smoke blocks — so a broken deploy is caught before manual QA starts. Manual QA on staging complements it
-(the human-only paths: real email, OAuth, billing, visual checks).
+**Deploy + smoke gate (ADR-031).** A merge to `develop` deploys nothing. Staging is deployed from **GitHub** →
+Actions → `CI` → *Run workflow* on `develop` with `deploy` = staging: the run re-runs every web gate, and only
+if all pass fires the Render hook, waits for the new build to be live (`/api/version` reports the commit) and
+runs the automated post-deploy smoke (liveness/readiness, SPA shell + deep-link, `/api` returns an API-shaped
+404, `/api/auth/providers`). A red gate or smoke blocks — so a broken deploy is caught before manual QA starts
+(QA-DEP-01..04). Manual QA on staging complements it (the human-only paths: real email, OAuth,
+billing, visual checks).
 
 ---
 
@@ -143,11 +147,13 @@ beyond Google/Microsoft, FR/DE/PT languages (scaffolded but not translated — s
 `docs/LOCALIZATION.md`), and any app-specific domain features not yet built on this platform.
 
 **Platform services with no client UI (API-/operational-level, not manually testable through the app
-yet):** the billing API (`/api/billing/*`), the append-only audit log, OpenTelemetry telemetry, the
-health endpoints, the background outbox/inbox/scheduled-jobs, and **file storage** — the `IFileStorage`
-seam + the signed download endpoint `GET /api/files/{token}` (anonymous, the token *is* the
-authorization; local-disk only — cloud backends hand out native presigned URLs). These are **covered by
-automated tests** (`tests/Api.Tests`); E2E is pending. Health has a smoke check (QA-SMK-07); manual
+yet):** the append-only audit log, OpenTelemetry telemetry, the health endpoints, the background
+outbox/inbox/scheduled-jobs, and **file storage** — the `IFileStorage` seam + the signed download
+endpoint `GET /api/files/{token}` (anonymous, the token *is* the authorization; local-disk only —
+cloud backends hand out native presigned URLs). These are **covered by automated tests**
+(`tests/Api.Tests`); browser E2E for them is deliberately out of scope (headless machinery). The
+**billing page** is NO longer in this list — BILLING-8 shipped `/billing` (§10c, QA-BILL-01/02) with
+the fake-provider E2E journey (`BillingJourneyTests`). Health has a smoke check (QA-SMK-07); manual
 cases for the rest will be added when client UI exists. **GDPR data export** (`POST /api/household/export`)
 and **account erasure** (`DELETE /api/auth/me`) now **have a web UI** (UI-1: owner Household → Data,
 Settings → Danger zone) — covered by the manual cases QA-HH-13 + QA-SET-07. **RBAC role management now has a web UI**
@@ -161,13 +167,13 @@ by QA-ADMIN-01..07. The **public API (PUBAPI)** and **outbound webhooks (HOOKS)*
 UI-less (they're for machines) and **config-gated off** — they have **manual curl/Postman cases in §14b**
 (QA-API-01..06), in addition to automated tests.
 
-**Automated in CI (Web):** a Playwright/NUnit E2E suite (`tests/E2E.Tests`) now runs the core auth,
-MFA, and i18n journeys against the real booted stack on every push — the `e2e` job in
-`.github/workflows/ci.yml`. The cases it covers are marked **⚙️ Automated in CI** (QA-SMK-01,
-QA-SMK-03, QA-AUTH-09, QA-MFA-01, QA-MFA-02, QA-I18N-01, QA-I18N-02, QA-SET-08, QA-INV-10; see the
-§15 note). Human QA can spot-check
-those on Web and focus effort on the un-automated cases and the Desktop/Android clients, which the CI
-job does not exercise.
+**Automated in CI (Web):** a Playwright/NUnit E2E suite (`tests/E2E.Tests`, currently 37 journeys)
+runs against the real booted stack on every push — the `e2e` job in `.github/workflows/ci.yml`. Every
+case it covers is marked **⚙️ Automated in CI** on its title (≈35 cases across auth, MFA, i18n,
+household/roster, invitations, notifications, admin, billing, theme, and GDPR — the case titles are
+authoritative; §15 maps the major journeys). Human QA can spot-check those on Web and focus effort on
+the un-automated cases and the native clients — where CI runs two smoke canaries (Android boots the
+real app and drives the OTP journey on an emulator; Windows is a boot-to-login probe only).
 
 ---
 
@@ -195,7 +201,7 @@ And the header shows my household name and my display name
 **Walkthrough**
 1. Open <https://localhost:7008> → you're redirected to `/login`.
 2. In the email field enter `qa-smoke@example.com`; click **Email me a 6-digit code**.
-3. **Expected:** the form switches to a code-entry view ("Enter the code we sent to…").
+3. **Expected:** the form switches to a code-entry view ("Enter the 6-digit code sent to …").
 4. Open Mailpit (<http://localhost:8025>); open the newest mail; copy the 6-digit code.
 5. Enter the code; click **Verify code**.
 6. **Expected:** you land on the home page; the top header shows a tenant badge (household name)
@@ -234,11 +240,19 @@ And navigating to /settings redirects me back to /login
 Given I am signed in to the web app
 When I reload the page (or reopen the tab)
 Then I am still signed in without re-authenticating
+And a tab left open past the access token's hour stays signed in
+And a server that is still starting up does not sign me out
 ```
 **Walkthrough**
 1. Signed in, press F5 / reload.
 2. **Expected:** brief load, then the app shell — still signed in, no trip to `/login`. (A silent
    refresh exchanges the refresh cookie for a new access token on load.)
+3. Leave the tab open and untouched for **more than 65 minutes** (the access token lives 60), then
+   navigate to another page. **Expected:** the page loads its data; no trip to `/login`, no error toast.
+   (The session renewed itself a minute before expiry — ADR-002 addendum 2026-09-22.)
+4. Stop the API, reload the tab: the loading spinner stays up for about 30 s, then `/login`. Start the
+   API again and reload. **Expected:** signed in without re-authenticating — a server that couldn't be
+   reached never cost the session. *(Native: `SessionKeepAliveTests` pin the same for the stored token.)*
 
 ### QA-SMK-05 — Desktop: OTP sign-in 🔴 (Desktop) — see QA-DSK-01
 ### QA-SMK-06 — Android: OTP sign-in 🔴 (Android) — see QA-AND-01
@@ -272,8 +286,8 @@ And I open the emailed link from Mailpit
 Then I am signed in and landed in the app
 ```
 **Walkthrough**
-1. On `/login` enter `qa-magic@example.com`; click **Send me a magic link**.
-2. **Expected:** a success panel — "Check your inbox… we sent a link to qa-magic@example.com" — with
+1. On `/login` enter `qa-magic@example.com`; click **Email me a magic link**.
+2. **Expected:** a success panel — "Check your inbox." + "A sign-in link was sent to qa-magic@example.com. It expires in 15 minutes." — with
    a **Use a different email** link.
 3. In Mailpit open the newest mail; click the sign-in link (or copy it into the same browser).
 4. **Expected:** the link resolves and you end up signed in, in the app.
@@ -342,16 +356,17 @@ And separately, an unused code is rejected once it passes its lifespan (default 
 ### QA-AUTH-11 — Passwordless endpoints are rate-limited 🟠 (Web)
 **Gherkin**
 ```gherkin
-Given I rapidly request codes/links (or verify attempts) for the same client
-When I exceed the per-IP limit (default 5 per minute)
+Given I rapidly request codes/links for the same client
+When I exceed the per-IP send limit (default 5 per minute)
 Then further requests are rejected with HTTP 429 until the window resets
 ```
 **Walkthrough**
 1. From `/login`, request an OTP (or magic link) repeatedly in quick succession — more than 5 within
    a minute.
 2. **Expected:** after the limit the request is throttled (**HTTP 429**), surfaced on `/login` as
-   **"Too many requests. Please wait a minute, then try again."** The same throttle — and the same
-   message — applies to **OTP verify**.
+   **"Too many requests. Please wait a minute, then try again."** **OTP verify** has its own,
+   larger per-IP budget — max(send limit, OTP attempt cap + 5) = 10/min by default (so the lockout
+   cap in QA-AUTH-04 is reachable) — with the same 429 + message when exceeded.
 3. Wait ~1 minute; requests succeed again.
 > Protects against email-bombing and OTP brute-forcing. Expected behavior, not a defect — see the
 > §1.1 pacing note.
@@ -401,7 +416,7 @@ Then a human-readable error banner is shown
 **Expected:** inline "enter a valid email" validation; no request sent.
 
 ### QA-AUTH-10 — Magic link & OTP available on web; OAuth always 🟢 (Web)
-**Walkthrough:** confirm the web login page shows **both** "Send magic link" and "Email me a code",
+**Walkthrough:** confirm the web login page shows **both** "Email me a magic link" and "Email me a 6-digit code",
 plus Google/Microsoft buttons. (Native clients hide magic link — covered in §11–12.)
 
 ---
@@ -489,11 +504,11 @@ leave/dissolve button. The single-owner invariant is enforced in the UI.
 **Gherkin**
 ```gherkin
 Given I am the only member and owner of my household
-When I click "Leave and delete household" and confirm
+When I click "Leave and delete" and confirm
 Then the household is dissolved and I am re-homed to a fresh solo household
 ```
 **Walkthrough**
-1. As sole owner (no other members), bottom card → **Leave & delete household**.
+1. As sole owner (no other members), bottom card ("Leave & dissolve") → **Leave and delete**.
 2. **Expected:** a confirm dialog warning the household will be deleted; on confirm, the app reloads
    and you land signed in with a **new empty household you own** (you're never left tenant-less).
 
@@ -568,8 +583,9 @@ Then I get a link to a JSON export of the household's data
    (owner-only). No secrets (invitation token hashes) appear in the file.
 
 ### QA-HH-14 — Seat quota blocks inviting past the plan limit 🟠 (Web) ⚙️ Automated in CI
-**Precondition:** the platform ships example seat caps (Free = 3 seats, counting members + pending invites;
-`PlanCatalog`). A Free household at its cap (e.g. 3 members, or 2 members + 1 pending invite).
+**Precondition:** the platform ships example seat caps (Free = 5 seats, counting members + pending
+**unexpired** invites — a lapsed invite reserves nothing, v4 T34;
+`PlanCatalog`). A Free household at its cap (e.g. 5 members, or 4 members + 1 pending invite).
 **Gherkin**
 ```gherkin
 Given my Free plan's seats are all used (members + pending invites)
@@ -580,7 +596,9 @@ And raising the limit (Pro plan / editing PlanCatalog) lets the invite through
 **Walkthrough**
 1. As owner of a Free household at the seat cap, **Household** → invite a new email.
 2. **Expected:** an error — "Your plan's seat limit is reached. Upgrade your plan to invite more members."
-   (HTTP **402**); no invitation is created and no email is sent.
+   (HTTP **402**); no invitation is created and no email is sent. **With billing gated off**
+   (`Billing__Enabled` unset — GATES-1) the same 402 reads "Your household is full. Remove a member or
+   revoke a pending invitation to free a seat." instead, since there is no plan to upgrade to.
 3. Free up a seat (revoke a pending invite / remove a member) **or** move to a higher-seat plan — the next
    invite succeeds. (Seats count members **plus** pending invites, so invites can't over-provision.)
 4. **Note:** limits are `PlanCatalog` data; `null`/absent = unlimited. Metered-usage caps
@@ -629,9 +647,11 @@ Then they become a member of the inviter's household
 a household who accepts another invite moves to the new household — verify their old membership is
 replaced, honoring the one-tenant invariant.)*
 
-### QA-INV-04 — Join link with missing token 🟢 (Web)
-**Walkthrough:** open `/join` with no `?token=`. **Expected:** "invalid invitation / missing token"
-state, no crash.
+### QA-INV-04 — Join page with no token offers manual code entry 🟢 (Web)
+**Walkthrough:** open `/join` with no `?token=`. **Expected:** the **manual invite-code entry** state
+("Join with an invite code" + input + submit — the NATIVE-4b path for emailed codes), no crash.
+Pasting a garbage code shows the inline error and lets you retry (⚙️ automated:
+`MembershipLifecycleTests.Pasting_An_Invalid_Code_Shows_An_Inline_Error`).
 
 ### QA-INV-05 — Join with invalid/expired/used token 🟠 (Web)
 **Gherkin**
@@ -937,7 +957,7 @@ And "Clear read" removes only the read rows; "Clear all" empties the list
 2. Footer → **Clear read**. **Expected:** only the already-read rows vanish; unread ones (and the
    badge) survive. The button is disabled when nothing is read.
 3. Footer → **Clear all**. **Expected:** the list empties ("You're all caught up."), badge gone.
-4. Reload → deletions persist (server-side; `DELETE /api/notifications/{id}`, `?read=true`, and all).
+4. Reload → deletions persist (server-side; `DELETE /api/notifications/{id}`; bulk requires an explicit scope — `?read=true` clears read, `?read=false` clears all, omitted → 400 `scope_required`).
 
 ### QA-NOTIF-03 — Delivery preferences 🟠 (Web) ⚙️ Automated in CI
 **Gherkin**
@@ -1047,7 +1067,10 @@ And "Stop impersonating" returns me to my own staff identity
    **impersonation banner** is pinned at the top; the **Admin** link is hidden while impersonating.
 3. Click **Stop impersonating**. **Expected:** you're back as yourself (staff); the banner is gone.
 4. The impersonation token is **short-lived (15 min) and non-refreshable** — a full page reload also
-   returns you to your own identity. Impersonation is **audited** in the target's tenant.
+   returns you to your own identity. When it **expires** (leave the impersonated session open 15 min),
+   the app reloads to `/` as yourself: no call from the target's page is ever made as staff, and the
+   client never renews the impersonation (v4 T31, `SessionKeepAliveTests.ImpersonationExpiry_*`).
+   Impersonation is **audited** in the target's tenant.
 
 ### QA-ADMIN-04 — Staff announcement reaches a tenant's members 🟢 (Web) ⚙️ Automated in CI
 **Gherkin**
@@ -1102,8 +1125,10 @@ And a provider-managed (Stripe-backed) subscription refuses the override
 2. Comp it → confirm. **Expected:** "Subscription updated."; badge flips to `pro` / `active`; the
    button is replaced by **Revert to Free**. The comp **never lapses** (no period end) and is audited
    in-tenant (`admin.subscription.comped`).
-3. As that tenant's owner, check `/billing`. **Expected:** plan **Pro**, seat limit 10 — identical to
-   a completed checkout (this simulates payment completion; QA-BILL/QA-HH-14 behaviors follow the plan).
+3. As that tenant's owner, check `/billing`. **Expected:** plan **Pro**, seat limit 10 — same plan +
+   entitlements as a completed checkout, but **no Manage subscription button** (a comp has no
+   provider customer, so the portal is absent). This simulates payment completion for
+   entitlement purposes; QA-BILL/QA-HH-14 behaviors follow the plan.
 4. **Revert to Free** → confirm. **Expected:** badge back to `free`; entitlements fall back
    (absence ⇒ Free, fail-closed); audited (`admin.subscription.reverted`). Reverting again is a no-op.
 5. **Provider-managed guard:** for a tenant with a **real Stripe subscription** (QA-BILL-02), the
@@ -1151,9 +1176,9 @@ Then I see my current plan, its status, and seat usage vs the plan limit
 And a member opening /billing sees only the "ask your owner" notice
 ```
 **Walkthrough**
-1. As **owner**, open **Billing** in the header. **Expected:** current plan (e.g. `free`), status
+1. As **owner**, open **Billing** in the header. **Expected:** current plan shown as its localized label (e.g. **Free** — the raw `free` token stays wire-only), status
    badge, and seats (e.g. `1 of 3 used`); an **Upgrade to Pro** button on the free plan; **Manage
-   subscription** only when a subscription exists.
+   subscription** only when a provider customer exists (a comped tenant has a subscription row but no portal button).
 2. As a **member**, open `/billing`. **Expected:** no plan/usage — just the owner-only notice.
 
 ### QA-BILL-02 — Upgrade via checkout + provider webhook lands on Pro 🟠 (Web) ⚙️ Automated in CI
@@ -1161,7 +1186,8 @@ And a member opening /billing sees only the "ask your owner" notice
 ```gherkin
 Given the owner on the free plan clicks Upgrade to Pro
 When the checkout redirect fires and the provider webhook lands (subscription active)
-Then /billing shows plan pro, status active, the pro seat limit, and the portal button
+Then the provider returns me to /billing/success — the Billing page with a "Payment received" banner — and the page refetches on its own until it shows plan pro, status active, the pro seat limit, and the portal button
+And cancelling at the provider returns me to /billing/cancel — the same page with a "nothing changed" banner and the plan untouched
 ```
 **Walkthrough**
 1. Click **Upgrade to Pro**. **Expected:** redirect to the provider checkout (fake:
@@ -1169,8 +1195,14 @@ Then /billing shows plan pro, status active, the pro seat limit, and the portal 
 2. Simulate payment completion by POSTing the webhook (fake provider): `POST {api}/api/billing/webhook`
    with header `Stripe-Signature: valid` and a PascalCase JSON body (`EventId`, `TenantId`, `PlanKey:
    "pro"`, `Status: "active"`, `StripeCustomerId`, `OccurredAt`). **Expected:** 200.
-3. Reload `/billing`. **Expected:** plan `pro` / status `active`, seats `x of 10`, **Manage
-   subscription** now visible.
+3. Open `/billing/success` (where a real provider returns the browser). **Expected:** the **Payment
+   received** banner, then — within a few seconds, no reload — plan **Pro** / status **Active** (localized
+   labels; raw tokens on the wire), seats `x of 10`, **Manage subscription** now visible, and the owner's
+   bell (+ outbox email) carries a **Subscription active** notice naming the plan and its renewal date.
+   `/billing/cancel` shows the **Checkout cancelled — nothing changed** banner over the unchanged plan.
+4. Cancel from the portal (or delete the customer in Stripe) → the webhook lands. **Expected:** plan **Free**,
+   badge **Canceled**, the line reads **Your paid subscription ended on <date>** (never "renews"), and
+   **Manage subscription** is gone — **Upgrade to Pro** is the way back (a fresh checkout).
 
 ---
 
@@ -1210,7 +1242,7 @@ in spam — a domain/DKIM concern, not an app bug.)*
 > The desktop client reuses the same UI; only the **auth transport** (loopback browser flow, body
 > token, OS secure storage) differs. Magic link is intentionally **absent** on native.
 
-### QA-DSK-01 — OTP sign-in 🔴 (Desktop) ⚙️ Automated in CI
+### QA-DSK-01 — OTP sign-in 🔴 (Desktop) — CI covers boot-to-login only
 **Gherkin**
 ```gherkin
 Given the desktop app is on the login screen
@@ -1445,6 +1477,9 @@ Then it walks back through the app's pages and only leaves the app at the root
 **Walkthrough:** as QA-DSK-09: signed out, switch to **Español** (re-renders) → **swipe-close** the
 app → relaunch. **Expected:** still Spanish (OS Preferences bootstrap, NATIVE-5). Signed-in accounts
 reconcile to their server-saved locale — by design.
+**Signed in (2026-09-16):** Settings → Language → **Español**. **Expected:** the app reloads once, in
+Spanish, and **stays** Spanish — before the fix it read the old language from the sign-in token, saved
+it back and reloaded again.
 
 ### QA-AND-10 — Data export via the share sheet 🟠 (Android)
 **Walkthrough:** owner → **Household** → **Data** → **Export my data** → **Download**. **Expected:**
@@ -1474,11 +1509,38 @@ Then no control is hidden under the status bar or gesture areas
 bottom-of-screen buttons (Settings danger zone) in both orientations. **Expected:** nothing sits
 under the status bar or the gesture-nav pill; everything tappable. *(Flagged 🔍 by the parity audit —
 if this fails, it becomes a small safe-area fix slice.)*
+**Also, in both themes (2026-09-16):**
+- The **status bar** is the header's colour (the brand green, light icons) on signed-in screens; on the
+  sign-in screen it is the page's ground — near-white with dark icons in Light, near-black with light
+  icons in Dark. Switching the theme repaints it at once, and **Auto** follows the phone's dark-theme toggle.
+- **No empty band** between the status bar and the header.
 
 ### QA-AND-14 — Theme: dark mode survives an app restart 🟢 (Android)
 **Walkthrough:** as QA-DSK-15 on Android — pick **Dark** (hamburger → header controls), force-stop
 the app (or swipe it away) and relaunch. **Expected:** boots dark, no light flash (Android WebView
 localStorage persists). **Auto** follows the system dark theme toggle live.
+**Then (2026-09-16):** signed in, pick **Light** in Settings and immediately switch the language (which
+reloads the app). **Expected:** still Light after the reload — and the status bar follows each change.
+
+### QA-AND-15 — OAuth sign-in survives process death (NATIVE-12) 🟠 (Android)
+**Gherkin**
+```gherkin
+Given I tapped Continue with Google and the consent tab is open
+When Android kills the app process before I finish consent
+Then approving still signs me in — the redirect relaunches the app and completes on startup
+```
+**Walkthrough**
+1. Tap **Continue with Google**. **Expected:** the browser tab opens to Google consent.
+2. With the tab in the foreground, kill the app process:
+   `adb shell am kill com.perezosoft.platform` (works because the app is backgrounded behind the
+   browser; *Don't keep activities* + memory pressure reproduces it the organic way).
+3. Approve consent in the still-open tab. **Expected:** the `perezosoft://auth` redirect cold-starts
+   the app, which **stays open** and lands signed in on Home (the stashed code is exchanged during
+   startup — no "flash open and close").
+4. (MFA account) same steps. **Expected:** the app opens on the Login MFA code prompt; entering the
+   TOTP completes sign-in.
+5. (Staleness) repeat 1–2, wait > 5 min before approving. **Expected:** the app opens on Login with
+   "Your sign-in took too long to complete. Please try again." — no crash, retry works.
 
 ---
 
@@ -1491,7 +1553,8 @@ localStorage persists). **Auto** follows the system dark theme toggle live.
 > `dotnet build src/Maui -t:Run -f net10.0-ios` (simulator) / `-f net10.0-maccatalyst`.
 > The **G7 fix is required** (PR #109) — before it, both platforms crashed at first resolve (no
 > `IOAuthInitiator` registered). OAuth is wired via `ASWebAuthenticationSession` + the `perezosoft`
-> scheme in Info.plist but has **never been exercised** — treat QA-IOS-04 as its first real test.
+> scheme in Info.plist; first exercised **and passed** in the 2026-07-06 §13b run (PR #125 fixed the
+> two gaps it found) — QA-IOS-04 re-verifies it each pass.
 
 ### QA-IOS-01 — App boots to the login screen 🔴 (iOS)
 **Walkthrough:** launch on the simulator. **Expected:** the app opens (no startup crash — this *was*
@@ -1535,13 +1598,28 @@ spot-check, and record results in §16:
 | Platform | Always (🔴) | Plus one of (🟠) |
 |---|---|---|
 | Windows desktop | DSK-01, DSK-03, DSK-06 | DSK-08..12 |
-| Android | AND-01, AND-03, AND-07 | AND-08..12 |
+| Android | AND-01, AND-03, AND-07 | AND-08..15 |
 | iOS | IOS-01, IOS-02 | IOS-03, IOS-04 |
 | macCatalyst | MAC-01, MAC-02 | MAC-03 |
 
 Full per-feature native regression (every case in §12–13b) is for releases that changed native glue
 (`src/Maui/**`, the RCL seams: `ICulturePersistence` / `IFileDownloadLauncher` / `AppResumeNotifier`)
 or bumped the .NET/MAUI toolchain.
+
+> **Two things to know before handing a tester an Android build (v4 T51).** (1) Android upgrades an app in
+> place only when the new build carries the **same signing key** as the installed one: a store-signed build
+> will not install over a debug-signed sideload, nor the reverse — the tester uninstalls the old one first
+> (DEPLOYMENT §9). (2) Nothing the app stores is backed up off the device (`allowBackup="false"` + data-
+> extraction rules), so after an uninstall or on a new phone the tester signs in again and re-picks language
+> and theme; the account and its data are on the server.
+>
+> **⚠️ The native legs run ON REQUEST, never per push (ADR-031).** A pull request runs the web gates only.
+> The MAUI builds and the Windows / Android / Apple smokes run from GitHub → Actions → `CI` → *Run workflow*
+> → `devices` (android / windows / apple / all) — macOS bills at 10× and Windows at 2× on a private repo.
+>
+> **What that means for a release:** a green pull request says nothing about the native apps. Before
+> shipping a native client, run the device legs for that platform (or all) on the commit you ship, or run the
+> iOS/macOS cases in §13b on a Mac.
 
 ---
 
@@ -1564,7 +1642,7 @@ Then A can only ever see A's household, members, and invitations — never B's
 **Walkthrough:** signed out, directly visit `/household`, `/settings`. **Expected:** each redirects to
 `/login`.
 
-### QA-SEC-03 — Session is gone after sign-out 🟠
+### QA-SEC-03 — Session is gone after sign-out 🟠 ⚙️ Automated in CI
 **Gherkin**
 ```gherkin
 Given I sign out
@@ -1573,6 +1651,12 @@ Then I am not able to access it — I am sent to /login
 ```
 **Walkthrough:** sign out, press **Back** to a protected page / reload it. **Expected:** bounced to
 `/login`; no stale authenticated view.
+
+*Automated by `SessionJourneyTests.SignOut_ThenBack_LandsOnLogin_NotTheCachedHousehold`, which runs with the
+browser's back/forward cache on and fails if the page was not actually restored from it. The trade-off,
+by decision: a page restored from that cache is reloaded (`bfcache-guard.js`), so Back after sign-out
+costs a signed-in user one extra page load on any Back that hits the cache, in exchange for never
+showing the previous user's screen on a shared computer.*
 
 ### QA-SEC-04 — Native open-redirect guard 🟢 (Desktop/Android)
 **Context/Expected:** the native OAuth flow only honors loopback `http` callbacks or the configured
@@ -1588,8 +1672,12 @@ the API directly:
   foreign-tenant write is rejected (`TenantStampingInterceptorTests`), so reads *and* writes are
   tenant-isolated.
 - **Refresh-token reuse detection** — replaying an already-rotated refresh token revokes all the
-  user's sessions (`RefreshTokenServiceTests`). Manually observable only by capturing and replaying a
-  refresh cookie/token; out of scope for routine QA.
+  user's sessions (`RefreshTokenServiceTests`, `RefreshReplayTests`) — unless it arrives within 60 s of
+  its rotation while its successor is still live (two tabs refreshing at once, a lost response): that
+  race gets a fresh session and revokes nothing (ADR-002 addendum, 2026-09-18) — once per token: a third
+  presentation is reuse (2026-09-28). Logout revokes the family of any known token, expired or just
+  rotated out included (`RefreshReplayTests.Logout_With*`). Manually observable only by capturing and
+  replaying a refresh cookie/token; out of scope for routine QA.
 - **Unverified-email takeover guard** fails closed (`ClaimsExtractorTests` / `UserServiceTests`).
 - **Legacy refresh-cookie self-heal** — a stale `Path=/` refresh cookie left by an older build can
   shadow the live `Path=/api/auth` cookie and wedge sign-in into a `/refresh` 401 → "Authentication
@@ -1598,6 +1686,426 @@ the API directly:
   manual cookie-clearing, and upgraded deployments self-heal (`CookieServiceTests`). *Manual repro
   needs a planted `Path=/` cookie; record as covered by automated tests. If a tester hits a stuck
   `/refresh` 401 loop in Firefox after a deploy, a single re-sign-in clears it.*
+
+---
+
+## 14a. Adversarial & tenant-isolation (QA-ADV-*) 🟠
+
+> This suite probes the failure classes a **v3 audit** surfaced: cross-tenant reads/writes at the
+> **API** layer (not just the UI), impersonation attribution and confinement, billing idempotency,
+> session/token lifecycle, preference bleed on shared devices, and deploy/native hardening. Most cases
+> are **curl/Postman** driven with **two tenants A and B** — mint an **owner JWT for each** (sign in as
+> each owner and copy its access token from `POST /api/auth/refresh` or the Swagger **Authorize**
+> button, exactly as §14b describes) so you hold **two JWTs carrying different `tenant_id` claims**. A
+> few cases need the **two browser contexts** of §1.2 (a normal window + an incognito/second profile);
+> those are flagged in the title. Base URL `https://localhost:7160` (use `-k` for the dev cert) locally,
+> or the staging host for Environment B. Grab each tenant's ids up front: `GET /api/household` as A and
+> as B gives you A's/B's household id + member user-ids; note one **B** member user-id, one **B**
+> notification/webhook/api-key id (create them if needed) for the cross-tenant probes.
+>
+> **⚠️ EXPECT-FAIL discipline.** Roughly half of these assert behaviour the v3 audit says is
+> **broken at authoring time (2026-07); ALL are fixed as of the v3 remediation (PRs #147–#191)**. Each
+> formerly-broken case carries a ✅ v3-landed note naming the
+> finding. When it fails, record **Blocked (known defect)** against the id in §16 — **never Pass**. A
+> QA plan that green-ticks a broken isolation path is worse than no case at all. The remaining cases
+> should **Pass on current code**; a failure there is a real regression.
+
+### QA-ADV-01 — Tenant A cannot read/export/erase Tenant B via the API 🔴 (curl)
+**Gherkin**
+```gherkin
+Given I hold owner JWTs for two separate tenants A and B
+When I use A's JWT to target B-scoped resource ids directly
+Then every B id is refused (404/403), A's export contains only A, and no B row mutates
+```
+**Walkthrough**
+1. With **A's JWT**, call `GET /api/household` → **200** showing **only A** (never B's name/members).
+2. `POST /api/household/export` with A's JWT → the JSON bundle enumerates **only A's** tenant, members
+   and invitations — grep it for B's household name/emails: **absent**.
+3. Target B directly with A's JWT: `DELETE /api/household/members/{B-userId}`,
+   `POST /api/notifications/{B-notificationId}/read`, `DELETE /api/notifications/{B-notificationId}`.
+4. **Expected:** each B-scoped call returns **404** (or 403) — the global tenant filter + RLS backstop
+   hide B entirely; ids from another tenant simply don't exist for A.
+5. Re-verify as **B** (`GET /api/household`, bell): B's member list and notifications are **unchanged**.
+   This promotes QA-SEC-01 from a UI-only check to a direct API probe (audit **RLS-2/4**).
+
+### QA-ADV-02 — Cross-tenant isolation on the newer tables (PUBAPI/HOOKS on) 🟠 (curl)
+**Precondition:** set `PublicApi__Enabled=true` + `Webhooks__Enabled=true`, restart (§14b). In **each**
+tenant mint an API key (QA-API-02) and register a webhook + generate one delivery (QA-API-05/06).
+**Gherkin**
+```gherkin
+Given tenants A and B each own an API key, a webhook subscription and a delivery row
+When A's JWT targets B's api-key / webhook / delivery ids
+Then each is 404 and nothing cross-tenant is read, replayed or revoked
+```
+**Walkthrough**
+1. With **A's JWT**: `GET /api/webhooks/{B-subscriptionId}/deliveries`,
+   `POST /api/webhooks/deliveries/{B-deliveryId}/replay`, `DELETE /api/apikeys/{B-keyId}`.
+2. **Expected:** **404** for each — the delivery log/read side filters by `TenantId` and management
+   routes are tenant-scoped, so B's rows are invisible and untouchable to A.
+3. Confirm as B: B's key still authenticates, its subscription/deliveries are intact, nothing replayed
+   (audit **LB-TEN-2 / RLS-8**).
+
+### QA-ADV-03 — Export includes EVERY tenant-scoped table, secret-free 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given PUBAPI + HOOKS are enabled and my tenant has an API key, a webhook and metered usage
+When I export the household
+Then the bundle covers api-keys (metadata only), webhook subscriptions (no secret) and usage counters — or explicitly notes their exclusion
+```
+**Walkthrough**
+1. Enable both flags; as owner mint an API key, register a webhook, and drive **one** metered
+   `IQuotaService.TryConsumeAsync` consume (any endpoint an app has wired, or seed a `UsageCounter`).
+2. `POST /api/household/export`; open the JSON.
+3. **Expected (post-remediation):** it contains an **api-keys** section (name/prefix/scopes,
+   **no hash**), a **webhook-subscriptions** section (url/event-types, **no signing secret**), and the
+   **usage counters** — or an explicit documented exclusion note for each.
+4. **Was (pre-v3 audit LB-TEN-1):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**. Also assert **no secret leaks** (hashes / `whsec_…`) regardless — the export stays secret-free.
+
+### QA-ADV-04 — Dissolve / erasure actually deletes api keys, webhook secrets, usage counters, delivery logs 🟠 (curl + DB)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given a tenant with an API key, a webhook subscription (+ deliveries) and usage counters
+When the sole owner dissolves the household (or deletes the account)
+Then all those rows are physically gone — no orphaned keys, secrets, counters or delivery logs remain
+```
+**Walkthrough**
+1. Set up a throwaway tenant with the same artefacts as QA-ADV-03.
+2. As sole owner, dissolve (QA-HH-07) / delete account (QA-SET-07).
+3. Query the DB (or the staff console) for that tenant's `ApiKey`, `WebhookSubscription`,
+   `WebhookDelivery`, `UsageCounter` rows.
+4. **Expected (post-remediation):** **0 rows** for the dissolved tenant — every contributor cleaned up.
+5. **Was (pre-v3 audit LB-TEN-1):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-05 — Writes during impersonation are attributed to the acting staff 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given a staff user is impersonating the household owner (token carries impersonated_by)
+When they perform audited tenant writes (export the household, change a member's role)
+Then each mutation's audit row records impersonated_by=<staff>, not just the target
+```
+> **Pick writes that are actually audited.** The audited-action catalog is small —
+> `tenant.exported`, `member.role_changed`, `account.erased`, and the staff-only `admin.*` actions.
+> Household rename (`PUT /api/household`) and mark-notification-read (`POST /api/notifications/{id}/read`)
+> emit **no** `AuditEvent`, so they produce nothing to inspect; the two owner-gated writes below do. The
+> stamp itself is ambient (`AuditLog` reads `ICurrentImpersonation`), so it lands on **every** audited
+> event regardless of call site — the point is to exercise one that exists.
+
+**Walkthrough**
+1. As staff, `POST /api/admin/impersonate/{ownerUserId}` → short-lived token with `impersonated_by`. Pick
+   the household **owner** so the writes below are permitted; the tenant must also have **at least one other
+   member** for the role change.
+2. With that token, perform two **audited** tenant writes: `POST /api/household/export` (→ `tenant.exported`)
+   and `PUT /api/household/members/{memberUserId}/role` (flip admin↔member → `member.role_changed`).
+3. Inspect the tenant's audit trail (staff-console audit view, or query the `AuditEvent` rows in the DB).
+4. **Expected (post-remediation):** the `tenant.exported` **and** `member.role_changed` rows each carry
+   **`impersonated_by=<staff-id>`** (with `actor_user_id=<owner>`), so an operator can tell staff-driven
+   changes from the user's own — the stamp is applied to every event, not per call site.
+5. **Was (pre-v3 audit LB-ADM-1):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-06 — An impersonation session cannot reach staff-only actions 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given I hold an impersonation token (impersonated_by present, target is a normal member)
+When I call staff-only admin endpoints with it
+Then every one is refused at the staff gate — impersonation must not be a ladder back to staff power
+```
+**Walkthrough**
+1. Impersonate a **plain member** (`POST /api/admin/impersonate/{memberUserId}`, as in QA-ADV-05 step 1
+   but targeting a non-owner) → token with `impersonated_by`.
+2. With it, attempt: `POST /api/admin/impersonate/{x}`,
+   `PUT /api/admin/tenants/{id}/subscription`, `DELETE /api/admin/users/{x}/mfa`,
+   `POST /api/admin/announce-all`.
+3. **Expected (post-remediation):** **403** on each — the staff gate treats a token bearing
+   `impersonated_by` as **non-staff**, closing privilege re-escalation.
+4. **Was (pre-v3 audit ADM-2):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-07 — Impersonation cannot exceed the target's role 🟠 (curl)
+**Gherkin**
+```gherkin
+Given I am impersonating a plain member (not owner)
+When I attempt owner-only actions as that member
+Then I get exactly the 403 the member themselves would get
+```
+**Walkthrough**
+1. Impersonate a **plain member** of a tenant that has an owner + other members.
+2. Attempt owner-only writes: `POST /api/household/transfer-ownership`,
+   `PUT /api/household/members/{id}/role`, and (as staff-would-be) a comp — via the member token.
+3. **Expected:** **403** on each — impersonation inherits the **target's** role ceiling; a member seat
+   confers no owner power (audit **TB-ADM-3**). Should **Pass** on current code.
+
+### QA-ADV-08 — Impersonation never rewrites target prefs; shared-device pref poisoning 🟠 (curl + Web — two contexts)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given I impersonate a user and change theme/language in their session
+Then the target's server-stored preference is unchanged after I Stop impersonating
+And on a shared browser, a fresh sign-in never inherits the previous user's saved preference
+```
+**Walkthrough**
+1. **Leg A (should Pass):** impersonate a user, change theme/language in-session, **Stop impersonating**.
+   Re-read the target's server pref (`GET /api/auth/me` / their Settings → Preferences). **Expected:**
+   **unchanged** — preference sync is suppressed while `impersonated_by` is set (PREFS-1/ADR-022).
+2. **Leg B (EXPECT-FAIL):** in **context 1**, sign in as user A whose saved locale is **Español**; sign
+   out. In the **same** browser, sign in as user B who has **never chosen** a language/theme.
+3. **Expected (post-remediation):** B renders in B's own default (server never-set ⇒ B does not adopt
+   A's leftover device value while a *different* account signs in).
+4. **Was (pre-v3 audit LB-UI-4/5):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-09 — A staff MFA-reset notification cannot be silenced by target prefs 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given a user has turned BOTH notification channels (in-app + email) off
+When staff reset that user's MFA
+Then the security.mfa_reset in-app row AND the email are still delivered (security events ignore prefs)
+```
+**Walkthrough**
+1. As the target, `PUT /api/notifications/preferences` with **in-app=false, email=false**.
+2. As staff, `DELETE /api/admin/users/{targetUserId}/mfa`.
+3. **Expected (post-remediation):** the target still gets the **`security.mfa_reset`** bell row **and**
+   the email — a security-critical notice is not suppressible by user prefs.
+4. **Was (pre-v3 audit ADM-1):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-10 — MFA step-up locks out after repeated wrong codes 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given an MFA-enabled account at the sign-in step-up
+When I submit wrong 6-digit codes past the attempt cap, including across freshly-requested challenges
+Then a per-user cumulative MFA lockout engages — not merely the per-IP 429
+```
+**Walkthrough**
+1. Trigger step-up (sign in as an MFA-on user); `POST /api/auth/mfa/verify` with wrong codes.
+2. Keep going **past** the OTP-style attempt cap, and request **new** challenges to reset any per-IP
+   window, pacing under the 429 verify throttle.
+3. **Expected (post-remediation):** after N cumulative failures the **account's** step-up is locked
+   (distinct from QA-AUTH-11's per-IP 429), mirroring the OTP cumulative lockout (QA-AUTH-04).
+4. **Was (pre-v3 audit ADM-3):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-11 — A recovery code is single-use 🟠 (Web)
+**Gherkin**
+```gherkin
+Given I used one MFA recovery code to complete step-up
+When I sign out and submit the SAME recovery code again
+Then it is rejected — recovery codes are consumed on first use
+```
+**Walkthrough**
+1. On an MFA-on account, at step-up enter a **recovery code** (not the TOTP) → signed in.
+2. Sign out; start a fresh sign-in to the same account; at step-up submit the **same** recovery code.
+3. **Expected:** rejected ("that code is incorrect or has expired"); the code was hashed + burned on
+   first use (audit **TB-AUTH-6**). A different, unused code still works. Should **Pass**.
+
+### QA-ADV-12 — Webhook replay + out-of-order + same-second idempotency 🟠 (curl)
+**Precondition:** billing wired to the fake provider; HOOKS not required (this exercises the billing
+webhook inbox).
+**Gherkin**
+```gherkin
+Given the billing webhook endpoint
+When I POST the same EventId twice, then two distinct same-second events (created then active)
+Then the duplicate is a no-op (inbox dedup) and the later state (active) still applies — not dropped as stale
+```
+**Walkthrough**
+1. POST a provider webhook to `/api/billing/webhook`; **repeat the exact same `EventId`**.
+2. **Expected:** the second POST is a **no-op** — the inbox dedups on event id; the subscription state
+   is applied exactly once.
+3. POST two **distinct** events with the **same whole-second** `OccurredAt`: first `created`, then
+   `active`.
+4. **Expected:** the flip to **`active`** is applied (the strictly-older recency guard drops stale events; same-second ties apply in arrival order (exact redeliveries are inbox-deduped), not by a
+   second-granular timestamp that would wrongly drop it as stale) (audit **LB-BILL-1**). Should **Pass**.
+
+### QA-ADV-13 — A first-ever webhook in a bad state does not false-notify 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given a tenant that has NEVER had a live subscription
+When its first-ever billing webhook arrives as past_due (or canceled)
+Then NO dunning notification is sent to the owner (there was nothing to lapse)
+```
+**Walkthrough**
+1. Pick a tenant with no subscription history. POST a **first** webhook with `Status=past_due` (or
+   `canceled`) to `/api/billing/webhook`.
+2. **Expected (post-remediation):** the owner receives **no** billing/dunning notification — a dunning
+   notice requires a transition **out of** an active/paid state.
+3. **Was (pre-v3 audit LB-BILL-4):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-14 — Comp / revert a churned (canceled) tenant 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given a tenant whose Stripe subscription is canceled (its subscription id still persisted)
+When staff try to comp it to Pro (or revert)
+Then the comp should succeed — a churned tenant is not permanently un-comp-able
+```
+**Walkthrough**
+1. Take a tenant whose provider sub is **canceled** but whose `Subscription` row still holds the
+   Stripe id. As staff, `PUT /api/admin/tenants/{id}/subscription` (comp to Pro).
+2. **Expected (post-remediation):** comp **succeeds** — a canceled/churned sub is treated as
+   not-provider-managed for comp purposes.
+3. **Was (pre-v3 audit ADM-5):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**. (The guard now keys on *liveness*: 409 only for a live provider sub — see QA-ADMIN-06, where 409 on a live Stripe sub is correct.)
+
+### QA-ADV-15 — Concurrent acceptance of the last seat 🟠 (Web — two contexts)
+**Gherkin**
+```gherkin
+Given a tenant at seat cap minus one with two pending invitations
+When both invitees accept near-simultaneously
+Then exactly one joins, the other gets 402 seat_limit_reached, and seats never exceed the cap
+```
+**Walkthrough**
+1. Bring a Free tenant to **one seat below its cap** with **two** pending invitations outstanding (the cap
+   is the M in the Billing page's "N of M seats"). A pending invitation reserves a seat, so a Free tenant
+   cannot be put in that state directly: comp it to Pro from the staff console, add members until it has
+   **cap − 1**, send the two invitations, then revert it to Free — the downgrade setup QA-INV-10 uses.
+2. In **two browser contexts**, sign in as each invitee and open both `/join` links; click **accept**
+   as close to simultaneously as you can (or double-submit).
+3. **Expected:** **one** join succeeds (the last seat), the other returns **402 `seat_limit_reached`** with the
+   "household is full" state; the member count settles at **exactly the cap** — the atomic seat check has no
+   race (audit **TB-BILL-19 / BILLING-9**). Should **Pass**.
+
+### QA-ADV-16 — Magic-link / OTP double-redemption issues exactly one session 🟠 (Web — two contexts)
+**Gherkin**
+```gherkin
+Given a single magic link or a single OTP code
+When I redeem it from two clients at once (open the link in two tabs / submit the OTP twice)
+Then exactly one sign-in succeeds and the second attempt is rejected
+```
+**Walkthrough**
+1. Request a magic link; open the **same** link in two tabs nearly simultaneously (or double-click).
+   Alternatively, request one OTP and `POST /api/auth/otp/verify` the same code from two clients at once.
+2. **Expected:** **one** session is issued; the second redemption is rejected (token consumed
+   single-use, no double-spend under concurrency) (audit **LB-AUTH-3**). Should **Pass**.
+
+### QA-ADV-17 — Replaying a rotated refresh token revokes all sessions 🟠 (curl)
+**Gherkin**
+```gherkin
+Given I captured a refresh token, then refreshed once (rotating it)
+When I replay the OLD (now-rotated) refresh token more than 60 seconds after that rotation
+Then it is rejected AND all of the user's sessions are revoked
+But a replay WITHIN 60 seconds, while the new token is still live, is a race and gets a fresh session
+```
+**Walkthrough**
+1. Sign in; capture the refresh cookie/token. `POST /api/auth/refresh` once → a **new** token (the old
+   one is now rotated out).
+2. **Grace window (ADR-002 addendum, 2026-09-18):** replay the **old** token within 60 s → **200** with a
+   fresh token, and nothing is revoked (the new token from step 1 still refreshes). This is the two-tab /
+   lost-response race, deliberately not treated as theft (`RefreshToken:ReuseGraceSeconds`, default 60).
+   **The grace is one-shot (ADR-002 addendum, 2026-09-28):** replay the same old token a **third** time,
+   still within the 60 s → **401**, and every session is revoked (both the step-1 token and the step-2
+   token now fail). Sign in again before step 3. Should **Pass**.
+3. Wait **more than 60 s** after step 1, then replay the **old** token to `POST /api/auth/refresh`.
+4. **Expected:** **401** — reuse detected — **and** the whole token family is revoked: a legitimate
+   silent refresh from another live session now **fails** too (forces re-auth). Promotes QA-SEC-05's
+   automated `RefreshTokenServiceTests` note to a manual probe. Should **Pass**.
+5. **Logout stays final:** sign in again, refresh once (rotating A → B), `POST /api/auth/logout` with B,
+   then replay A **within** 60 s → **401**, no new session (`RefreshReplayTests`). Should **Pass**.
+
+### QA-ADV-18 — Spanish account on an English device accepts an invite 🔴 (Web — two contexts) ⚙️ Automated in CI
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given a user whose saved locale is Español, on an English-default browser
+When they open a valid /join?token=… (signed in, or signing in through it)
+Then the locale-mismatch reload preserves the /join deep-link and the invite is accepted
+```
+**Walkthrough**
+1. User's server locale = **Español**; use a **fresh English-default** browser profile.
+2. Open a valid `/join?token=…` while signed in (or sign in through the join flow).
+3. **Expected (post-remediation):** the one-time locale-mismatch reload (WASM satellite assemblies,
+   PREFS-1) **preserves** the `/join?token=…` URL and the invite is **accepted**.
+4. **Was (pre-v3 audit UX-1, LB-UI-1/2):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-19 — Theme/locale doesn't revert after a soft (OTP/MFA) sign-in 🟠 (Web)
+**Gherkin**
+```gherkin
+Given on the login page I pick Dark + Español, for a user whose server prefs differ
+When I complete an OTP soft-navigation sign-in
+Then there is no flip-back-then-correct flicker; the switcher reflects the applied value all session
+```
+**Walkthrough**
+1. On `/login`, set **Dark + Español**. Complete an **OTP** sign-in (soft nav, no full reload) for a
+   user whose stored prefs are e.g. Light/English.
+2. **Expected:** the reconcile settles the applied theme/locale **once**, cleanly — no visible
+   revert-then-reapply flash — and the header switcher shows the settled value for the rest of the
+   session (PREFS-1 reconcile on **every** sign-in path, audit **UX-3/4**). Should **Pass**.
+
+### QA-ADV-20 — "Clear read" never deletes unread notifications 🟠 (Web)
+**Gherkin**
+```gherkin
+Given my bell holds a mix of read and unread notifications
+When I use "Clear read"
+Then only the read ones are removed; every unread notification survives
+```
+**Walkthrough**
+1. Seed a mix (mark some read, leave some unread). In the bell, click **Clear read**.
+2. **Expected:** the client sends `DELETE /api/notifications?read=true` — **read-only** clear; unread
+   rows remain. Confirm the bulk clear **requires an explicit scope**: `?read=true` clears read only,
+   `?read=false` is the distinct **Clear all**, and an omitted scope returns **400 `scope_required`** —
+   so a dropped param can never silently wipe unread (audit
+   **LB-UI-10**). Should **Pass**.
+
+### QA-ADV-21 — Security headers on the single-origin host (staging / Environment B) 🟠 (curl)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given the deployed single-origin host serving API + WASM
+When I inspect the response headers for the SPA shell and framework assets
+Then HSTS, nosniff, a CSP/frame-ancestors and Referrer-Policy are present, with correct cache-control
+```
+**Walkthrough**
+1. `curl -I https://<app>-staging.onrender.com/` and `curl -I https://<app>-staging.onrender.com/_framework/blazor.webassembly.js`.
+2. **Expected (post-remediation):** `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, a
+   `Content-Security-Policy` (or `frame-ancestors`), and `Referrer-Policy`; **index.html** served
+   `no-cache`, `_framework/*` fingerprinted assets `immutable`.
+3. **Was (pre-v3 audit DEP-2/3):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-22 — Forged X-Forwarded-For cannot bypass the per-IP rate limit 🟠 (curl)
+**Gherkin**
+```gherkin
+Given the deploy is reachable other than via its trusted proxy (test the assumption)
+When I send OTP requests with a rotating X-Forwarded-For header
+Then the per-IP limit + OTP/MFA lockout is NOT bypassed
+```
+**Walkthrough**
+1. Hammer `POST /api/auth/otp/send` past the 5/min budget, rotating a spoofed `X-Forwarded-For` each
+   request.
+2. **Expected:** the throttle still trips **429** — the app only honours forwarded headers from the
+   **configured trusted proxy** (DEPLOY-1's config-gated forwarded-headers), so a client-supplied XFF is
+   ignored for rate-limit partitioning.
+3. If the deploy is reachable **only** through its single trusted ingress, spoofing is moot — **document
+   that sole-ingress assumption** in the run notes (audit **DEP-1 / ADM-10**). Should **Pass** (or be
+   recorded N-A with the documented assumption).
+
+### QA-ADV-23 — A Release native build points at a real HTTPS base URL, not cleartext localhost 🟠 (Desktop/Android)
+**✅ v3 REMEDIATION LANDED (2026-07, PRs #147–#191) — this case now expects PASS; re-run and record normally.**
+**Gherkin**
+```gherkin
+Given a Release (non-dev) native build with no dev overrides
+When I inspect its configured API base URL and network security config
+Then it targets the configured HTTPS API (build fails if none) — no http://localhost cleartext ships
+```
+**Walkthrough**
+1. Build a **Release** AAB/MSIX without dev overrides. Inspect the effective base URL + Android network
+   security config.
+2. **Expected (post-remediation):** base URL is the configured **HTTPS** API; a missing base URL **fails
+   the build**; no `http://localhost:5238` and no cleartext-permitting network config is shipped.
+3. **Was (pre-v3 audit NAT-3):** this step used to FAIL and was recorded Blocked. The finding is fixed (v3 remediation, PRs #147–#191) — the assertions above now hold; expect **Pass**.
+
+### QA-ADV-24 — Windows loopback OAuth binds state (login-CSRF guard) 🟢 (Desktop)
+**Gherkin**
+```gherkin
+Given the desktop loopback OAuth callback listener with a pending state
+When a callback arrives whose state does not match the pending listener
+Then it is rejected — no session is minted from an unsolicited/forged callback
+```
+**Walkthrough**
+1. Start a desktop OAuth sign-in (loopback listener opens). Simulate a callback to the loopback URL with
+   a **mismatched/blank `state`**.
+2. **Expected:** rejected — the client only completes the exchange when `state` matches the value it
+   generated for the pending listener (login-CSRF / session-fixation guard), consistent with the
+   native redirect policy (audit **NAT-10**). Should **Pass** (unit-backed; manual probe optional).
 
 ---
 
@@ -1689,14 +2197,332 @@ Given I've sent test deliveries to my subscription
 When I view its delivery log and replay one
 Then I see per-attempt rows, and replay re-POSTs the same event to my endpoint
 ```
+**Precondition:** send one or more **test** events first (QA-API-05 step 2) — the sync send-test records a
+delivery row per attempt (success and failure), so the log is populated in-template even though the sample
+app fires no published events. (Published events via `IWebhookPublisher` also log, through the outbox.)
 **Walkthrough**
 1. `GET /api/webhooks/{id}/deliveries` (JWT) → a list of attempts, newest first, each with `success`,
-   `status_code`, `error`, `event_id`.
+   `status_code`, `error`, `event_id`. Each send-test from QA-API-05 shows up here.
 2. `POST /api/webhooks/deliveries/{deliveryId}/replay` (JWT) → **202**; webhook.site receives the **same**
-   event again (same `X-Webhook-Id`, so a real receiver can dedup).
-3. **Failure path (optional):** point the subscription at a URL that returns 500, send a test → the log
-   shows `success:false` and the outbox retries with backoff (watch the API logs), dead-lettering after
-   the cap. Replay of an unknown/other-tenant delivery id → **404**.
+   event again (same `X-Webhook-Id`, so a real receiver can dedup). Replay goes through the outbox, so its
+   own attempt is logged too.
+3. **Failure path:** point the subscription at a URL that returns 500, send a test → the response is
+   `{ "delivered": false, "status_code": 500 }` and the log gains a `success:false` row. (The sync
+   send-test does **not** retry; the outbox retry/backoff + dead-lettering applies to *published*/replayed
+   deliveries — watch the API logs on a replay.) Replay of an unknown/other-tenant delivery id → **404**.
+
+## 14c. Pre-launch gates — billing off + signup green list (GATES) 🟠
+
+> Both gates are **deployment configuration**, read at startup (ADR-027) — every change below needs an
+> **API restart**, and neither can be flipped from inside the app. They exist so a deployment can run
+> **private and free** before it is published: nothing offers to sell a tester anything, and a stranger
+> who finds the URL cannot create an account. Hiding the deployment itself is explicitly out of scope.
+
+### QA-GATE-01 — Billing off: the surface does not exist 🔴 (Web + curl) ⚙️ Automated in CI
+*Automated by `GateJourneyTests.BillingOff_TheSurfaceDoesNotExist_NoLink_NoPage_ApiAnswers404` in the gates-off E2E lane (`Billing__Enabled` unset, `Signup__AllowedDomains__0` = one listed domain; `pwsh tools/e2e.ps1 -Gates` locally). The manual walkthrough stays for a real deployment.*
+
+**Precondition:** `Billing__Enabled` unset in the repo-root `.env` (the shipped default); restart.
+**Gherkin**
+```gherkin
+Given Billing:Enabled is unset
+When I look at the header and call the billing routes
+Then there is no billing link, /billing does not render, and the API answers 404
+```
+**Walkthrough**
+1. Sign in as an owner. **Expected:** the header shows Household / Settings but **no Billing** button.
+2. Type `/billing` in the address bar. **Expected:** you land on the home page — the page refuses to render.
+3. `curl -k https://localhost:7160/api/billing` → **404** (not 401 — the route is gone, not protected).
+4. `curl -k -X POST https://localhost:7160/api/billing/webhook -d '{}'` → **404**. The provider callback is
+   gated too: signature authentication is not a reason to accept events for a deployment with no provider.
+5. Check the API startup log for one line reading `Pre-launch gates: billing disabled...`.
+
+---
+
+### QA-GATE-02 — Billing off: nothing offers an upgrade 🟠 (Web) ⚙️ Automated in CI
+*Automated by `GateJourneyTests.BillingOff_AFullHousehold_SaysFull_AndNeverOffersAnUpgrade` in the gates-off E2E lane (`Billing__Enabled` unset, `Signup__AllowedDomains__0` = one listed domain; `pwsh tools/e2e.ps1 -Gates` locally). The manual walkthrough stays for a real deployment.*
+
+**Precondition:** QA-GATE-01's state, plus a household at its seat cap (see QA-HH-14).
+**Gherkin**
+```gherkin
+Given billing is gated off and my household is full
+When I invite one more member, and when an invitee opens a valid invitation
+Then both are told the household is full, and neither is told to upgrade a plan
+```
+**Walkthrough**
+1. As owner of a full household, invite another address. **Expected:** "Your household is full. Remove a
+   member or revoke a pending invitation to free a seat." — **no** mention of upgrading.
+2. Open a still-valid invitation to that household as the invitee. **Expected:** the full-household page
+   says to ask the owner to free a seat, **not** to ask them to upgrade their plan.
+3. Switch the UI to Spanish and repeat step 1 — the Spanish copy must be the no-upgrade wording too.
+
+---
+
+### QA-GATE-03 — Billing on: the surface comes back whole 🟠 (Web)
+**Precondition:** set `Billing__Enabled=true`; restart.
+**Gherkin**
+```gherkin
+Given Billing:Enabled is true
+When I sign in as an owner
+Then the billing link is back, /billing renders the plan summary, and the seat-limit copy offers an upgrade
+```
+**Walkthrough**
+1. The header shows **Billing**; `/billing` renders the plan + seat usage (§10c applies in full).
+2. A seat-capped invite now reads "...Upgrade your plan to invite more members."
+3. `curl -k https://localhost:7160/api/features` → `{"billing":true}` (anonymous — this is what the client reads).
+
+---
+
+### QA-GATE-04 — Green list: a stranger cannot create an account 🔴 (Web) ⚙️ Automated in CI
+*Automated by `GateJourneyTests.GreenList_AStrangerIsRefusedAtRedemption_WithTheRightWords` in the gates-off E2E lane (`Billing__Enabled` unset, `Signup__AllowedDomains__0` = one listed domain; `pwsh tools/e2e.ps1 -Gates` locally). The manual walkthrough stays for a real deployment.*
+
+**Precondition:** in `.env` set `Signup__AllowedEmails__0=` **your own address**; restart. Use a *second*
+address you control that is NOT listed and has **no account yet**.
+**Gherkin**
+```gherkin
+Given a green list that does not contain my address
+When I complete a first-time sign-in with a valid code
+Then I am told the app is in private testing and no account is created
+```
+**Walkthrough**
+1. On `/login`, request a code for the unlisted address. **Expected:** the send succeeds — the gate runs at
+   redemption, not at issue, deliberately (refusing at issue would reveal whether an address has an account).
+2. Enter the **correct** code from Mailpit. **Expected:** "This app is in private testing and isn't
+   accepting new accounts yet..." (HTTP **403**, `signup_not_allowed`) — NOT the "incorrect or expired" line.
+3. Confirm in the DB (or by retrying) that **no** user row and **no** household were created.
+4. Repeat with the same unlisted address via **Sign in with Google**. **Expected:** the same private-testing
+   message on the login page — the provider button is not a side door.
+5. Repeat via a **magic link**. **Expected:** the same message.
+
+---
+
+### QA-GATE-05 — Green list: a listed person founds a household and can bring their family 🟠 (Web) ⚙️ Automated in CI
+*Automated by `GateJourneyTests.GreenList_AListedOwnerFoundsAHousehold_AndAnUnlistedInviteeMayJoinIt` in the gates-off E2E lane (`Billing__Enabled` unset, `Signup__AllowedDomains__0` = one listed domain; `pwsh tools/e2e.ps1 -Gates` locally). The manual walkthrough stays for a real deployment.*
+
+**Precondition:** QA-GATE-04's state (your address listed, one unlisted address available).
+**Gherkin**
+```gherkin
+Given my address is on the green list
+When I sign in, and then invite the unlisted address into MY household
+Then I get my own household, and my invitee may sign up even though they are not listed
+```
+**Walkthrough**
+1. Sign in with your listed address. **Expected:** normal sign-in; you own a household.
+2. Invite the unlisted address from **Household**. Open the invitation as that address and sign in for the
+   first time. **Expected:** sign-in succeeds and they join **your** household — the invitation admits them
+   because the household's **owner** (you) is green-listed.
+3. Have that member press **Leave**. They are re-homed into their own empty household — expected, and
+   harmless: now have them invite a **third** unlisted address. **Expected:** the third address is refused
+   at sign-in, because the owner of that household is not green-listed. This is the one-hop boundary.
+
+---
+
+### QA-GATE-06 — Green list never locks out an existing account 🔴 (Web)
+**Precondition:** an account that already exists and is **not** on the green list (e.g. the one from
+QA-GATE-05 step 2, after removing it from the list if you added it).
+**Gherkin**
+```gherkin
+Given an account that already exists and is not on the green list
+When it signs in
+Then the sign-in succeeds
+```
+**Walkthrough**
+1. Sign out, then sign in again with that existing, unlisted account. **Expected:** success — the gate is on
+   account **creation** only. This is the case that makes editing the list safe once people have data.
+2. Clear `Signup__AllowedEmails__0` entirely and restart. **Expected:** the startup log reads
+   `signup open to anyone` and any new address can sign up again — this is what publishing looks like.
+
+---
+
+---
+
+## 14d. v4 audit — adversarial, forge & regression (QA-ADV-25+, QA-DEP-*) 🟠
+
+The v4 delta audit (`docs/audits/v4-2026-09/`, 2026-09-23) found the classes below. When this section was
+written, eleven of its cases asserted behaviour the audit had proved broken and were pre-recorded **Blocked**.
+**All eleven are remediated** (v4 batches B3–B7, merged 2026-09-24 → 2026-10-01): each case below names the
+finding and the task that fixed it, and **every case in this section is expected to Pass**. A failure here
+is a regression — record it **Fail** with the finding id in Notes. (The discipline for a future audit is
+unchanged: a case that asserts known-broken behaviour is marked **⚠️ PENDING remediation** and recorded
+Blocked, never Pass, until its task lands.)
+
+### QA-ADV-25 — Joining another household wipes your old one completely 🟠 (curl + DB)
+**✅ Remediated** — v4 LB-AUTH-5 / LB-BILL-19, task T21 (R123) landed; expected **Pass**.
+**Gherkin**
+```gherkin
+Given I am the only member of household A, with an API key and a webhook subscription (PUBAPI/HOOKS on)
+When I accept an invitation to household B
+Then household A is gone AND its API key no longer authenticates AND no row of A survives
+```
+**Walkthrough**
+1. Environment with `PublicApi__Enabled=true`, `Webhooks__Enabled=true`. Sign in as a fresh user (a
+   tenant-of-one is founded). Create an API key (`POST /api/apikeys`, capture the raw key) and a webhook
+   subscription.
+2. From a second account, invite the first user to household B; accept it as the first user.
+3. `GET /api/public/…` with the captured key. **Expected:** **401**. **Today:** 200 — the key still
+   authenticates against a tenant that no longer exists.
+4. DB: `SELECT count(*) FROM "ApiKeys"/"WebhookSubscriptions"/"UsageCounters" WHERE "TenantId" = '<A>'`.
+   **Expected:** 0 each. **Today:** rows survive (the accept path deletes the tenant row directly instead of
+   running the dissolution contributors). With a Stripe-backed A, also expect a `billing.cancel` outbox row.
+
+### QA-ADV-26 — Dissolving a household leaves no queued email or attachment behind 🟠 (curl + DB)
+**✅ Remediated** — v4 JOBS-2 / ADV-P4-7, tasks T22–T23 (R90/R91) landed; expected **Pass**.
+**Gherkin**
+```gherkin
+Given household A has emails in the outbox (an invitation, a notification)
+When A is dissolved (or its owner erases their account)
+Then no outbox row for A keeps a recipient address, a body or attachment bytes
+```
+**Walkthrough**
+1. As A's owner, send an invitation to `x@example.com`. Stop the outbox dispatcher (or read quickly) and note
+   the `OutboxMessages` row for it.
+2. Dissolve A (`POST /api/household/leave` as sole owner, or delete the account).
+3. DB: `SELECT "Payload" FROM "OutboxMessages" WHERE "Payload" LIKE '%x@example.com%'`. **Expected:** no rows
+   (pending rows wiped, sent rows scrubbed). **Today:** the row survives with `TenantId` null and the full
+   payload — and sent rows are never purged.
+
+### QA-ADV-27 — Signing out while a background renewal is in flight really signs out 🟠 (curl)
+**✅ Remediated** — v4 LB-AUTH-4 / LB-UI-12, tasks T29/T31 (R124/R125) landed; expected **Pass**.
+**Gherkin**
+```gherkin
+Given I refreshed once, rotating token A into B
+When I sign out presenting the rotated-out token A (the cookie a racing tab still holds)
+Then B is revoked too, and no further refresh succeeds
+```
+**Walkthrough**
+1. Sign in; capture refresh token A. `POST /api/auth/refresh` with A → capture B.
+2. Within 60 s, `POST /api/auth/logout` presenting **A**. Response is 200 either way.
+3. `POST /api/auth/refresh` with **B**. **Expected:** **401** (the family was revoked). **Today:** 200 — a
+   logout carrying the just-rotated token revokes nothing. Repeat step 2 with an **expired** token and a second
+   live session: the second session should be revoked as well.
+
+### QA-ADV-28 — A rotated token is forgiven once, not forever 🟠 (curl)
+**✅ Remediated** — v4 AUTH-1, task T28 (R81) landed; expected **Pass**.
+**Gherkin**
+```gherkin
+Given token A was rotated into B less than 60 seconds ago
+When A is presented a second time inside the window
+Then it is treated as theft: 401 and every session revoked
+```
+**Walkthrough**
+1. Sign in → A. Refresh with A → B.
+2. Refresh with A again (inside 60 s) → **200** (the benign race, QA-ADV-17 step 2).
+3. Refresh with A a **third** time (still inside 60 s). **Expected:** **401** and B stops working.
+   **Today:** 200 again — each replay mints another live chain.
+
+### QA-ADV-29 — An expired impersonation never turns into the staff account mid-page 🟠 (Web)
+**✅ Remediated** — v4 LB-UI-13, task T31 (R125) landed; expected **Pass**.
+**Gherkin**
+```gherkin
+Given staff is impersonating a member on the member's Household page
+When the 15-minute impersonation token expires and staff clicks an action
+Then the action is refused or staff is returned home — it never runs as the staff user in the staff's household
+```
+**Walkthrough**
+1. As staff (`Admin__StaffEmails__0`), impersonate a member from `/admin`. Stay on the member's `/household`.
+2. Wait 15+ minutes (or shorten the impersonation lifetime in a test config).
+3. Rename the household. **Expected:** a visible refusal or a return to your own identity with a message; the
+   member's household is untouched and the staff household is untouched. **Today:** the bearer handler silently
+   renews into the staff identity and the rename lands on the **staff's own** household.
+
+### QA-ADV-30 — A webhook endpoint that redirects is a failed delivery 🟠 (curl)
+**✅ Remediated** — v4 LB-JOBS-1 / JOBS-9 / ADV-P4-9, task T37 (R130) landed; expected **Pass**.
+**Gherkin**
+```gherkin
+Given a webhook subscription whose URL answers 302 to another host
+When a delivery or a send-test runs
+Then the redirect is not followed, and the delivery log records a failure with status 302
+```
+**Walkthrough**
+1. Point a subscription at a public endpoint you control that returns `302 Location: https://<other>/ok`
+   (e.g. a request-bin with a redirect rule); make `<other>` answer 200.
+2. `POST /api/webhooks/{id}/test`. **Expected:** `delivered: false`, `status_code: 302`; `<other>` receives
+   nothing. **Today:** `<other>` receives a body-less **GET** carrying the signature headers and the log says
+   delivered (200). With a 307, today the signed body itself reaches `<other>`.
+
+### QA-ADV-31 — The delivery log never shows raw server exception text 🟢 (curl)
+**✅ Remediated** — v4 JOBS-1, task T39 (R89) landed; expected **Pass**.
+**Walkthrough**
+1. Subscribe a webhook to `https://does-not-exist.invalid/hook`; send a test.
+2. `GET /api/webhooks/{id}/deliveries`. **Expected:** `error` is a short code (`dns`, `timeout`, `connection`,
+   `http_<status>`, `url_refused`). **Today:** the raw exception message (resolver text, IPs, the SSRF verdict).
+
+### QA-ADV-32 — Billing off leaves no billing-shaped surface anywhere 🟠 (curl)
+**✅ Remediated** — v4 BILL-2/BILL-3, task T45 (R86) landed; expected **Pass**.
+**Walkthrough**
+1. Environment with `Billing__Enabled` unset. As staff: `PUT /api/admin/tenants/{id}/subscription`
+   `{"plan_key":"pro"}`. **Expected:** **404** (the comp write goes with the billing surface) and the console's
+   Comp/Revert buttons are hidden. **Today:** 200, the tenant becomes Pro while billing is "off".
+2. Complements QA-GATE-01 (which checks `/api/billing*` only).
+
+### QA-ADV-33 — Expired invitations stop holding seats 🟠 (Web)
+**✅ Remediated** — v4 LB-AUTH-7 / LB-BILL-20, task T34 (R127) landed; expected **Pass**.
+**Walkthrough**
+1. Free household at `cap − 1` members plus pending invitations that are **past their expiry** (seed
+   `ExpiresAt` in the past in the DB, or wait out `LifespanDays`).
+2. Invite a new address. **Expected:** allowed (an expired invitation reserves nothing). **Today:** 402
+   `seat_limit_reached` / "household full" — dead invitations keep their seats forever.
+
+### QA-ADV-34 — The native export download never sends your sign-in token to the file host 🟢 (Android/Desktop)
+**✅ Remediated** — v4 NAT-12, task T49 (R102) landed; expected **Pass**.
+**Walkthrough**
+1. Environment with `Files__Provider=S3` (MinIO in compose). On the native app, Household → Export data.
+2. Watch the MinIO/S3 access log (or a proxy). **Expected:** the presigned GET carries **no**
+   `Authorization: Bearer` header and the download succeeds. **Today:** the bearer JWT is attached (and AWS S3
+   rejects a presigned GET that also carries an Authorization header).
+
+### QA-ADV-35 — Exported logs carry no email addresses 🟢 (Ops)
+**✅ Remediated** — v4 OBS-1, task T41 (R93) landed; expected **Pass**.
+**Walkthrough**
+1. Set `OpenTelemetry__Otlp__Endpoint` to a collector you can read (Grafana Cloud or a local otel-collector
+   with a file exporter). Sign in with OTP twice.
+2. Search the exported log records for `@`. **Expected:** none — records carry user ids only. **Today:** every
+   token issue exports `{Email}` as an attribute.
+
+### QA-DEP-01 — Deploy staging from GitHub 🔴 (Operator)
+**Gherkin**
+```gherkin
+Given develop on GitHub
+When I run the CI workflow on develop with deploy = staging
+Then every web gate runs, and only when all pass the Render hook fires and the version-gated smoke passes
+```
+**Walkthrough**
+1. GitHub → Actions → `CI` → *Run workflow* on `develop`, `deploy` = staging, `devices` = none (ADR-031;
+   DEPLOYMENT §6).
+2. **Expected:** `build-test`, `secret-scan`, `qa-artifacts`, `license-scan`, `docker-build` and `e2e` run, then
+   `deploy-staging` fires `RENDER_DEPLOY_HOOK_STAGING`, waits until `/api/version` reports the commit and runs the
+   post-deploy smoke green. No device leg runs. A merge alone deploys nothing.
+
+### QA-DEP-02 — A deploy run on the wrong branch fails loudly 🟠 (Operator)
+**Walkthrough**
+1. *Run workflow* on `main` with `deploy` = staging. **Expected:** the web gates run, then `deploy-staging` fails
+   at its first step: "staging deploys from develop". Nothing is deployed.
+2. *Run workflow* on `develop` with `deploy` = prod. **Expected:** `deploy-prod` fails the same way ("prod deploys
+   from main").
+
+### QA-DEP-03 — A red gate blocks the deploy 🟢 (Operator)
+**Walkthrough**
+1. On a throwaway branch off `develop`, break a unit test; run the workflow on that branch with `deploy` = staging.
+   **Expected:** `build-test` is red, `deploy-staging` is skipped, and the Render hook never fires.
+2. Delete the throwaway branch.
+
+### QA-DEP-04 — The device legs run only when asked for 🟠 (Operator)
+**Walkthrough**
+1. Open a pull request that changes `src/Shared.Ui`. **Expected:** only the web gates run — no `native-*` job.
+2. *Run workflow* on `develop` with `deploy` = none, `devices` = android. **Expected:** `native-build` (Android
+   leg only), `native-release-android` and `native-smoke-android` run; no web gate, no Windows or Apple job.
+3. Repeat with `devices` = all before a release (macOS bills 10×). **Expected:** every native job green.
+
+### QA-SET-09 — A theme saved just before a reload survives the reload 🟠 (Web + Android)
+**Walkthrough**
+1. Signed in, switch theme Light → Dark in Settings; immediately reload (web) or background/foreground the
+   Android app so the WebView reloads. **Expected:** Dark stays (PR #233 — the switcher remembers the saved
+   value; `PreferenceSyncClaimTests`). Repeat with the language switcher.
+
+### QA-AND-16 — An API base configured with a trailing slash still signs in 🟢 (Android)
+**Walkthrough**
+1. Build the Android app with `-p:ApiBaseUrl=https://<staging>/` (trailing slash). Sign in with OTP and with
+   Google. **Expected:** both succeed; no request goes to `//api/…` (PR #230 — `TrimEnd('/')` in
+   `MauiProgram` and both OAuth initiators).
 
 ---
 
@@ -1724,22 +2550,57 @@ Then I see per-attempt rows, and replay re-POSTs the same event to my endpoint
 | Transactional email delivery | (all email cases) | async via the outbox dispatcher (`OutboxMessages`) |
 | Billing — checkout/portal/webhook + billing page | **BILL-01/02** (§10c, ⚙️ E2E `BillingJourneyTests`) + **DSK-11 / AND-11** (native refresh-on-return — NATIVE-4) + `Api.Tests` (Billing*/Entitlement* tests) | `POST /api/billing/checkout`, `…/portal`, `…/webhook` |
 | Billing — quotas (BILLING-5) | **HH-14** (seat limit blocks invite → 402 upgrade message) + `Api.Tests` (`QuotaServiceTests`) | seats (members + pending invites vs `Plan.SeatLimit`) enforced on `POST /api/household/invitations` → 402 `seat_limit_reached`; metered usage via `IQuotaService.TryConsumeAsync` (monthly `UsageCounter`). Limits in `PlanCatalog` (null = unlimited). |
-| Billing — trial/dunning (BILLING-6) | covered by `Api.Tests` (`BillingWebhookHandlerTests`, `SubscriptionLapseSweepJobTests`); manual via Stripe test triggers | webhook transition into `past_due`/`canceled` → owner **notification** (in-app bell + outbox email, NOTIFY) once; `SubscriptionLapseSweepJob` (6h) nudges the owner once when a paid period lapses without a webhook (`LapseNotifiedAt`). Verify with `stripe trigger invoice.payment_failed` (test mode) → owner sees a billing notification in the bell. |
+| Billing — trial/dunning (BILLING-6) | covered by `Api.Tests` (`BillingWebhookHandlerTests`, `SubscriptionLapseSweepJobTests`); manual via Stripe test triggers | webhook transition into `active`/`trialing` from nothing or a lapsed state → owner **"Subscription active"** notification (`billing.activated`, plan + renewal date) once — a renewal or a trial converting is silent; transition into `past_due`/`canceled` → owner **notification** (in-app bell + outbox email, NOTIFY) once; `SubscriptionLapseSweepJob` (6h) nudges the owner once when a paid period lapses without a webhook (`LapseNotifiedAt`). Verify with `stripe trigger invoice.payment_failed` (test mode) → owner sees a billing notification in the bell. |
+| v4 audit — adversarial (§14d) | **ADV-25..35** (all remediated in v4 B3–B7 — each names the task that fixed it) | accept-path dissolve, outbox erasure, logout/grace, impersonation expiry, webhook redirects + error codes, billing-off admin comp, expired-invite seats, native bearer scope, exported-log PII |
+| Deploys + device legs on request (ADR-031) | **DEP-01..04** (operator) | GitHub `CI` *Run workflow*: `deploy` = staging/prod behind every web gate, branch guards, `devices` = android/windows/apple/all |
+| Regressions (#233, #230) | **SET-09**, **AND-16** | `PUT /api/auth/theme` + remembered preference; native `ApiBaseUrl` normalization |
 | Billing — dissolve cleanup (BILLING-7) | covered by `Api.Tests` (`BillingDissolveTests`) | on tenant dissolve, `BillingDataContributor` wipes the `Subscription` projection **and** enqueues a `"billing.cancel"` outbox message → `IBillingProvider.CancelSubscriptionAsync` (a deleted tenant stops being billed). `HasDataAsync`=false (billing never blocks leaving); export gains a `billing` section (plan/status/period, no Stripe ids). Manual (Stripe test mode): subscribe a throwaway tenant, delete the account, confirm the Stripe subscription is canceled. |
 | Public API + API keys (PUBAPI, **config-gated off**) | **QA-API-01..04** (curl/Postman) + `Api.Tests` (`ApiKeyServiceTests`, `RateLimitingTests`); boot-verified on/off | `PublicApi:Enabled` toggles it. Owner-only `/api/apikeys` (create → raw `pk_…` once, list, revoke; `Permission.ManageApiKeys`); API-key auth scheme mints a `tenant_id`-scoped principal; demo `/api/public/whoami` (read scope) + `/api/public/echo` (write scope) via `.RequireApiScope`. **PUBAPI-2:** per-key rate limit (60/min, isolated per key → 429) + a leak-free public OpenAPI doc at `/api/public/openapi.json` (only the public routes). **Off (default) ⇒ routes 404.** Manual: `PublicApi__Enabled=true`, mint a key, `curl -H "X-Api-Key: pk_…" /api/public/whoami`; fetch `/api/public/openapi.json`. |
 | Outbound webhooks (HOOKS, **config-gated off**) | **QA-API-01, 05, 06** (curl/webhook.site) + `Api.Tests` (`WebhookSubscriptionServiceTests`, `WebhookDeliveryTests`, `WebhookDeliveryLogTests`) + `Core.Tests` (`WebhookSignatureTests`); boot-verified on/off | `Webhooks:Enabled` toggles it. Owner-only `/api/webhooks` (register → signing secret `whsec_…` once, list, delete, **send test**; `Permission.ManageWebhooks`). `IWebhookPublisher.PublishAsync` fans out to matching active subs → one `"webhook"` **outbox** message each → signed POST (`X-Webhook-Signature`), retry/dead-letter via the outbox. **HOOKS-2:** a delivery log (`GET /api/webhooks/{id}/deliveries` — one row per attempt, success/status/error) + **replay** (`POST /api/webhooks/deliveries/{id}/replay` — re-enqueue the exact payload). **Off (default) ⇒ routes 404.** Manual: `Webhooks__Enabled=true`, register a receiver (e.g. a webhook.site URL), hit **send test**, view deliveries, replay one. |
+| Pre-launch gates (GATES, **both deployment config**) | **QA-GATE-01..06** (§14c) + `Api.Tests` (`BillingGateTests`, `SignupGateTests`, `SignupRefusalSurfacingTests`, `ConfigPostureTests`) + `Ui.Tests` (`BillingGateUiTests`, `SeatLimitCopyTests`, `SignupRefusedCopyTests`) | `Billing:Enabled` off (default) removes the billing controllers from the application model, so `GET /api/billing`, `POST …/checkout`, `…/portal` and `…/webhook` all **404** and every tenant resolves Free; the client reads `GET /api/features` (anonymous) to hide the link and refuse `/billing`, and the seat-limit copy drops the upgrade pitch. `Signup:AllowedEmails` / `Signup:AllowedDomains` (empty = open) gate account **creation** at `UserService.CreateUserWithTenantAsync` — refusal is **403** `signup_not_allowed` on `POST /api/auth/otp/verify` and `?error=signup_not_allowed` on the OAuth / magic-link redirects. An invitation admits its addressee only when that invitation's tenant **owner** is green-listed. ADR-027. |
 | Audit log (API-only) | covered by `Api.Tests` (`AuditLogTests`) | append-only `IAuditLog` + interceptor |
 | RBAC roles (admin tier) | HH-09/10/11/12 (web roster promote/demote + admin capability/limits); `Api.Tests` (`RolePermissionsTests`, `PermissionServiceTests`, `MemberRoleManagementTests`) | `PUT /api/household/members/{id}/role` (owner-only; admin↔member, owner via transfer only); permission seam gates tenant writes |
 | File storage (API-only) | covered by `Api.Tests` (`LocalDiskFileStorageTests`, `FileDownloadTokenizerTests`, `FilesControllerTests`, `S3FileStorageMinioTests` [real MinIO], `FileStorageRegistrationTests`) | `IFileStorage` (tenant-scoped keys; local disk / S3-compatible — AWS/MinIO/R2/B2, config-gated); local signed `GET /api/files/{token}` (expiring, single-key, tenant-checked → 404 on any failure); S3 native presigned URLs |
 | GDPR data export | **HH-13** (owner Household → Data → download, ⚙️ E2E `GdprExportJourneyTests`) + **DSK-10 / AND-10** (native share — NATIVE-3) + `Api.Tests` (`TenantExportTests`) | `POST /api/household/export` (owner-only `ExportData` → 403 else; JSON bundle via `IFileStorage`, signed URL; secret-free, tenant-scoped, audited) |
 | GDPR account erasure | **SET-07** (Settings → Danger zone) + `Api.Tests` (`AccountErasureTests`) | `DELETE /api/auth/me` (wipes identity/PII in one tx; owner-with-members → 400, solo owner → 409 without `confirm_dissolve`; member removed not re-homed; audited; audit trail survives) |
 | MFA / TOTP | **MFA-01..05**, **DSK-12 / AND-12** (native) (Settings enroll/QR/confirm/recovery + disable; step-up on OTP, OAuth/magic-link, **and** native logins) + `Api.Tests` (`MfaServiceTests`, `MfaChallengeServiceTests`, `MfaLoginServiceTests`) | `GET|POST /api/auth/mfa[/enroll|/confirm|/disable]` (enroll/manage; secret encrypted, hashed single-use recovery codes) + **login step-up** `POST /api/auth/mfa/verify` (MFA-on logins get a signed challenge instead of a session; verify a TOTP/recovery code to complete). **Every sign-in path enforces it** (web + native): OTP returns the challenge as JSON; OAuth callback + magic-link redirect to `/login?mfa=<challenge>`; native OTP/OAuth-exchange return the challenge in the body and the MAUI client steps up in-app. |
-| In-app notifications | **NOTIF-01..04**, **DSK-13** (header bell: list/unread-count/mark-read/delete/clear; Settings delivery-preference switches) + `Api.Tests` (`NotificationServiceTests`, `NotificationFanOutTests`) | `GET /api/notifications` (+ `?before=&limit=`), `/unread-count`, `POST /{id}/read`, `/read-all`, `DELETE /{id}`, `DELETE /api/notifications` (+ `?read=true` for read-only clear), and `GET|PUT /api/notifications/preferences` — **per-user** (scoped to the caller). `NotifyAsync` fans out to in-app + email (outbox-backed) per prefs (default both on). |
-| Admin back-office | **ADMIN-01..06**, **DSK-14** (native spot) (staff `/admin` console: tenant list/detail + impersonate w/ banner + stop; targeted/broadcast announce; plan comp/revert) + `Api.Tests` (`PlatformStaffServiceTests`, `AdminControllerTests`) | `GET /api/admin/me` (staff probe, 200 `{is_staff}` for any caller — drives the nav/gate), `GET /api/admin/tenants` (+ `/{id}` — returns `plan_key` + `provider_managed`), `POST /api/admin/impersonate/{userId}`, `POST /api/admin/tenants/{id}/announce` (optional `user_ids[]` subset, intersected with membership), `POST /api/admin/announce-all` (202; outbox fan-out to **every** user), `PUT|DELETE /api/admin/tenants/{id}/subscription` (comp/revert; 409 when Stripe-backed) — **platform-staff only** (config `Admin:StaffEmails`; non-staff → 403). Detail enters the target tenant (filter never loosened); impersonation returns a **short-lived, non-refreshable** token with an `impersonated_by` claim, **audited in the target's tenant**. |
+| In-app notifications | **NOTIF-01..04**, **DSK-13** (header bell: list/unread-count/mark-read/delete/clear; Settings delivery-preference switches) + `Api.Tests` (`NotificationServiceTests`, `NotificationFanOutTests`) | `GET /api/notifications` (+ `?before=&limit=`), `/unread-count`, `POST /{id}/read`, `/read-all`, `DELETE /{id}`, `DELETE /api/notifications?read=true|false` (scope REQUIRED — read-only vs all; omitted → 400), and `GET|PUT /api/notifications/preferences` — **per-user** (scoped to the caller). `NotifyAsync` fans out to in-app + email (outbox-backed) per prefs (default both on). |
+| Admin back-office | **ADMIN-01..06**, **DSK-14** (native spot) (staff `/admin` console: tenant list/detail + impersonate w/ banner + stop; targeted/broadcast announce; plan comp/revert) + `Api.Tests` (`PlatformStaffServiceTests`, `AdminControllerTests`) | `GET /api/admin/me` (staff probe, 200 `{is_staff}` for any caller — drives the nav/gate), `GET /api/admin/tenants` (+ `/{id}` — returns `plan_key` + `provider_managed`), `POST /api/admin/impersonate/{userId}`, `POST /api/admin/tenants/{id}/announce` (optional `user_ids[]` subset, intersected with membership), `POST /api/admin/announce-all` (202; outbox fan-out to **every** user), `PUT|DELETE /api/admin/tenants/{id}/subscription` (comp/revert; 409 only for a LIVE provider sub — canceled Stripe-backed subs are comp-able) — **platform-staff only** (config `Admin:StaffEmails`; non-staff → 403). Detail enters the target tenant (filter never loosened); impersonation returns a **short-lived, non-refreshable** token with an `impersonated_by` claim, **audited in the target's tenant**. |
+
+**Adversarial & tenant-isolation (§14a, QA-ADV-*) — v3-audit hardening probes.** Rows tagged
+**⚠️ v3** were authored against then-broken behaviour and sat **Blocked** until their finding landed;
+**every tagged finding is fixed** (v3 remediation, PRs #147–#191), so ALL rows now expect **Pass**.
+
+| Probe (finding) | Test case(s) | Key API endpoint(s) / surface |
+|---|---|---|
+| Cross-tenant read/export/erase (RLS-2/4) | ADV-01 | `GET /api/household`, `POST /api/household/export`, `DELETE /api/household/members/{id}`, `POST\|DELETE /api/notifications/{id}[/read]` (foreign id → 404/403) |
+| Cross-tenant isolation, newer tables (LB-TEN-2/RLS-8) | ADV-02 | `GET /api/webhooks/{id}/deliveries`, `POST /api/webhooks/deliveries/{id}/replay`, `DELETE /api/apikeys/{id}` (foreign id → 404) |
+| Export completeness, secret-free (**⚠️ v3** LB-TEN-1) | ADV-03 | `POST /api/household/export` (must cover api-keys/webhooks/usage, no hashes/`whsec_…`) |
+| Dissolve/erasure cleanup (**⚠️ v3** LB-TEN-1) | ADV-04 | dissolve/`DELETE /api/auth/me` → 0 rows in `ApiKey`/`WebhookSubscription`/`WebhookDelivery`/`UsageCounter` |
+| Impersonation write attribution (**⚠️ v3** LB-ADM-1) | ADV-05 | `POST /api/admin/impersonate/{id}` then `PUT /api/household`, `POST /api/notifications/{id}/read` (audit `impersonated_by`) |
+| Impersonation ≠ staff ladder (**⚠️ v3** ADM-2) | ADV-06 | impersonation token vs `POST /api/admin/impersonate/{x}`, `PUT /api/admin/tenants/{id}/subscription`, `DELETE /api/admin/users/{x}/mfa`, `POST /api/admin/announce-all` (→ 403) |
+| Impersonation role ceiling (TB-ADM-3) | ADV-07 | member impersonation vs `POST /api/household/transfer-ownership`, `PUT /api/household/members/{id}/role` (→ 403) |
+| Pref bleed: impersonation + shared device (**⚠️ v3** partial, ADM-8/9, LB-UI-4/5) | ADV-08 | `GET /api/auth/me` prefs; localStorage theme/locale bootstrap across accounts |
+| Security notice bypasses prefs (**⚠️ v3** ADM-1) | ADV-09 | `PUT /api/notifications/preferences` (both off) + `DELETE /api/admin/users/{id}/mfa` → `security.mfa_reset` in-app + email |
+| Per-user MFA lockout (**⚠️ v3** ADM-3) | ADV-10 | `POST /api/auth/mfa/verify` (cumulative cap, not just per-IP 429) |
+| Recovery code single-use (TB-AUTH-6) | ADV-11 | `POST /api/auth/mfa/verify` (recovery code burned on first use) |
+| Webhook replay/order/same-second idempotency (LB-BILL-1) | ADV-12 | `POST /api/billing/webhook` (dup EventId no-op; same-second created→active applies) |
+| No false dunning on first bad webhook (**⚠️ v3** LB-BILL-4) | ADV-13 | `POST /api/billing/webhook` first-ever `past_due`/`canceled` → no owner notification |
+| Comp/revert a churned sub (**⚠️ v3** ADM-5) | ADV-14 | `PUT\|DELETE /api/admin/tenants/{id}/subscription` (canceled sub should be comp-able, not stuck 409) |
+| Concurrent last-seat accept (TB-BILL-19/BILLING-9) | ADV-15 | `POST /api/household/invitations/accept` (one 200, one 402 `seat_limit_reached`) |
+| Magic-link/OTP double-redemption (LB-AUTH-3) | ADV-16 | `GET /api/auth/magic-link/verify`, `POST /api/auth/otp/verify` (exactly one session) |
+| Rotated refresh-token replay revokes family (SEC-05 promoted) | ADV-17 | `POST /api/auth/refresh` (reuse past the 60 s grace window → 401 + all sessions revoked; within it, successor live → 200, nothing revoked — once; a third presentation → 401 + revoke-all) |
+| Locale-reload preserves deep-link (**⚠️ v3** UX-1/LB-UI-1/2) | ADV-18 (⚙️ E2E `LocaleMismatchJoinTests`) | `/join?token=…` under a PREFS-1 locale-mismatch reload |
+| No pref revert after soft sign-in (UX-3/4) | ADV-19 | OTP soft-nav sign-in reconcile (`theme`/`locale` claims) |
+| "Clear read" spares unread (LB-UI-10) | ADV-20 | `DELETE /api/notifications?read=true` vs `?read=false`; omitted scope → 400 `scope_required` |
+| Security/cache headers on single-origin (**⚠️ v3** DEP-2/3) | ADV-21 | `curl -I /` + `/_framework/*` (HSTS/nosniff/CSP/Referrer-Policy; cache-control) |
+| Forged XFF ≠ rate-limit bypass (DEP-1/ADM-10) | ADV-22 | `POST /api/auth/otp/send` w/ rotating `X-Forwarded-For` (trusted-proxy only) |
+| Release native build HTTPS base URL (**⚠️ v3** NAT-3) | ADV-23 | Release AAB/MSIX base URL + Android network-security-config (no cleartext localhost) |
+| Loopback OAuth state binding (NAT-10) | ADV-24 | desktop loopback callback rejects mismatched `state` |
 
 **Per-client coverage:** Web = full (all suites). Desktop = DSK-01..15 (auth + per-feature parity).
-Android = AND-01..14 (auth + per-feature parity incl. hardware back + share sheet). iOS = IOS-01..04
-and macCatalyst = MAC-01..03 (first-run smoke — never run before; needs a Mac). Magic link is
+Android = AND-01..15 (auth + per-feature parity incl. hardware back, share sheet, OAuth kill drill). iOS = IOS-01..04
+and macCatalyst = MAC-01..03 (first-run smoke — first passed 2026-07-06; needs a Mac). Magic link is
 **web-only** by design; the §13c checklist is the per-release native subset.
 
 **Automated (E2E CI ⚙️):** the following manual cases have an equivalent Playwright/NUnit journey in
@@ -1757,11 +2618,19 @@ Postgres + Mailpit + API + Web stack — so they are continuously regression-gua
 | QA-I18N-02 (language follows the user across browsers) | `I18nTests.LocaleChoice_FollowsTheUser_AcrossBrowsers` |
 | QA-SET-08 (dark mode applies/persists/follows, incl. Auto propagation) | `ThemeJourneyTests.ThemeChoice_AppliesLive_PersistsLocally_AndFollowsTheUser` |
 | QA-INV-10 (accept refused after a downgrade — seat re-check) | `SeatQuotaJourneyTests.Accepting_An_Invite_After_A_Downgrade_Shows_The_HouseholdFull_State` |
-| QA-DSK-01 (desktop OTP sign-in) | `NativeSmokeTests` — the `native-smoke-windows` job boots the REAL Windows exe and drives it over WebView2 CDP (OTP + household load) |
+| QA-AUTH-01/05 (magic link happy + single-use) | `MagicLinkJourneyTests` |
+| QA-HH-02/03/05/07/08 (rename, invite/join, leave, dissolve, delete account) | `MembershipLifecycleTests` |
+| QA-HH-09..12 (roster: promote/demote/remove/owner-protection) | `RosterJourneyTests` |
+| QA-HH-13 (data export download) | `GdprExportJourneyTests` |
+| QA-INV-01/02/08 (invite create/accept/regenerate) | `MembershipLifecycleTests` (+ invalid-code inline error) |
+| QA-NOTIF-01..03 (bell list/unread/mark-read via announcements) | `NotificationJourneyTests` + `AnnouncementJourneyTests` |
+| QA-ADMIN-01/04 (staff console gate, announce) | `AnnouncementJourneyTests` |
+| QA-BILL-01/02 (billing page + fake-provider upgrade loop) | `BillingJourneyTests` |
+| QA-ADV-18 (locale-mismatch × invite acceptance) | `LocaleMismatchJoinTests` |
+| QA-DSK-01 (desktop boot) | the `native-smoke-windows` job boots the REAL Windows exe as a process-alive + provider-probe canary (WebView2 150 strips CDP under elevation — PRs #170/#171); the OTP journey is CI-driven on Android only. `NativeSmokeTests` remains for local non-elevated runs |
 | QA-AND-01 (Android OTP sign-in) | `tests/native-smoke-android/smoke.js` — the `native-smoke-android` job boots a real emulator and drives the app via playwright-core's `_android` module |
 
-The two native smoke jobs run on develop pushes that touch native-relevant paths (see the
-`native-paths` gate in ci.yml) — they are boot-and-sign-in canaries, not the per-feature native
+The native smoke jobs run from *Run workflow* → `devices` (ADR-031) — they are boot-and-sign-in canaries, not the per-feature native
 regression, which stays manual (§12–13b). All other cases remain manual-only or API-test-backed as
 noted per row.
 
@@ -1775,7 +2644,185 @@ Record one row per executed case. Build = API/web commit SHA (`git rev-parse --s
 |---------|--------|--------------------------|--------|-------------|------|---------------------|
 | QA-SMK-01 | Web | | | | | |
 | QA-SMK-02 | Web | | | | | |
-| … | | | | | | |
+| QA-SMK-03 | Web | | | | | |
+| QA-SMK-04 | Web | | | | | |
+| QA-SMK-05 | Desktop | | | | | |
+| QA-SMK-06 | Android | | | | | |
+| QA-SMK-07 | Platform | | | | | |
+| QA-AUTH-01 | Web | | | | | |
+| QA-AUTH-02 | Web | | | | | |
+| QA-AUTH-03 | Web | | | | | |
+| QA-AUTH-04 | Web | | | | | |
+| QA-AUTH-11 | Web | | | | | |
+| QA-AUTH-05 | Web | | | | | |
+| QA-AUTH-06 | Web | | | | | |
+| QA-AUTH-07 | Web | | | | | |
+| QA-AUTH-08 | Web | | | | | |
+| QA-AUTH-09 | Web | | | | | |
+| QA-AUTH-10 | Web | | | | | |
+| QA-ONB-01 | Web | | | | | |
+| QA-ONB-02 | Web | | | | | |
+| QA-HH-01 | Web | | | | | |
+| QA-HH-02 | Web | | | | | |
+| QA-HH-03 | Web | | | | | |
+| QA-HH-04 | Web | | | | | |
+| QA-HH-05 | Web | | | | | |
+| QA-HH-06 | Web | | | | | |
+| QA-HH-07 | Web | | | | | |
+| QA-HH-08 | Web | | | | | |
+| QA-HH-09 | Web | | | | | |
+| QA-HH-10 | Web | | | | | |
+| QA-HH-11 | Web | | | | | |
+| QA-HH-12 | Web | | | | | |
+| QA-HH-13 | Web | | | | | |
+| QA-HH-14 | Web | | | | | |
+| QA-INV-01 | Web | | | | | |
+| QA-INV-02 | Web | | | | | |
+| QA-INV-03 | Web | | | | | |
+| QA-INV-04 | Web | | | | | |
+| QA-INV-05 | Web | | | | | |
+| QA-INV-06 | Web | | | | | |
+| QA-INV-07 | Web | | | | | |
+| QA-INV-08 | Web | | | | | |
+| QA-INV-09 | Web | | | | | |
+| QA-INV-10 | Web | | | | | |
+| QA-SET-01 | Web | | | | | |
+| QA-SET-02 | Web | | | | | |
+| QA-SET-03 | Web | | | | | |
+| QA-SET-04 | Web | | | | | |
+| QA-SET-05 | Web | | | | | |
+| QA-SET-06 | Web | | | | | |
+| QA-SET-07 | Web | | | | | |
+| QA-SET-08 | Web | | | | | |
+| QA-MFA-01 | Web | | | | | |
+| QA-MFA-02 | Web | | | | | |
+| QA-MFA-03 | Web | | | | | |
+| QA-MFA-04 | Web | | | | | |
+| QA-MFA-05 | Desktop/Android | | | | | |
+| QA-NOTIF-01 | Web | | | | | |
+| QA-NOTIF-02 | Web | | | | | |
+| QA-NOTIF-04 | Web | | | | | |
+| QA-NOTIF-03 | Web | | | | | |
+| QA-I18N-01 | Web | | | | | |
+| QA-I18N-02 | Web | | | | | |
+| QA-I18N-03 | Web | | | | | |
+| QA-I18N-04 | Web | | | | | |
+| QA-ADMIN-01 | Web | | | | | |
+| QA-ADMIN-02 | Web | | | | | |
+| QA-ADMIN-03 | Web | | | | | |
+| QA-ADMIN-04 | Web | | | | | |
+| QA-ADMIN-05 | Web | | | | | |
+| QA-ADMIN-06 | Web | | | | | |
+| QA-ADMIN-07 | Web | | | | | |
+| QA-BILL-01 | Web | | | | | |
+| QA-BILL-02 | Web | | | | | |
+| QA-MAIL-01 | Web | | | | | |
+| QA-MAIL-02 | Web | | | | | |
+| QA-MAIL-03 | Web | | | | | |
+| QA-MAIL-04 | Web | | | | | |
+| QA-DSK-01 | Desktop | | | | | |
+| QA-DSK-02 | Desktop | | | | | |
+| QA-DSK-03 | Desktop | | | | | |
+| QA-DSK-04 | Desktop | | | | | |
+| QA-DSK-05 | Desktop | | | | | |
+| QA-DSK-06 | Desktop | | | | | |
+| QA-DSK-07 | Desktop | | | | | |
+| QA-DSK-08 | Desktop | | | | | |
+| QA-DSK-09 | Desktop | | | | | |
+| QA-DSK-10 | Desktop | | | | | |
+| QA-DSK-11 | Desktop | | | | | |
+| QA-DSK-12 | Desktop | | | | | |
+| QA-DSK-13 | Desktop | | | | | |
+| QA-DSK-14 | Desktop | | | | | |
+| QA-DSK-15 | Desktop | | | | | |
+| QA-AND-01 | Android | | | | | |
+| QA-AND-02 | Android | | | | | |
+| QA-AND-03 | Android | | | | | |
+| QA-AND-04 | Android | | | | | |
+| QA-AND-05 | Android | | | | | |
+| QA-AND-06 | Android | | | | | |
+| QA-AND-07 | Android | | | | | |
+| QA-AND-08 | Android | | | | | |
+| QA-AND-09 | Android | | | | | |
+| QA-AND-10 | Android | | | | | |
+| QA-AND-11 | Android | | | | | |
+| QA-AND-12 | Android | | | | | |
+| QA-AND-13 | Android | | | | | |
+| QA-AND-14 | Android | | | | | |
+| QA-AND-15 | Android | | | | | |
+| QA-IOS-01 | iOS | | | | | |
+| QA-IOS-02 | iOS | | | | | |
+| QA-IOS-03 | iOS | | | | | |
+| QA-IOS-04 | iOS | | | | | |
+| QA-MAC-01 | macCatalyst | | | | | |
+| QA-MAC-02 | macCatalyst | | | | | |
+| QA-MAC-03 | macCatalyst | | | | | |
+| QA-SEC-01 | Web | | | | | |
+| QA-SEC-02 | Web | | | | | |
+| QA-SEC-03 | Web | | | | | |
+| QA-SEC-04 | Desktop/Android | | | | | |
+| QA-SEC-05 | Web | | | | | |
+| QA-API-01 | curl | | | | | |
+| QA-API-02 | curl | | | | | |
+| QA-API-03 | curl/Postman | | | | | |
+| QA-API-04 | curl | | | | | |
+| QA-API-05 | curl | | | | | |
+| QA-API-06 | curl | | | | | |
+| QA-GATE-01 | Web + curl | | | | | |
+| QA-GATE-02 | Web | | | | | |
+| QA-GATE-03 | Web | | | | | |
+| QA-GATE-04 | Web | | | | | |
+| QA-GATE-05 | Web | | | | | |
+| QA-GATE-06 | Web | | | | | |
+
+**§14a adversarial / tenant-isolation (QA-ADV-*).** All rows are **Not-run** (blank) until executed.
+The formerly pre-seeded **Blocked (known defect)** rows were reset when the v3 remediation completed
+(2026-07, PRs #147–#191) — their Notes record which defect each was blocked on, and every one of those
+cases now expects **Pass** on re-run.
+
+| Case ID | Client | Result (P/F/Blocked/N-A) | Tester | Build (SHA) | Date | Notes / defect link |
+|---------|--------|--------------------------|--------|-------------|------|---------------------|
+| QA-ADV-01 | API | | | | | |
+| QA-ADV-02 | API | | | | | |
+| QA-ADV-03 | API | | | | | Was pre-seeded Blocked (LB-TEN-1 (export incomplete)) — fixed in v3; re-run |
+| QA-ADV-04 | API | | | | | Was pre-seeded Blocked (LB-TEN-1 (orphaned rows on dissolve)) — fixed in v3; re-run |
+| QA-ADV-05 | API | | | | | Was pre-seeded Blocked (LB-ADM-1 (impersonation write attribution)) — fixed in v3; re-run |
+| QA-ADV-06 | API | | | | | Was pre-seeded Blocked (ADM-2 (staff gate re-escalation)) — fixed in v3; re-run |
+| QA-ADV-07 | API | | | | | |
+| QA-ADV-08 | API/Web | | | | | Was pre-seeded Blocked (LB-UI-4/5 shared-device pref bleed) — fixed in v3 (ADM-9 sign-out clear); re-run both legs |
+| QA-ADV-09 | API | | | | | Was pre-seeded Blocked (ADM-1 (security notice suppressible by prefs)) — fixed in v3; re-run |
+| QA-ADV-10 | API | | | | | Was pre-seeded Blocked (ADM-3 (no per-user MFA lockout)) — fixed in v3; re-run |
+| QA-ADV-11 | Web | | | | | |
+| QA-ADV-12 | API | | | | | |
+| QA-ADV-13 | API | | | | | Was pre-seeded Blocked (LB-BILL-4 (false dunning on first bad webhook)) — fixed in v3; re-run |
+| QA-ADV-14 | API | | | | | Was pre-seeded Blocked (ADM-5 (comp stuck 409 on churned sub)) — fixed in v3; re-run |
+| QA-ADV-15 | Web | | | | | |
+| QA-ADV-16 | Web | | | | | |
+| QA-ADV-17 | API | | | | | |
+| QA-ADV-18 | Web | | | | | Was pre-seeded Blocked (UX-1/LB-UI-1/2 (locale reload drops /join deep-link)) — fixed in v3; re-run |
+| QA-ADV-19 | Web | | | | | |
+| QA-ADV-20 | Web | | | | | |
+| QA-ADV-21 | API | | | | | Was pre-seeded Blocked (DEP-2/3 (no security/cache headers)) — fixed in v3; re-run |
+| QA-ADV-22 | API | | | | | |
+| QA-ADV-23 | Desktop/Android | | | | | Was pre-seeded Blocked (NAT-3 (Release build cleartext localhost base URL)) — fixed in v3; re-run |
+| QA-ADV-24 | Desktop | | | | | |
+| QA-ADV-25 | API | | | | | Was pre-seeded Blocked (LB-AUTH-5) — fixed in v4 T21; re-run |
+| QA-ADV-26 | API | | | | | Was pre-seeded Blocked (JOBS-2) — fixed in v4 T22–T23; re-run |
+| QA-ADV-27 | API | | | | | Was pre-seeded Blocked (LB-AUTH-4) — fixed in v4 T29/T31; re-run |
+| QA-ADV-28 | API | | | | | Was pre-seeded Blocked (AUTH-1) — fixed in v4 T28; re-run |
+| QA-ADV-29 | Web | | | | | Was pre-seeded Blocked (LB-UI-13) — fixed in v4 T31; re-run |
+| QA-ADV-30 | API | | | | | Was pre-seeded Blocked (LB-JOBS-1) — fixed in v4 T37; re-run |
+| QA-ADV-31 | API | | | | | Was pre-seeded Blocked (JOBS-1) — fixed in v4 T39; re-run |
+| QA-ADV-32 | API | | | | | Was pre-seeded Blocked (BILL-2) — fixed in v4 T45; re-run |
+| QA-ADV-33 | Web | | | | | Was pre-seeded Blocked (LB-AUTH-7) — fixed in v4 T34; re-run |
+| QA-ADV-34 | Android/Desktop | | | | | Was pre-seeded Blocked (NAT-12) — fixed in v4 T49; re-run |
+| QA-ADV-35 | Ops | | | | | Was pre-seeded Blocked (OBS-1) — fixed in v4 T41; re-run |
+| QA-DEP-01 | Operator | | | | | |
+| QA-DEP-02 | Operator | | | | | |
+| QA-DEP-03 | Operator | | | | | |
+| QA-DEP-04 | Operator | | | | | |
+| QA-SET-09 | Web + Android | | | | | |
+| QA-AND-16 | Android | | | | | |
 
 **Release gate (suggested):** all 🔴 Smoke + all 🟠 Core cases Pass on Web; the §13c native
 checklist Pass on every platform being shipped (iOS/macCatalyst once those ship); no open
@@ -1916,7 +2963,7 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   pending invites vs `Plan.SeatLimit`, enforced on the invite path → **402 `seat_limit_reached`**, with an
   upgrade message in the Household invite UI) and **metered usage** (`TryConsumeAsync` against a monthly,
   self-resetting `UsageCounter`). Limits are `PlanCatalog` data — `null`/absent = unlimited, so it's inert
-  until set (platform ships example caps: Free 3/3, Pro 10/100). New entity + migration `AddUsageCounter`.
+  until set (platform shipped example caps Free 3/3, Pro 10/100; Free seats were raised to 5 by GATES-1). New entity + migration `AddUsageCounter`.
   Covered by `QuotaServiceTests` (10 cases); **QA-HH-14**; EN/ES. Only **BILLING-6** (trial/dunning) and a
   billing-dissolve contributor remain from the BILLING epic.
 - **Updated 2026-07-01** — **BILLING-6 (trial/dunning):** the owner-facing reaction to the subscription
@@ -1951,10 +2998,19 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   boot-verified it serves in Production when enabled and 404s when off).
 - **Updated 2026-07-01** — **HOOKS-2 (delivery log + replay):** a tenant-facing debug trail. `WebhookDelivery`
   records **one row per delivery attempt** (event, success, status/error, and the sent body; not
-  `ITenantScoped` — written from the tenant-less dispatcher, read side filters by `TenantId`; migration
-  `AddWebhookDelivery`). Owner routes `GET /api/webhooks/{id}/deliveries` + `POST
-  /api/webhooks/deliveries/{id}/replay` (re-enqueue the exact stored payload, same event id). Covered by
-  `WebhookDeliveryLogTests`. **Candidate HOOKS-3 (not built):** a Blazor management UI for webhooks/API keys.
+  `ITenantScoped` — written from both the tenant-less outbox dispatcher and the request-scoped send-test,
+  read side filters by `TenantId`; migration `AddWebhookDelivery`). Owner routes `GET
+  /api/webhooks/{id}/deliveries` + `POST /api/webhooks/deliveries/{id}/replay` (re-enqueue the exact stored
+  payload, same event id). Covered by `WebhookDeliveryLogTests`. **Candidate HOOKS-3 (not built):** a Blazor
+  management UI for webhooks/API keys.
+- **Updated 2026-08-28** — **HOOKS-2 fix (send-test now records a delivery):** the synchronous
+  `POST /api/webhooks/{id}/test` delivered inline but wrote **no** `WebhookDelivery` row, and the sample app
+  fires no published events — so `GET /api/webhooks/{id}/deliveries` was always empty and replay had nothing
+  to replay (QA-API-06 unrunnable). The send-test now records one row per attempt (success **and** failure)
+  via `IWebhookSubscriptionService.SendTestAsync`, so the log doubles as the in-template debug trail and
+  replay is testable. Response shape unchanged (`{ delivered, status_code }`, or `{ delivered:false,
+  error:"delivery_failed" }` on a transport error — internal detail stays in the row, GAP-3). New
+  `WebhookDeliveryLogTests` (`SendTest_RecordsDelivery_*`).
 - **Updated 2026-07-01** — **BILLING-7 (dissolve cleanup):** closed the one real gap — deleting a
   billing-enabled tenant left the Stripe subscription active (still charging). `BillingDataContributor`
   now wipes the `Subscription` projection on dissolve and **cancels the provider subscription** via a
@@ -1999,7 +3055,7 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   needs the restricted `keychain-access-groups` entitlement (MissingEntitlement without it, SIGKILL at
   launch with it) → store entitlement added to `Entitlements.plist` for signed builds, Debug builds swap
   to `Entitlements.Debug.plist` (unsandboxed) + a `DebugFileSessionStore` fallback (`MACCATALYST && DEBUG`
-  only); NATIVE-9 must re-verify SecureStorage under real signing.
+  only); SecureStorage must be re-verified under real signing at the downstream first native release (ADR-024; `NEW_APP_GUIDE.md` Phase 9).
 - **Updated 2026-07-09** — first findings + features from the manual QA pass (`bugfix/qa-manual-pass`):
   (1) **rate-limit split** — passwordless *verify* endpoints got their own per-IP budget (attempt cap +
   headroom, default 10/min) so the cumulative-lockout 401 (QA-AUTH-04) surfaces before the 429 can mask
@@ -2044,3 +3100,73 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   seat their invite reserved) and `/join` shows a "This household is full" state (EN/ES); the token
   stays pending and self-heals on re-upgrade. New **QA-INV-10** (⚙️ automated —
   `SeatQuotaJourneyTests`, fake-provider webhook downgrade). Suite 124 → **125** cases.
+- **Updated 2026-07-14** *(recorded 2026-08-25 — the branch carrying this entry never merged and
+  was recovered during branch housekeeping)* — **FULL MANUAL PASS COMPLETE**: the maintainer
+  finished the entire manual QA process as the plan stood that day — the web suite (the
+  2026-07-09/10 sessions' findings all fixed and merged), the §12–13 native columns (Android +
+  Windows device pass), and the remaining §13b Apple spot-checks (QA-IOS-03 + rest of QA-MAC-03,
+  on top of the 2026-07-06 first run) — **all 125 cases passing, no open findings**. With epic
+  NATIVE closed the same day (ADR-024: distribution is downstream work), this pass is the
+  platform's verification baseline; future passes follow §13c per release and the full plan on
+  native-glue/toolchain changes. *Rider:* everything added below this entry postdates the
+  baseline — the §14a adversarial cases (12 §16 re-run rows) and QA-AND-15 (NATIVE-12) are the
+  open device items on the current plan.
+- **Updated 2026-07-15** — **§14a Adversarial & tenant-isolation (QA-ADV-*)**: 24 new curl/Postman +
+  two-browser-context cases from the **v3 audit**, probing cross-tenant read/write isolation at the
+  **API** layer (RLS-2/4, LB-TEN-1/2), impersonation attribution/confinement (LB-ADM-1, ADM-2/3/5),
+  billing-webhook idempotency + false-dunning (LB-BILL-1/4), session/token lifecycle (LB-AUTH-3,
+  refresh-reuse), preference bleed on shared devices + the locale-reload deep-link break (UX-1,
+  LB-UI-1/2/4/5/10), and deploy/native hardening (DEP-1/2/3, NAT-3/10). **12 cases are EXPECT-FAIL**
+  (assert not-yet-fixed behaviour): ADV-03, 04, 05, 06, 08 (partial), 09, 10, 13, 14, 18, 21, 23 —
+  each formerly carried a **PENDING v3 REMEDIATION** banner (now ✅ v3-landed notes) and their §16 rows are reset for a re-run
+  (never Pass while the finding is open). The other 12 should Pass on current code. §15 gains a
+  QA-ADV traceability block; §16 gains 24 sign-off rows. Suite 125 → **149** cases.
+- **Updated 2026-07-17** — **NATIVE-12 (OAuth process-death resilience)** merged onto develop: an OS
+  kill mid-consent no longer loses the sign-in — an `IOAuthResumeStore` marker (MAUI Preferences)
+  brackets the browser round-trip, the cold-started callback activity stashes the redirect, and
+  `AuthService.TryCompletePendingOAuthAsync` completes the exchange on startup (MFA handoff + 5-min
+  TTL guard; interrupted links land on Settings' banner). New **QA-AND-15** (on-device kill test;
+  renumbered from the branch's QA-AND-14 — that slot went to THEME-1's restart test in the interim).
+  Suite 149 → **150** cases.
+- **Updated 2026-09-07** — **Billing: the checkout return addresses exist.** The hosted checkout sends the
+  browser back to `/billing/success` or `/billing/cancel`, and neither route existed — the first real
+  (test-mode) Stripe checkout on a downstream app's staging ended on the 404 page. Both now route to the
+  Billing page with a banner ("Payment received…" / "Checkout cancelled — nothing changed"); after success
+  the page refetches quietly until the webhook has flipped the plan. QA-BILL-02 rewritten around the return;
+  `NotifyBillingTests.Billing_ReturnFromCheckout_*` pin it. `DEPLOYMENT.md` §3 gains the real-Stripe
+  walkthrough (where the price id hides, the three look-alikes, the webhook events, the test cards).
+  Also the lifecycle's good-news notice: `billing.activated` ("Subscription active", plan + renewal date) on a
+  transition into a granting status (first activation, resubscribe; renewals and trial conversion silent) —
+  `BillingWebhookHandlerTests.SubscriptionActivated_*` pin it; the dunning tests now count dunning notices only.
+  The cancelled state reads honestly: "Your paid subscription ended on <date>" instead of "renews", and no
+  portal button (nothing live to manage; Upgrade is the way back) — `NotifyBillingTests.Billing_CancelledSubscription_*`.
+- **Updated 2026-09-16** — **Android system bars, ported from JiggerJot** (found on a Pixel 10 Pro XL /
+  Android 16 emulator). The status bar was a hard-coded sage whatever the theme, and on the headerless
+  sign-in screen it sat over the page's ground in both themes; it now follows the page (`SystemBarThemeSync`
+  → `ISystemBarTheme`, Android only → `SystemBarColors`, held to app.css by `NativeChromeGateTests`).
+  Current WebViews report the status-bar inset to CSS, so the header's `env(safe-area-inset-top)` added it
+  a second time under `MainActivity`'s padding — the shell now hands the WebView insets with the top spent.
+  And a theme or language picked in the app came undone at the next WebView reload, because the native
+  session keeps its sign-in token across the reload and the reconcile trusted its stale claims — both
+  switchers now remember the saved value in the session after a successful save, with no request
+  (`PreferenceSyncClaimTests`; a first cut refreshed the session instead, which on the web rotated the
+  refresh cookie under a reload and came back signed out).
+  **QA-AND-09**, **QA-AND-13** and **QA-AND-14** carry the new checks. No new cases.
+- **Updated 2026-09-23 (v4 delta audit, Phase 6 — `docs/audits/v4-2026-09/`).** §1's deploy paragraph now
+  describes the Forgejo dispatch deploy (ADR-028) — a merge no longer deploys. New **§14d**: eleven adversarial
+  cases **QA-ADV-25..35**, all **⚠️ PENDING remediation** and pre-recorded **Blocked** in §16 (each names the v4
+  task that flips it), four operator drills **QA-DEP-01..04** for the primary-forge deploy (DEP-02 step 3 and
+  DEP-04 Blocked), and two regressions **QA-SET-09** (#233 theme save across a reload) and **QA-AND-16** (#230
+  trailing-slash API base). 156 → 173 cases.
+- **Updated 2026-10-02** — **CI on billed minutes (ADR-031).** GitHub is the only forge again (ADR-030). A pull
+  request runs the web gates only; the MAUI builds and native smokes run from *Run workflow* → `devices`; deploys
+  run from *Run workflow* → `deploy` behind every web gate. QA-DEP-01..04 rewritten for that (deploy from GitHub,
+  wrong-branch guard, red gate blocks, device legs on request); the Apple-cadence note became the device-legs
+  note.
+- **Updated 2026-10-03 (v4 Later, groups C and D).** §14d's eleven adversarial cases **QA-ADV-25..35** are no
+  longer pending: every remediation they waited on landed in v4 batches B3–B7, so their markers read
+  **Remediated — expected Pass** and their §16 rows are unseeded (run them; a failure is a regression).
+  **QA-ADV-15** counts seats relative to the plan's cap instead of quoting a number (it said "cap 3" after
+  the cap became 5, which left room for both joiners and tested nothing). **QA-SEC-03** (Back after sign-out)
+  is automated by a browser journey that runs with the back/forward cache on. §13c gained the signing-key and
+  no-backup note for Android builds. 173 cases, unchanged.

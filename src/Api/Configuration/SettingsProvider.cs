@@ -30,10 +30,16 @@ public class JwtSettings : IJwtSettings
 public class RefreshTokenSettings : IRefreshTokenSettings
 {
     public int ExpiryDays { get; }
+    public int ReuseGraceSeconds { get; }
+    public int? AbsoluteLifetimeDays { get; }
 
     public RefreshTokenSettings(IConfiguration config)
     {
         ExpiryDays = config.GetValue("RefreshToken:ExpiryDays", 30);
+        ReuseGraceSeconds = config.GetValue("RefreshToken:ReuseGraceSeconds", 60);
+        // Blank, absent or 0 all mean "no absolute lifetime" — the knob ships off (v4 T36, decision #2).
+        var absolute = config.GetValue<int?>("RefreshToken:AbsoluteLifetimeDays");
+        AbsoluteLifetimeDays = absolute is > 0 ? absolute : null;
     }
 }
 
@@ -44,7 +50,7 @@ public class ApplicationSettings : IApplicationSettings
 
     public ApplicationSettings(IConfiguration config)
     {
-        ClientUrl = config["Auth:AppBaseUrl"]?.TrimEnd('/') ?? "https://localhost:7008";
+        ClientUrl = config["Auth:AppBaseUrl"]?.TrimEnd('/') ?? LocalPorts.WebHttpsUrl; // the Web app's https launch profile (local-ports.props)
         NativeCallbackScheme = config["Auth:Native:CallbackScheme"] ?? string.Empty;
     }
 }
@@ -64,6 +70,18 @@ public class PasswordlessSettings : IPasswordlessSettings
         OtpLength = config.GetValue("Auth:Otp:Length", 6);
         OtpMaxAttempts = config.GetValue("Auth:Otp:MaxAttempts", 5);
         OtpLockoutWindowMinutes = config.GetValue("Auth:Otp:LockoutWindowMinutes", 15);
+    }
+}
+
+public class MfaSettings : IMfaSettings
+{
+    public int MaxAttempts { get; }
+    public int LockoutWindowMinutes { get; }
+
+    public MfaSettings(IConfiguration config)
+    {
+        MaxAttempts = config.GetValue("Auth:Mfa:MaxAttempts", 5);
+        LockoutWindowMinutes = config.GetValue("Auth:Mfa:LockoutWindowMinutes", 15);
     }
 }
 

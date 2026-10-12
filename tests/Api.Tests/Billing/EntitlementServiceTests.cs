@@ -26,6 +26,20 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
     }
 
     [Fact]
+    public void GateOff_GrantingSubscription_StillResolvesItsPlan_ByDesign()
+    {
+        // v4 T46 (BILL-1, R128): resolution is GATE-BLIND on purpose. EntitlementService does not read
+        // Billing:Enabled — a row that grants (active/trialing, period not over) resolves to its plan whether the
+        // gate is on or off, so flipping the gate never silently downgrades anyone: a comp keeps working, a Stripe
+        // row from before the gate closed keeps its plan. What "billing off" removes is the SURFACE (routes, comp,
+        // link) — not existing entitlements. BillingPostureCheck says at startup when Stripe-managed rows linger.
+        var granting = new Subscription { PlanKey = PlanKeys.Pro, Status = SubscriptionStatus.Active, CurrentPeriodEnd = null };
+
+        Assert.Equal(PlanKeys.Pro, EntitlementService.ResolvePlanKey(granting, DateTimeOffset.UtcNow));
+        Assert.DoesNotContain("Billing", string.Join(",", typeof(EntitlementService).GetConstructors().Single().GetParameters().Select(p => p.ParameterType.Name))); // no gate dependency
+    }
+
+    [Fact]
     public async Task ActiveProSubscription_GrantsProFeature()
     {
         var tenant = Guid.CreateVersion7();
@@ -53,6 +67,9 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
     [Theory]
     [InlineData(SubscriptionStatus.PastDue)]
     [InlineData(SubscriptionStatus.Canceled)]
+    [InlineData("incomplete")]        // Stripe statuses the projection doesn't model —
+    [InlineData("unpaid")]            // — must fail closed, not default-grant
+    [InlineData("some_future_status")] // an unrecognized status must NEVER grant (v3 TB-BILL, T45b)
     public async Task InactiveSubscription_FailsClosedToFree(string status)
     {
         var tenant = Guid.CreateVersion7();
@@ -62,6 +79,27 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
         var service = new EntitlementService(new EfRepository<Subscription>(db), TimeProvider.System);
 
         Assert.False(await service.HasAsync(Entitlements.ProFeature));
+    }
+
+    [Fact]
+    public void StatusMap_GrantsExactlyActiveAndTrialing_ForEveryDeclaredStatus()
+    {
+        // v3 TB-BILL backfill (T45b): the status map, exhaustively. Every status CONSTANT the entity
+        // declares is classified here by reflection — adding a new constant fails this test until its
+        // granting verdict is recorded, so a "grandfathered"/"paused" addition can't silently grant.
+        var granting = new HashSet<string> { SubscriptionStatus.Active, SubscriptionStatus.Trialing };
+
+        var declared = typeof(SubscriptionStatus)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+            .Select(f => (string)f.GetRawConstantValue()!)
+            .ToList();
+        Assert.NotEmpty(declared); // probe alive
+
+        foreach (var status in declared)
+            Assert.Equal(granting.Contains(status), SubscriptionStatus.IsGranting(status));
+        Assert.False(SubscriptionStatus.IsGranting(null));      // no subscription
+        Assert.False(SubscriptionStatus.IsGranting("unknown")); // fail closed on anything else
     }
 
     [Fact]

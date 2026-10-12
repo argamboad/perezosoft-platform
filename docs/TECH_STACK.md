@@ -22,8 +22,9 @@
 > ⚠️ **RE-VERIFY at project start.** Versions move; search for current stable before committing.
 > Policy: **target the latest _stable_ release, never previews.**
 >
-> **Verified 2026-06-17:** .NET SDK 10.0.301 · ASP.NET Core / EF Core **10.0.9** ·
-> Npgsql.EntityFrameworkCore.PostgreSQL **10.0.2** · PostgreSQL server **17**.
+> **Verified 2026-09-09 (SDK 10.0.401 bump — the 10.0.400 SDK left the machine with a tooling update; earlier 2026-08-25, 2026-06-17):** .NET SDK **pinned in `global.json` (10.0.401, rollForward disable)** — the single source of truth
+> (CI `setup-dotnet` + both Dockerfile image tags follow it; v3 audit DEP-4) · ASP.NET Core / EF Core
+> **10.0.11** · Npgsql.EntityFrameworkCore.PostgreSQL **10.0.3** · PostgreSQL server **17**.
 > Note: `Guid.CreateVersion7()` (time-ordered UUIDv7) is supported in .NET 9+ — already used in
 > `Tenant.cs`. PostgreSQL 18 adds a native `uuidv7()` SQL function but is not required for this.
 
@@ -100,7 +101,7 @@ Spun up via `docker compose up -d`. Copy `.env.example` → `.env` and adjust be
 
 | Service | Image | Default port(s) | Purpose |
 |---------|-------|-----------------|---------|
-| `db` | `postgres:17` | `${DB_PORT:-5432}` (committed `.env.example` sets **5433**) | PostgreSQL — matches production DB engine |
+| `db` | `postgres:17.11` | `${DB_PORT:-5432}` (committed `.env.example` sets **5433**) | PostgreSQL — matches production DB engine |
 | `mail` | `axllent/mailpit:latest` | SMTP `${MAIL_SMTP_PORT:-1025}`, UI `${MAIL_UI_PORT:-8025}` | Local SMTP trap for passwordless + invitation emails |
 
 Both services have healthchecks. When the API container is added to compose (per-project), it should declare `depends_on: db: condition: service_healthy`.
@@ -111,8 +112,8 @@ Port variables allow multiple projects to run simultaneously without conflicts.
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `Microsoft.AspNetCore.Authentication.Google` | 10.0.9 | Google OAuth provider |
-| `Microsoft.AspNetCore.Authentication.MicrosoftAccount` | 10.0.9 | Microsoft OAuth provider |
+| `Microsoft.AspNetCore.Authentication.Google` | 10.0.11 | Google OAuth provider |
+| `Microsoft.AspNetCore.Authentication.MicrosoftAccount` | 10.0.11 | Microsoft OAuth provider |
 | `MailKit` | 4.17.0 | SMTP email sending (magic links, invitations) |
 
 **Adding a new OAuth provider:** install the provider package, add `.AddXxx(options => ...)` in
@@ -147,7 +148,11 @@ Production reads the same keys from real environment variables, never a committe
   `ActivitySource` (not the beta EF Core instrumentation). Exporter config-gated: OTLP when
   `OpenTelemetry:Otlp:Endpoint` is set, else nothing (or console via `OpenTelemetry:ConsoleExporter`).
 - **`Otp.NET` 1.4.1** — authenticator-app TOTP (MFA-1 / ADR-012); the standard RFC-6238 math behind the
-  encrypted per-user secret and step-up verification.
+  encrypted per-user secret and step-up verification. **Supply-chain note (v3 audit TOOL-4/R66):** the
+  package is effectively single-maintainer, and it sits on the MFA path — accepted because the surface
+  is tiny (RFC-6238 HMAC math, no I/O, no network) and it is **confined to `MfaService`** (arch-tested:
+  `OtpNet_IsConfinedToMfaService`), so swapping it for another RFC-6238 implementation — or ~30 lines of
+  inline HMAC — is a one-file change behind `IMfaService`. Review releases before bumping the pin.
 - **`AWSSDK.S3` 4.0.100** — the S3-compatible `IFileStorage` implementation (FILES-3 / ADR-010; works
   with AWS S3, MinIO, R2, DO Spaces). Selected only when `Storage:S3:*` is configured; else local disk.
 - **`Swashbuckle.AspNetCore` 7.2.0** — the leak-free public OpenAPI document at

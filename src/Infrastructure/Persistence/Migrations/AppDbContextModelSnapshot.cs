@@ -17,7 +17,7 @@ namespace Perezosoft.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -119,6 +119,9 @@ namespace Perezosoft.Infrastructure.Persistence.Migrations
                     b.Property<string>("EntityType")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<Guid?>("ImpersonatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Metadata")
                         .HasColumnType("jsonb");
@@ -372,6 +375,9 @@ namespace Perezosoft.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("GraceUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("boolean");
 
@@ -387,6 +393,15 @@ namespace Perezosoft.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RotatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("SessionExpiresAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
@@ -672,8 +687,14 @@ namespace Perezosoft.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("EnrolledAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("FailedAttemptCount")
+                        .HasColumnType("integer");
+
                     b.Property<long?>("LastVerifiedTimeStep")
                         .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");

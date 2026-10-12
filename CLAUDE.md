@@ -8,12 +8,28 @@
 _TODO_ — full context in `docs/PROJECT_BRIEF.md`.
 
 ## Read before you act
-- **Writing or modifying ANY code → `docs/audits/v2-2026-07/FOUNDATION_RULES.md` (v1.0, R1–R35) is
-  binding.** It encodes the post-audit invariants (tenancy, second-factor/event replay, SSRF,
-  fail-closed normalization, atomic quotas, per-user erasure, injected clocks, slice boundaries) as
-  machine-enforced arch tests + CI gates. Comply; if a task seems to require violating a rule, stop and
-  surface it. The frozen quality bar lives in `CONTRIBUTING.md`.
+- **Writing or modifying ANY code → `docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md` (v3.0: R1–R35
+  from v1.0, R36–R76 from v2.0, R81–R158 minus the retired R94, R138 and R156; R77–R80 retired) is
+  binding.** It encodes the post-audit invariants (tenancy incl. the RLS backstop parity, second-factor/
+  event replay, SSRF, fail-closed normalization, atomic quotas + single-use credentials, per-user AND
+  per-tenant erasure completeness, injected clocks, slice boundaries, host parity, doc/Postman sync — and
+  since v4: refresh-grace one-shot, durable outbox accounting, redirect-refusing webhooks, web-only PR CI with on-request device legs (ADR-031),
+  Release-build guards, the course-coverage and rule-id gates) as machine-enforced arch tests + CI gates;
+  `tests/Api.Tests/RulesEnforcement.cs` names the check behind every `[machine]` rule. Comply; if a task
+  seems to require violating a rule, stop and surface it. The frozen quality bar lives in `CONTRIBUTING.md`
+  (v2.0 at `docs/audits/v3-2026-07/FOUNDATION_RULES_v2.md` and v1.0 at
+  `docs/audits/v2-2026-07/FOUNDATION_RULES.md` remain as the historical layers).
+- **Hardening the template (or a clone) → follow `docs/audits/AUDIT_SUITE.md`.** The single repeatable
+  super-audit (5 diagnostic/gate phases + QA-paranoia + docs/course currency) that produced the `audits/v*`
+  runs. It's **triggered, not routine** — run it on a structural core change, a new wave of epics, a major
+  dependency bump, or before generating a production app (at minimum re-run its Phase 4 adversarial slice
+  pass). Between triggers, keep the gates green instead of re-auditing.
 - Touching the schema or entities → read **`docs/DATA_MODEL.md`** first.
+- **Changing code, a diagram or a rule that the course quotes → reconcile the lesson in the same PR.**
+  `docs/tutorial/` teaches this codebase by quoting it; a lesson that quotes yesterday's code teaches a
+  bug. Run `python docs/tutorial/gen_coverage.py --check-quotes` (what CI runs): it names every lesson
+  whose quote no longer matches the tree. Fix the lesson, then regenerate `COVERAGE.md`
+  (`python docs/tutorial/gen_coverage.py`) and the PDF (`python docs/tutorial/gen_tutorial_pdf.py`).
 - Implementing a screen or flow → read **`docs/FEATURES.md`** first.
 - Starting a build slice → read **`docs/WAYS_OF_WORKING.md`** (slices, story format, PR/commit
   conventions).
@@ -30,7 +46,8 @@ _TODO_ — full context in `docs/PROJECT_BRIEF.md`.
 
 ## Golden rules — constant (do not violate)
 1. **Tenant-scoped, not user-scoped.** App data belongs to the tenant; never leak across tenants.
-   Tenant entities implement `ITenantScoped` and are filtered automatically by a global EF query
+   Tenant entities implement `ITenantScoped` (or `ISharedOrTenantScoped` for shared-or-owned catalog rows, Arch A4)
+   and are filtered automatically by a global EF query
    filter (see ADR-003); genuinely cross-tenant/pre-auth reads use the sanctioned escape hatch
    `IRepository<T>.QueryAllTenants()`, and signature-/system-authenticated tenant-scoped writes
    (the billing webhook, admin impersonation) enter their tenant via `ITenantContext.EnterTenant`.
@@ -61,7 +78,8 @@ _TODO_ — full context in `docs/PROJECT_BRIEF.md`.
 _TODO_
 
 ## Tech stack (see `docs/TECH_STACK.md`)
-- **Versions:** latest stable on the current .NET line — **re-verified 2026-07-14: .NET SDK 10.0.302 (WASM/ILLink SDK assets 10.0.10), ASP.NET Core / EF Core packages 10.0.9, Npgsql.EF 10.0.2, PostgreSQL 17.** CI floats on `dotnet-version: 10.0.x`, so an SDK patch can outrun the committed `packages.lock.json` (NU1004 in locked-mode restore) — fix = regenerate with the new SDK (`dotnet restore --force-evaluate`), and re-check the Apple legs' Xcode requirement while at it (the iOS/macCatalyst workload floats with the SDK; ci.yml pins the WORKLOAD SET to the image's default Xcode — non-default Xcodes on the runner images can be incomplete, so bump that pin only together with the image's default Xcode).
+- **Versions:** latest stable on the current .NET line — **.NET SDK 10.0.401 (pinned in `global.json`, the single source of truth, with `rollForward: disable` — the 2026-08 drift showed `latestPatch` let runners outrun both the lockfiles and the MCR image catalog), ASP.NET Core / EF Core packages 10.0.11, Npgsql.EF 10.0.3, PostgreSQL 17.** The SDK is **pinned, not floating** (v3 audit DEP-4): CI's `setup-dotnet` reads `global-json-file: global.json`, and both Dockerfile image tags (`sdk:10.0.401` build, `aspnet:10.0.11` runtime) match it — so a runner-image SDK patch can't outrun the committed `packages.lock.json` (the WASM SDK injects patch-sensitive implicit packages → NU1004 in locked-mode restore).
+  - **Bump-together playbook** (do all of these in ONE PR when moving the SDK): ① edit `global.json` `version`; ② `dotnet restore --locked-mode` on the new SDK, and regenerate (`dotnet restore --force-evaluate`) only the lockfiles that fail — a bump that changes no package graph needs none (PR #220 skipped them all with no harm; v4 DEP-24); ③ bump the two `Dockerfile` tags — build `sdk:X` and runtime `aspnet:Y` where Y = the ASP.NET **package** line in `Directory.Packages.props` (the `SdkPin_HasOneSource` gate checks exactly that; the SDK's bundled runtime may be newer, and the packages move on their own schedule — 2026-09-09: SDK 10.0.401 bundles 10.0.12 while the packages and the runtime image stay 10.0.11); ④ reconcile the version strings in this file + `docs/TECH_STACK.md` + `docs/DEPLOYMENT.md`; ⑤ re-check the Apple legs' Xcode requirement (the iOS/macCatalyst workload moves with the SDK; `ci.yml` pins the WORKLOAD SET to the image's default Xcode — non-default Xcodes on the runner images can be incomplete, so bump that pin only together with the image's default Xcode);
 - **Backend:** ASP.NET Core Web API behind a clean API boundary.
 - **Web frontend:** Blazor WebAssembly; UI components in a shared **RCL** (hard rule).
 - **DB:** PostgreSQL via **EF Core (Npgsql)**; schema/migrations generated from `docs/DATA_MODEL.md`.
@@ -86,7 +104,8 @@ _TODO_
   tenant query scoping.
 
 ## API documentation (constant)
-- **The Postman collection mirrors the API — and the repo copy is canonical.** Any change to API
+- **The Postman collection mirrors the API — and the repo copy is canonical (ADR-023; the
+  `PostmanParityTests` CI gate enforces the floor).** Any change to API
   endpoints (route, verb, path/query params, request/response shape, auth requirements, or error
   codes) must update **`docs/postman/Perezosoft.postman_collection.json`** (+ the environment
   files when config/env expectations change) in the same slice. Controllers in
@@ -98,8 +117,8 @@ _TODO_
   the `*.postman_environment.json` files (one per deploy target), never in the collection.
 - Copies in the Postman app/workspace are **mirrors, never the source** (not versioned or
   reviewed). CI keeps the workspace mirror fresh: the `postman-sync` workflow pushes
-  `docs/postman/**` to the workspace on every `develop` change (needs `POSTMAN_API_KEY` secret +
-  `POSTMAN_WORKSPACE_ID` variable; syncs by name — see `docs/postman/README.md`). Edits made in
+  `docs/postman/**` to the workspace on every GitHub `develop` change (needs `POSTMAN_API_KEY` secret +
+  `POSTMAN_WORKSPACE_ID` variable set on GitHub — both are; syncs by name — see `docs/postman/README.md`). Edits made in
   the Postman UI are overwritten on the next sync.
 
 ## Scope discipline
@@ -115,29 +134,38 @@ deferred items without an explicit decision.
 - Seed data (if any) — _TODO_.
 - Concrete schema (EF Core migrations) — generated from `docs/DATA_MODEL.md`.
 - **User stories: generated per-epic at build time**, under `docs/stories/` (one file per epic).
-- Deferred sub-decisions: non-web framework commitment (see `docs/TECH_STACK.md`). Hosting is now
-  **decided** (ADR-017: Render free single-origin + Neon + Brevo) — built by epic `DEPLOY`.
+- Non-web framework: **decided and built** — MAUI Blazor Hybrid ships all four native shells
+  (epic `NATIVE` ✅ complete 2026-07-14, ADR-018; signing/stores are downstream per ADR-024, resolving the 2026-07-06 amendment's gate). Hosting is
+  likewise **decided** (ADR-017: Render free single-origin + Neon + Brevo) — built by epic `DEPLOY`.
 
 ## Doc map
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` (root) | This file — operating manual, auto-loaded |
+| `_PLATFORM_PRIMER.md` (root) | Conceptualization primer — paste into a NEW project chat to pre-load the constant decisions and jump straight to what the app does |
+| `docs/NEW_APP_GUIDE.md` | **The onboarding spine** — every phase from idea to production, in order, linking the detailed doc per step |
+| `docs/OVERVIEW.md` | Friendly platform tour (PM/power-user/developer/architect) — no codebase knowledge assumed |
 | `docs/PROJECT_BRIEF.md` | Why/what/scope (lean PRD) + OUT list |
 | `docs/FEATURES.md` | User flows & behavior |
 | `docs/DATA_MODEL.md` | Entities, relationships, derived rules |
 | `docs/TECH_STACK.md` | Stack choices + rationale |
 | `docs/DECISIONS.md` | ADR log (the "why") |
+| `docs/ARCHITECTURE.md` | Mermaid diagram layer — solution map, seams, per-subsystem class diagrams; drawn from the code, ADR-cross-linked |
+| `docs/FLOWS.md` | Sequence diagrams for the core call stacks (auth, tenancy, outbox, billing webhook, dissolve) + the OTP line-level walkthrough |
 | `docs/WAYS_OF_WORKING.md` | Slices, story format, commit/PR conventions |
-| `docs/REBRANDING.md` | Every brand touchpoint to replace per app — **incl. the email templates** |
+| `docs/audits/AUDIT_SUITE.md` | **The repeatable super-audit** — 5 diagnostic/gate phases + QA-paranoia + docs/course currency; triggered, not routine; `audits/v1..v3` are its worked runs |
+| `docs/REBRANDING.md` | Every brand touchpoint to replace per app — **incl. the email templates**, the §0 solution/namespace rename and the §6 template-only material |
+| `docs/brand/build_assets.py` | Regenerates every brand raster (PNGs, `favicon.ico`, store set) from the SVG sources — REBRANDING §3; a downstream app swaps the SVGs and runs it |
 | `docs/LOCALIZATION.md` | i18n setup (EN/ES live) + how to add a language |
 | `docs/MOBILE_TESTING.md` | Run/sign-in on the Android emulator (adb reverse, OAuth) |
-| `docs/QA_TEST_PLAN.md` | Manual QA plan — step-by-step tests across web + all four native platforms (123 cases: smoke + regression + §13c native release checklist) |
-| `docs/ROADMAP.md` | Sequenced plan — pillars done (JOBS/BILLING/OBS) + the next waves (RBAC, files, GDPR, MFA, …) |
-| `docs/STATUS.md` | 2026-07-04 status snapshot + operator guides — native QA pass, Apple first-run smoke (MacBook walkthrough), prod activation; SaaS-readiness assessment |
+| `docs/QA_TEST_PLAN.md` | Manual QA plan — step-by-step tests across web + all four native platforms (173 cases: smoke + regression + §14a v3-audit adversarial/tenant-isolation + §14c pre-launch gates + §14d v4-audit adversarial + forge deploy drills + §13c native release checklist) |
+| `docs/ROADMAP.md` | Sequenced plan — pillars + all waves done (terminal state 2026-07-14) + the **post-terminal cost wave** (`LOCALCI` — local/self-hosted CI) + the **flavors wave** (`FLAVORS` — spec + conformance kit, then React/Angular/Flutter fronts, Node/Go/Spring/FastAPI backs, Expo for true-native mobile, tiered DBs incl. SQL Server; both planned 2026-09-08) |
+| `docs/STATUS.md` | 2026-07-04 status snapshot + operator guides — native QA pass (✅ 2026-07-14), Apple first-run smoke (MacBook walkthrough), prod activation (⤵ downstream Phase-8 runbook, ADR-017 amendment); SaaS-readiness assessment |
 | `docs/PLATFORM_BACKLOG.md` | Per-item design sketches for the future foundation slices (the detail behind ROADMAP) |
 | `docs/stories/` | User stories per epic — generated at build time |
+| `docs/stories/ui.md` | epic `UI` ✅ COMPLETE — **retrospective** (v3 T59, closing v2 DOC-22): the four 2026-07 web-UI slices that shipped without a story file — UI-1 GDPR export/erasure UI, UI-2 MFA UI, UI-3 notification bell/prefs UI, UI-4 staff `/admin` console; defines what QA §2 + the traceability matrix cite |
 | `docs/stories/billing.md` | epic `BILLING` ✅ COMPLETE — entitlements + Checkout + webhook + Portal (1–4) + seat/usage quotas (5, `IQuotaService`) + trial/dunning (6, `IBillingNotifier` + lapse sweep via NOTIFY) + dissolve cleanup (7, `BillingDataContributor` cancels the provider sub + wipes the projection) + billing page (8, `GET /api/billing` summary + `/billing` UI, fake-provider E2E upgrade loop) + seat re-check at invitation accept (9, 2026-07-14: downgrade left stale invites joinable past the cap → 402 `seat_limit_reached` + `/join` "household full" state, self-heals on upgrade); ADR-006 |
-| `docs/stories/async-jobs.md` | epic `JOBS` ✅ COMPLETE — outbox+dispatcher, inbox, scheduler (ADR-007) |
+| `docs/stories/async-jobs.md` | epic `JOBS` ✅ COMPLETE — outbox+dispatcher, inbox, scheduler (ADR-007); JOBS-4 (2026-09-16) file attachments on `IEmailSender` (≤ 7 MiB raw total / 10 MiB on the wire, ≤ 20 parts, strict media type + safe name, validated before enqueue — pass the `CancellationToken` by name) |
 | `docs/stories/observability.md` | epic `OBS` ✅ COMPLETE — logging, OpenTelemetry, health, append-only audit log (ADR-008) |
 | `docs/stories/rbac.md` | epic `RBAC` ✅ COMPLETE — `admin` role + permission seam (RBAC-1) + owner-only role change (RBAC-2) + admin-aware roster UI (RBAC-3); ADR-009 |
 | `docs/stories/files.md` | epic `FILES` ✅ COMPLETE — `IFileStorage` local/S3, tenant-scoped keys, signed URLs (FILES-1 abstraction, FILES-2 download, FILES-3 S3); ADR-010 |
@@ -151,8 +179,15 @@ deferred items without an explicit decision.
 | `docs/stories/prefs.md` | epic `PREFS` ✅ COMPLETE — per-user preference sync (PREFS-1, ADR-022): Settings → Preferences card (language + theme switchers, signed-in home); `AuthService.SignedIn` event → `MainLayout` reconciles on EVERY sign-in path (not just cold starts); two-way sync (server wins; never-set server value adopts the device choice — a pre-auth login-page pick becomes the account pref; never while impersonating); locale mismatch = persist + ONE reload (WASM satellite assemblies — reverts B7-3's in-process switch); "system" stored verbatim (null = never chose). Fixes QA-I18N-02 (was: locale unreachable from UI) + theme-after-OTP-sign-in instability; E2E `LocaleChoice_FollowsTheUser_AcrossBrowsers` (suite 31→32), QA-I18N-02 now ⚙️ automated |
 | `docs/stories/e2e.md` | epic `E2E` ✅ COMPLETE — Playwright journeys (suite 7→26 tests): E2E-1 RBAC roster; E2E-2 billing seat-quota 402 UX; E2E-3 notification bell/prefs (list/mark-read covered via ADMIN-3 announcements); E2E-4 magic-link sign-in (happy + single-use); E2E-5 membership lifecycle (transfer/leave/dissolve/delete-account); BILLING-8 added the fake-provider upgrade-loop journey. Health = DEPLOY-3 smoke, not a browser test |
 | `docs/stories/deploy.md` | epic `DEPLOY` ✅ COMPLETE — staging/prod on the free tier: DEPLOY-1 single-origin (API serves the WASM) + config-gated forwarded headers; DEPLOY-2 Dockerfile + compose parity + `render.yaml` + `docs/DEPLOYMENT.md` (staging live, all 4 sign-in paths verified); DEPLOY-3 CI deploy pipeline (develop→staging auto + version-gated smoke, main→prod gated) + QA §1.5; ADR-017 |
-| `docs/DEPLOYMENT.md` | Deployment runbook (DEPLOY-2/3) — Render + Neon + Brevo free-tier bring-up; `Dockerfile` + `render.yaml` reference; required env incl. the Production Stripe-key guard; §6 CI-gated auto-deploy |
-| `docs/stories/native.md` | epic `NATIVE` 🚧 — full MAUI parity (Android/Windows/iOS/macOS): NATIVE-1 ✅ CI build gate (all 4 TFMs; Apple legs on develop pushes — 10× macOS minutes; Maui lockfile excluded by design) + NATIVE-2 ✅ parity audit → gaps G1–G6 + NATIVE-4b ✅ join-by-invite-code on /join (G5 closed; E2E suite 26→28) + NATIVE-5 ✅ culture bootstrap (G6 closed: ICulturePersistence seam, MAUI Preferences + MauiProgram bootstrap; Windows-verified via WebView2 CDP) + NATIVE-3 ✅ downloads (G1 closed: Content-Disposition attachment + IFileDownloadLauncher — web same-tab download, native OS share sheet; E2E suite 28→29); + NATIVE-4 ✅ (G2 refresh-on-resume AppResumeNotifier + G3 Android back handler) — Wave 2 COMPLETE, all six gaps closed; NATIVE-6 QA plan authored (117 cases: DSK-08..14, AND-07..13, iOS/mac first-run smoke, release checklist) + G7 Apple-boot fix (iOS/macCatalyst crashed at startup — WebAuthenticator initiator generalized + Info.plist schemes); **Apple column UNPINNED 2026-07-06** — §13b run on the maintainer's MacBook: QA-IOS-01/02/04 + QA-MAC-01/02 + OAuth PASS (two gaps fixed in PR #125: SMTP revocation knob + Catalyst Debug session store); NATIVE-7 ✅ COMPLETE smokes for all four platforms in CI (Windows WebView2-CDP + Android emulator playwright-core _android + iOS-simulator & Mac Catalyst boot-to-login canaries in one `native-smoke-apple` job — WKWebView has no CDP, so they assert process-alive + provider-probe-200, no UI driving; native-paths gate skips Apple/smoke legs on docs-only pushes; deploy-staging concurrency); next: remaining §13b spot-checks + Windows/Android device pass; NATIVE-8/9/10 signed AAB/MSIX/IPA/pkg + NATIVE-11 store submission (needs Apple Developer account; NATIVE-9 must re-verify SecureStorage under real signing); ADR-018 |
+| `docs/DEPLOYMENT.md` | Deployment runbook (DEPLOY-2/3) — Render + Neon + Brevo free-tier bring-up; `Dockerfile` + `render.yaml` reference; required env incl. the Production Stripe-key guard; §6 CI-gated deploys — a manual GitHub *Run workflow* (`deploy` = staging/prod) behind every web gate (ADR-031); §10 the retired Forgejo era (ADR-028 → ADR-030), a pointer only |
+| `docs/stories/localci.md` | epic `LOCALCI` — **SUPERSEDED 2026-10-02 by ADR-030: GitHub is the forge again** (Forgejo archived read-only, runners stopped; since the CI rebuild (ADR-031) PRs run backend + web UI only and device legs + Render deploys run only from a manual *Run workflow*). History: **LOCALCI-4 🚧 (2026-09-16, ADR-028): Forgejo is the primary forge (`origin`; GitHub = `github` remote, pushed to on purpose) and runs the FULL pipeline from `.forgejo/workflows/` on the desk's runners (`ubuntu-latest` + `ubuntu-host-ports` in WSL, `windows-latest` host mode; Apple legs wait for `vars.CI_MACOS_RUNNER`); pushes/PRs run gates + `e2e` + native builds (≈10 min); native SMOKES and DEPLOYS only from "Run workflow" (`smokes` / `deploy` inputs) or the Monday schedule; a deploy fast-forwards `develop`/`main` on GitHub (Render follows GitHub; GitHub re-deploys the same commit, accepted) then fires the Render hook; `ForgejoCiParityTests` (R80) holds the two workflow copies together — edit BOTH, runbook `DEPLOYMENT.md` §10; supersedes LOCALCI-1 here.** **LOCALCI-3 ✅ shipped 2026-09-11** (built downstream in jigger-jot, ported here and to vuelto the same day): `changes` computes `code`/`native`/`docs` from the diff and every non-deploy job gates on it, so a docs-only push stops billing ~30 minutes for markdown. **`secret-scan` and `qa-artifacts` NEVER gate on code** — a docs commit can leak a credential, and editing the QA plan without regenerating the PDFs is the only way to break the artifacts check, so gating it would blind CI to exactly what it catches (a test enforces both halves). Fails OPEN on an unknown diff base. The Apple SMOKE (87 billed min, macOS at 10×) moves to a Monday cron + dispatch until `vars.CI_MACOS_RUNNER` is set; the Apple BUILD still runs per develop push, so compile rot is caught within one merge. ⚠️ A green develop run is NOT a green Apple smoke — see QA §13c before shipping a native client. Original plan (2026-09-08) — local + self-hosted CI, pick-up-ready: LOCALCI-1 variable-driven `runs-on` (`vars.CI_{LINUX,WINDOWS,MACOS}_RUNNER` → self-hosted, hosted fallback; deploys stay hosted; R77 tripwire; runner install runbook → DEPLOYMENT §10; ADR-025 draft in the file) · LOCALCI-2 land `ci-local.ps1` (extract from the STALE unpushed `ci/local-gates` branch, never merge it) + R78 pin/gate-list tripwire · LOCALCI-3 paths gate for every non-deploy job + weekly Apple smoke in hosted mode. Measured: ≈190 billed min per develop code push, ≈157 of them macOS/Windows |
+| `docs/stories/flavors.md` | program `FLAVORS` 📋 PLANNED (2026-09-08) — the platform as a stack-neutral **spec** + conformance kit, pick-up-ready: `SPEC` (SPEC-1 extract contract into a `spec` repo, SPEC-2 R1–R76 restated as outcomes + classified K/S/P/X, SPEC-3 kit = Newman 79 requests + 37 journeys + QA-ADV adversarial + DB probes as one Docker image, SPEC-4 test-id contract from the 95 existing ids, SPEC-5 conformance matrix + version protocol) → `FRONT-REACT` (FR-1..8 screen ladder + Capacitor/Tauri) → `BACK-NODE` (BN-1..11 slice ladder) → `BACK-GO` → Spring+Angular → FastAPI → `NATIVE-RN`/`FRONT-FLUTTER`/`DB-SQLSERVER`/`SCAFFOLD` on demand; ADR-026 + spec ADRs S-001..S-003 drafted inside |
+| `docs/stories/gates.md` | epic `GATES` ✅ COMPLETE on the platform (2026-09-11; downstream port to vuelto + jigger-jot still open) — **pre-launch gates**, both deployment config, both cleared on launch day (ADR-027): GATES-1 `Billing:Enabled` default-off (billing controllers + provider webhook removed from the application model ⇒ 404; client hides the link and refuses `/billing`; every tenant without a granting subscription resolves Free via `PlanCatalog.Get`'s fail-closed fallback (resolution is gate-blind — v4 T46); Free seats **3→5**; billing-off seat-limit/full-household copy so nothing offers an upgrade that has no provider account behind it) · GATES-2 signup green list (`Signup:AllowedEmails`/`AllowedDomains`, empty = open) — the list decides **who may found a household**; a valid pending invitation admits its addressee iff that invitation's tenant **owner** is green-listed (owner, not inviter, so a non-listed admin can still invite into their owner's household). Gates **account creation only, never sign-in**, at the single choke point `UserService.CreateUserWithTenantAsync`; deliberately does NOT fire at magic-link/OTP **issue** time (that would be a user-enumeration oracle) |
+| `docs/stories/test-toolchain.md` | epic `TOOLS` 📋 PLANNED (2026-10-03, v4 audit T65) — keep the test projects on maintained packages: TOOLS-1 move `Api.Tests`/`Core.Tests`/`Ui.Tests` from `xunit` 2.9.3 (NuGet: Legacy) to `xunit.v3` (test projects become executables, `IAsyncLifetime` returns `ValueTask` — 10 fixtures in `Api.Tests`, new analyzers under `TreatWarningsAsErrors`; order Core → Ui → Api) · TOOLS-2 ✅ `NUnit3TestAdapter` 5.0.0 → 6.3.0, which dropped the deprecated transitive `Microsoft.ApplicationInsights` from `E2E.Tests` |
+| `docs/stories/apple-signin.md` | epic `APPLE` ⏸ DEFERRED (ADR-005) — Sign in with Apple as a third OAuth provider on the provider-agnostic stack; needs the paid Apple Developer Program, so it is picked up web-first when there is a business need; prerequisites and stories are written |
+| `docs/tutorial/` | **The course** — teaches the platform by rebuilding it, quoting the real code: `OUTLINE.md` (the lesson plan), `lessons/` (one file per lesson), `CONCEPTS.md`, `FRONTMATTER.md`, the generated `COVERAGE.md` (every tracked file → the lesson that builds it; an unmapped file fails CI) and `PEREZOSOFT_COURSE.pdf`. Generators: `gen_coverage.py` (`--check`, `--check-quotes` — both run in CI beside the QA artifacts), `gen_diagrams.py` (renders the lessons' Mermaid from ARCHITECTURE/FLOWS; needs node), `gen_tutorial_pdf.py`. Reconcile rule: "Read before you act" |
+| `docs/qa-runs/` | Filled QA run logs — `2026-08-run-log.md` is the 2026-08 full pass (every web/API-runnable case, with evidence) — plus `helpers/`, the small scripts a co-pilot run uses (mint a JWT, fetch links from Mailpit, MFA codes, the adversarial drills). A new pass adds a new dated log; the plan itself is `docs/QA_TEST_PLAN.md` |
+| `docs/stories/native.md` | epic `NATIVE` ✅ COMPLETE (2026-07-14 — NATIVE-6 device pass green; distribution moved downstream, ADR-024) — full MAUI parity (Android/Windows/iOS/macOS): NATIVE-1 ✅ CI build gate (all 4 TFMs; Apple legs on develop pushes — 10× macOS minutes; Maui lockfile excluded by design) + NATIVE-2 ✅ parity audit → gaps G1–G6 + NATIVE-4b ✅ join-by-invite-code on /join (G5 closed; E2E suite 26→28) + NATIVE-5 ✅ culture bootstrap (G6 closed: ICulturePersistence seam, MAUI Preferences + MauiProgram bootstrap; Windows-verified via WebView2 CDP) + NATIVE-3 ✅ downloads (G1 closed: Content-Disposition attachment + IFileDownloadLauncher — web same-tab download, native OS share sheet; E2E suite 28→29); + NATIVE-4 ✅ (G2 refresh-on-resume AppResumeNotifier + G3 Android back handler) — Wave 2 COMPLETE, all six gaps closed; NATIVE-6 QA plan authored (117 cases: DSK-08..14, AND-07..13, iOS/mac first-run smoke, release checklist) + G7 Apple-boot fix (iOS/macCatalyst crashed at startup — WebAuthenticator initiator generalized + Info.plist schemes); **Apple column UNPINNED 2026-07-06** — §13b run on the maintainer's MacBook: QA-IOS-01/02/04 + QA-MAC-01/02 + OAuth PASS (two gaps fixed in PR #125: SMTP revocation knob + Catalyst Debug session store); NATIVE-7 ✅ COMPLETE smokes for all four platforms in CI (Windows WebView2-CDP + Android emulator playwright-core _android + iOS-simulator & Mac Catalyst boot-to-login canaries in one `native-smoke-apple` job — WKWebView has no CDP, so they assert process-alive + provider-probe-200, no UI driving; native-paths gate skips Apple/smoke legs on docs-only pushes; deploy-staging concurrency); **NATIVE-6 ✅ FULL PASS 2026-07-14** — the maintainer completed the entire manual QA process as the plan stood then (125 cases incl. the leftover §13b spot-checks), no open findings; post-pass additions (§14a re-runs + QA-AND-15) are the open device items; **NATIVE-8..11 (signing/installers/stores) ⤵ MOVED DOWNSTREAM (ADR-024)** — per-app work, checklist in `NEW_APP_GUIDE.md` Phase 9, Wave 4 kept as reference incl. the two signing-identity re-verify traps (packaged-MSIX SecureStorage + Apple keychain-access-groups); ADR-018 |
 | `docs/NATIVE_PARITY.md` | NATIVE-2 audit — WebView-vs-browser deltas × platform × screen (✅/⚠️/🔍 verdicts); gap register G1–G6 → Wave-2 slices; maintainer rules (index.html sync, emailed links land on web, forceLoad = leaves the app) |
 | `docs/postman/` | **Postman collection for the whole API** (collection + per-env environments: local, staging/Render + README) — chained OTP sign-in w/ Mailpit auto-fetch, token rotation, all surfaces incl. config-gated PUBAPI/HOOKS and the admin writes. **CI-mirrored to the Postman workspace** (`postman-sync` on develop; one-way, repo canonical); rename on rebrand (incl. the workflow's file path) |
 | `.env.example` | **Config catalog** — every configurable key + its default (CONFIGURATION REFERENCE block) + the compiled-in "not configurable" limits; CI-enforced source of truth (`ConfigKeys_ReadInCode_AreDocumented`) |

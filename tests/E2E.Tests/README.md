@@ -4,7 +4,26 @@ End-to-end tests that drive a real browser against the running Web app + API, re
 codes from **Mailpit** (the same flow a manual tester uses). They cover the QA plan's web
 smoke path that doesn't need an external OAuth provider.
 
-## Prerequisites
+## Run it — one command
+
+```sh
+pwsh tools/e2e.ps1                                   # the whole suite
+pwsh tools/e2e.ps1 -Filter "FullyQualifiedName~Billing"   # a slice
+pwsh tools/e2e.ps1 -Gates                            # the gates-off lane: billing off + a one-domain green list, GateJourneyTests only
+```
+
+`tools/e2e.ps1` starts this repo's `db` + `mail` containers, builds, installs Chromium, then runs the API and the web
+app **with the E2E overrides as command-line settings** — mail into this repo's Mailpit, the raised sign-in rate
+limit, the fake billing provider, the test staff address — waits until both answer, runs the suite and stops both.
+Like CI, the run gets its own database: `e2e`, dropped and recreated in this repo's Postgres container each time and
+migrated + seeded by the API at startup, so the journeys see CI's seed data (not your grown dev catalog) and your dev
+database never collects test users and households.
+Your `.env` is never touched, so it can keep real mail (Brevo) and Stripe test keys for everyday development. It
+refuses to start if an API or web app is already listening on this repo's ports (that one would send real mail).
+Ports come from the compose defaults and launch profiles (README → Local ports). The manual steps below are what
+the script does.
+
+## Prerequisites (manual run)
 
 1. **Backing services** — `docker compose up -d` (Postgres + Mailpit).
 2. **API — must send email to Mailpit, not a real provider.** The dev default
@@ -16,11 +35,15 @@ smoke path that doesn't need an external OAuth provider.
    dotnet run --project src/Api --launch-profile https -- \
      --Email:Smtp:Host=localhost --Email:Smtp:Port=1025 --Email:Smtp:Username= --Email:Smtp:Password= \
      --Auth:RateLimit:PasswordlessPermitLimit=1000 \
+     --Auth:RateLimit:RefreshPermitLimit=1000 \
      --Admin:StaffEmails:0=e2e-staff@example.com \
+     --Billing:Enabled=true \
      --Billing:Stripe:SecretKey=
    ```
    The `Admin:StaffEmails` entry enables the admin-console journey (ADMIN-3); it must match
-   `AnnouncementJourneyTests.StaffEmail`. The empty `Billing:Stripe:SecretKey` forces the
+   `AnnouncementJourneyTests.StaffEmail`. **`Billing:Enabled=true` is required** — billing ships gated
+   OFF (GATES-1, ADR-027), which removes `/api/billing` from the route table entirely, so without it
+   the billing and seat-quota journeys hit 404s. The empty `Billing:Stripe:SecretKey` forces the
    **FakeBillingProvider** even if your `.env` has Stripe test keys — the billing journey
    (BILLING-8) depends on the fake's deterministic checkout URLs and `valid` webhook signature.
    CI sets the same overrides. Tests that call the API directly (the billing webhook) use
@@ -31,6 +54,19 @@ smoke path that doesn't need an external OAuth provider.
    CI sets the same override for its E2E job.
 3. **Web** — `dotnet run --project src/Web --launch-profile https` (serves <https://localhost:7008>).
 4. **Browser (once)** — `pwsh tests/E2E.Tests/bin/Debug/net10.0/playwright.ps1 install chromium`.
+
+Every full navigation goes through `BlazorBoot` (page objects, magic-link opens, reloads): it waits for
+Blazor's loader to hand over to the app, and if the loader dies of a **network** cause — a failed
+`_framework/*` fetch, a loader that never finishes — it reloads the page the browser landed on (up to
+three times per navigation; a busy CI machine does that). Blazor's own "An unhandled error has occurred"
+banner with nothing failed on the network is the app's startup exception and fails at once, unretried.
+Each test process has an allowance of three dead boots in all (`BlazorBootCore.DeadBootsPerRun`); the
+fourth fails whatever its reload would have done, and CI's "Slowest journeys" step counts the same lines
+from the `.trx` and fails the shard past that number. `BlazorBoot` also keeps the browser console per
+page, which every red journey prints. Use `BlazorBoot.GotoAsync(page, url)` rather than
+`page.GotoAsync(url)` for anything that boots the app — a gate (`E2eNavigations_GoThroughBlazorBoot`)
+keeps it that way, because a retry that re-issued the navigation re-spent single-use URLs. The decision
+itself is `BlazorBootCore.cs`, Playwright-free and unit-tested from `Api.Tests` (`BlazorBootTests`).
 
 ## Run
 

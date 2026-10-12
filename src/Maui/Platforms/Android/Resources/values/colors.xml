@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#6B8A72</color>
-    <color name="colorPrimaryDark">#465D4D</color>
+    <!-- The brand tokens from app.css: colorPrimary and colorAccent are its bs-primary, colorPrimaryDark
+         its brand-dark (NativeChromeGateTests holds them equal). The status bar itself is painted at
+         runtime to follow the page's theme: see SystemBarColors in AndroidSystemBarTheme.cs. -->
+    <color name="colorPrimary">#465D4D</color>
+    <color name="colorPrimaryDark">#2F3D33</color>
     <color name="colorAccent">#465D4D</color>
 </resources>

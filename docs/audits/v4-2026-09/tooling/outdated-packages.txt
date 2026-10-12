@@ -1,0 +1,61 @@
+   > AWSSDK.S3                                                    4.0.100     4.0.100    4.0.103.3
+   > AngleSharp                                     1.5.2       1.5.2      1.8.2  
+   > MailKit                                                      4.17.0      4.17.0     4.18.0   
+   > Microsoft.AspNetCore.App.Internal.Assets                   10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Authentication.Google                   10.0.11     10.0.11    10.0.12  
+   > Microsoft.AspNetCore.Authentication.JwtBearer           10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Authentication.MicrosoftAccount         10.0.11     10.0.11    10.0.12  
+   > Microsoft.AspNetCore.Components.Authorization              10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Components.Authorization      10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Components.Web                10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Components.WebAssembly                10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Components.WebAssembly.DevServer      10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Components.WebAssembly.Server      10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.Components.WebView.Maui      10.0.20     10.0.20    10.0.110
+   > Microsoft.AspNetCore.DataProtection.EntityFrameworkCore      10.0.11     10.0.11    10.0.12  
+   > Microsoft.AspNetCore.Mvc.Testing               10.0.11     10.0.11    10.0.12
+   > Microsoft.AspNetCore.TestHost                  10.0.11     10.0.11    10.0.12
+   > Microsoft.EntityFrameworkCore.Design                         10.0.11     10.0.11    10.0.12  
+   > Microsoft.EntityFrameworkCore.Design                    10.0.11     10.0.11    10.0.12
+   > Microsoft.EntityFrameworkCore.Relational       10.0.11     10.0.11    10.0.12
+   > Microsoft.Extensions.Http                                  10.0.11     10.0.11    10.0.12
+   > Microsoft.Extensions.Localization                  10.0.11     10.0.11    10.0.12
+   > Microsoft.Extensions.Logging.Debug                10.0.0      10.0.0     10.0.12 
+   > Microsoft.Extensions.TimeProvider.Testing      10.7.0      10.7.0     10.10.0
+   > Microsoft.Maui.Controls                           10.0.20     10.0.20    10.0.110
+   > Microsoft.NET.ILLink.Tasks                                 10.0.11     10.0.11    10.0.12
+   > Microsoft.NET.Sdk.WebAssembly.Pack                         10.0.11     10.0.11    10.0.12
+   > Microsoft.NET.Test.Sdk                         17.14.1     17.14.1    18.10.1
+   > Microsoft.NET.Test.Sdk          17.14.1     17.14.1    18.10.1
+   > Microsoft.NET.Test.Sdk         17.14.1     17.14.1    18.10.1
+   > Microsoft.Playwright.NUnit      1.60.0      1.60.0     1.62.0 
+   > NUnit                           4.3.2       4.3.2      4.6.1  
+   > NUnit.Analyzers                 4.7.0       4.7.0      4.15.0 
+   > NUnit3TestAdapter               5.0.0       5.0.0      6.3.0  
+   > OpenTelemetry.Exporter.Console                          1.16.0      1.16.0     1.19.1 
+   > OpenTelemetry.Exporter.OpenTelemetryProtocol            1.16.0      1.16.0     1.19.1 
+   > OpenTelemetry.Extensions.Hosting                        1.16.0      1.16.0     1.19.1 
+   > OpenTelemetry.Instrumentation.AspNetCore                1.16.0      1.16.0     1.19.0 
+   > OpenTelemetry.Instrumentation.Http                      1.16.0      1.16.0     1.19.0 
+   > OpenTelemetry.Instrumentation.Runtime                   1.18.0      1.18.0     1.19.0 
+   > Stripe.net                                                   52.1.0      52.1.0     52.4.2   
+   > Swashbuckle.AspNetCore                                  7.2.0       7.2.0      10.2.3 
+   > System.IdentityModel.Tokens.Jwt                    8.19.1      8.19.1     8.23.0 
+   > Testcontainers.Minio                           4.12.0      4.12.0     4.15.0 
+   > Testcontainers.PostgreSql                      4.12.0      4.12.0     4.15.0 
+   > bunit                                          2.7.2       2.7.2      2.11.3 
+   > coverlet.collector                             6.0.4       6.0.4      10.0.1 
+   > coverlet.collector              6.0.4       6.0.4      10.0.1 
+   > coverlet.collector             6.0.4       6.0.4      10.0.1 
+   > xunit.runner.visualstudio                      3.1.4       3.1.4      4.0.0  
+   > xunit.runner.visualstudio      3.1.4       3.1.4      4.0.0  
+Project `Perezosoft.Api.Tests` has the following updates to its packages
+Project `Perezosoft.Api` has the following updates to its packages
+Project `Perezosoft.Core.Tests` has the following updates to its packages
+Project `Perezosoft.E2E.Tests` has the following updates to its packages
+Project `Perezosoft.Infrastructure` has the following updates to its packages
+Project `Perezosoft.Maui` has the following updates to its packages
+Project `Perezosoft.Shared.Ui` has the following updates to its packages
+Project `Perezosoft.Ui.Tests` has the following updates to its packages
+Project `Perezosoft.Web` has the following updates to its packages
+The given project `Perezosoft.Core` has no updates given the current sources.

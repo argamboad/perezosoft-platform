@@ -73,15 +73,15 @@ public class WebhookSubscriptionServiceTests(PostgresFixture fixture) : Postgres
     [Fact]
     public async Task List_IsTenantScoped()
     {
-        var mine = Guid.CreateVersion7();
-        var other = Guid.CreateVersion7();
-        await using (var db = Fixture.CreateContext(mine)) await Build(db).CreateAsync(Creator, "https://mine.test/h", ["ping"], default);
-        await using (var db = Fixture.CreateContext(other)) await Build(db).CreateAsync(Creator, "https://theirs.test/h", ["ping"], default);
+        var pair = await TwoTenants.SeedAsync(async tenant =>
+        {
+            await using var db = Fixture.CreateContext(tenant);
+            return (await Build(db).CreateAsync(Creator, $"https://{tenant:N}.test/h", ["ping"], default))!.Subscription.Id;
+        });
 
-        await using var read = Fixture.CreateContext(mine);
+        await using var read = Fixture.CreateContext(pair.Mine);
         var list = await Build(read).ListAsync(default);
-        Assert.Single(list);
-        Assert.Equal("https://mine.test/h", list[0].Url);
+        Assert.Equal(pair.MineSeed, Assert.Single(list).Id);
     }
 
     [Fact]
@@ -124,5 +124,13 @@ public class WebhookSubscriptionServiceTests(PostgresFixture fixture) : Postgres
     private static WebhookSubscriptionService Build(Perezosoft.Infrastructure.Persistence.AppDbContext db, WebhookSecretProtector? protector = null) =>
         new(new EfRepository<WebhookSubscription>(db), new EfRepository<WebhookDelivery>(db),
             new EfOutbox(db, TimeProvider.System), new TestCurrentTenant(),
-            new TokenGenerator(), protector ?? NewProtector(), new AllowAllUrlGuard(), TimeProvider.System);
+            new TokenGenerator(), protector ?? NewProtector(),
+            new WebhookSender(new HttpClient(new UnusedHandler()), new AllowAllUrlGuard()), // send test not exercised here
+            new AllowAllUrlGuard(), new Perezosoft.Infrastructure.Audit.AuditLog(new EfRepository<AuditEvent>(db), TimeProvider.System), TimeProvider.System);
+
+    private sealed class UnusedHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("These tests do not send test webhooks.");
+    }
 }

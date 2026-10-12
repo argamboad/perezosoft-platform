@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Perezosoft.Api.Models;
+using Perezosoft.Api.Configuration;
 using Perezosoft.Api.Services;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Billing;
@@ -29,8 +30,11 @@ public class AdminController(
     IJwtTokenService jwt,
     INotificationService notifications,
     IMfaService mfaService,
+    IRefreshTokenService refreshTokens,
     IOutbox outbox,
     IUnitOfWork unitOfWork,
+    BillingSettings billing,
+    ILogger<AdminController> logger,
     TimeProvider clock) : AdminApiControllerBase(staff)
 {
     // Impersonation tokens are deliberately short-lived and non-refreshable (ADR-014).
@@ -111,6 +115,11 @@ public class AdminController(
     [HttpPut("tenants/{id:guid}/subscription")]
     public async Task<IActionResult> SetSubscription(Guid id, [FromBody] AdminSetSubscriptionRequest request, CancellationToken cancellationToken)
     {
+        // Part of the billing surface (GATES-1, ADR-027; v4 T45): while the gate is off nobody holds Pro, staff
+        // included — the action does not exist, before the staff check, exactly like the billing routes.
+        if (!billing.Enabled)
+            return NotFound();
+
         var (staffUserId, denied) = await RequireStaffAsync(cancellationToken);
         if (denied is not null)
             return denied;
@@ -130,7 +139,7 @@ public class AdminController(
                 return NotFound(new ErrorResponse("tenant_not_found", "Tenant not found"));
 
             var subscription = await subscriptions.Query().FirstOrDefaultAsync(cancellationToken);
-            if (subscription?.StripeSubscriptionId is not null)
+            if (subscription is { IsProviderManaged: true })
                 return Conflict(new ErrorResponse("provider_managed",
                     "This tenant has a live provider subscription; manage its plan at the billing provider."));
 
@@ -173,6 +182,9 @@ public class AdminController(
     [HttpDelete("tenants/{id:guid}/subscription")]
     public async Task<IActionResult> RemoveSubscription(Guid id, CancellationToken cancellationToken)
     {
+        if (!billing.Enabled)
+            return NotFound(); // gated with the comp (v4 T45)
+
         var (staffUserId, denied) = await RequireStaffAsync(cancellationToken);
         if (denied is not null)
             return denied;
@@ -187,7 +199,7 @@ public class AdminController(
             var subscription = await subscriptions.Query().FirstOrDefaultAsync(cancellationToken);
             if (subscription is null)
                 return NoContent(); // already Free — nothing to revert
-            if (subscription.StripeSubscriptionId is not null)
+            if (subscription.IsProviderManaged)
                 return Conflict(new ErrorResponse("provider_managed",
                     "This tenant has a live provider subscription; cancel it at the billing provider instead."));
 
@@ -230,11 +242,13 @@ public class AdminController(
             if (tenant is null)
                 return NotFound(new ErrorResponse("tenant_not_found", "Tenant not found"));
 
-            // Optional subset: notify only the requested members (intersect with actual membership so a
-            // stray/non-member id can't notify someone outside this tenant). No list ⇒ every member.
+            // Targeting: a MISSING list (null) ⇒ every member; a PRESENT list ⇒ exactly its intersection
+            // with actual membership — so an explicitly-empty [] notifies NO ONE, not everyone (v3 audit
+            // LB-ADM-2). Intersecting also stops a stray/non-member id from reaching outside this tenant.
+            var targeted = request.UserIds is not null;
             var members = await tenants.GetMembersAsync(id, cancellationToken);
-            var recipients = (request.UserIds is { Count: > 0 } wanted
-                ? members.Where(m => wanted.Contains(m.UserId))
+            var recipients = (targeted
+                ? members.Where(m => request.UserIds!.Contains(m.UserId))
                 : members).ToList();
 
             foreach (var member in recipients)
@@ -242,7 +256,7 @@ public class AdminController(
                     metadata: null, cancellationToken);
 
             await audit.RecordAsync("admin.announcement.sent", staffUserId, nameof(Tenant), id.ToString(),
-                new { member_count = recipients.Count, targeted = request.UserIds is { Count: > 0 } }, cancellationToken);
+                new { member_count = recipients.Count, targeted }, cancellationToken);
             await auditEvents.SaveChangesAsync(cancellationToken);
             await scope.CommitAsync(cancellationToken);
 
@@ -259,7 +273,7 @@ public class AdminController(
     [HttpPost("announce-all")]
     public async Task<IActionResult> AnnounceAll([FromBody] AdminAnnounceRequest request, CancellationToken cancellationToken)
     {
-        var (_, denied) = await RequireStaffAsync(cancellationToken);
+        var (staffUserId, denied) = await RequireStaffAsync(cancellationToken);
         if (denied is not null)
             return denied;
 
@@ -271,14 +285,17 @@ public class AdminController(
                 $"Title (max {AnnounceTitleMaxLength} chars) and body (max {AnnounceBodyMaxLength} chars) are required."));
 
         // Stage the fan-out message and commit it. The handler (AdminBroadcastOutboxHandler) does the
-        // per-user delivery out-of-band. SaveChangesAsync flushes the staged message before commit
-        // (CommitAsync itself does not save).
+        // per-user delivery out-of-band. This platform-wide broadcast spans all tenants so it has no
+        // in-tenant audit row; the durable outbox message carries the acting staff id so the largest-
+        // blast-radius admin write is still attributable (v3 audit ADM-6). SaveChangesAsync flushes the
+        // staged message before commit (CommitAsync itself does not save).
         await using var scope = await unitOfWork.BeginTransactionAsync(cancellationToken);
         await outbox.EnqueueAsync(AdminBroadcastOutboxHandler.MessageType,
-            JsonSerializer.Serialize(new AdminBroadcastPayload(title, body)), tenantId: null, cancellationToken);
+            JsonSerializer.Serialize(new AdminBroadcastPayload(title, body, staffUserId)), tenantId: null, cancellationToken);
         await auditEvents.SaveChangesAsync(cancellationToken);
         await scope.CommitAsync(cancellationToken);
 
+        logger.LogWarning("admin.announce-all by staff {StaffUserId}", staffUserId); // platform-wide action → operational record
         return Accepted(new AdminBroadcastResponse { Status = "queued" });
     }
 
@@ -340,10 +357,15 @@ public class AdminController(
         if (target is null)
             return NotFound(new ErrorResponse("user_not_found", "User not found"));
 
-        // Wipe, notification, and the in-tenant audit commit atomically.
+        // Wipe, session revocation, notification, and the in-tenant audit commit atomically.
         await using var scope = await unitOfWork.BeginTransactionAsync(cancellationToken);
         if (!await mfaService.ResetAsync(userId, cancellationToken))
             return NoContent(); // nothing enrolled — idempotent no-op
+
+        // Revoke the target's refresh tokens (v3 audit ADM-7): a reset is also a compromise-recovery
+        // primitive, and an attacker's existing sessions would otherwise survive the second-factor wipe.
+        // Enlists in this transaction (set-based UPDATE), so it commits with the wipe.
+        await refreshTokens.RevokeAllUserTokensAsync(userId, cancellationToken);
 
         await notifications.NotifyAsync(userId, AdminMfaResetNotification.Kind,
             AdminMfaResetNotification.Title, AdminMfaResetNotification.Body,
@@ -359,7 +381,12 @@ public class AdminController(
                 await auditEvents.SaveChangesAsync(cancellationToken); // inside EnterTenant: the audit row stamps into the target tenant
             }
         else
+        {
+            // A tenant-less user has no tenant-scoped audit trail to write to (ADM-11 — a full platform-scoped
+            // audit sink is deferred). Leave a durable operational record of this high-privilege staff action.
+            logger.LogWarning("admin.mfa.reset by staff {StaffUserId} for tenant-less user {UserId}", staffUserId, userId);
             await auditEvents.SaveChangesAsync(cancellationToken); // flush the staged notification
+        }
 
         await scope.CommitAsync(cancellationToken);
         return NoContent();
