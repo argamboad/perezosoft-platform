@@ -323,7 +323,7 @@ public class DocsAreTrueTests
     [InlineData(".github/workflows/ci.yml")]
     public void CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts(string workflow) // v4 audit TR-19/TR-12 (T61), R114/R115
     {
-        // The course lives in perezosoft-platform; a downstream app has no docs/tutorial (its R114/R115/R118 say NotHere).
+        // The course lives in perezosoft-platform; a downstream app has no docs/tutorial, and this fact holds nothing there.
         if (!Directory.Exists(Path.Combine(RepoRoot(), "docs", "tutorial"))) return;
         // gen_coverage.py only ran when someone remembered to; the map claimed 901 files and 0 unmapped while the
         // generator found 903 and 1, and lessons quoted code the repo no longer had. The qa-artifacts job — which
