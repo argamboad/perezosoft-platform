@@ -327,16 +327,20 @@ public class DocsAreTrueTests
         if (!Directory.Exists(Path.Combine(RepoRoot(), "docs", "tutorial"))) return;
         // gen_coverage.py only ran when someone remembered to; the map claimed 901 files and 0 unmapped while the
         // generator found 903 and 1, and lessons quoted code the repo no longer had. The qa-artifacts job — which
-        // never gates on the changes classifier, so a docs-only push runs it — checks both on every push.
+        // never gates on the code classifier, so a docs-only change runs it — checks both whenever the course or a
+        // file a lesson quotes changed, or a file was added or deleted (the classifier's `course` output, Pkg 1.4; its cases are in tests/ci-logic).
         var ci = File.ReadAllText(Path.Combine(RepoRoot(), workflow)).ReplaceLineEndings("\n");
         var job = ci[ci.IndexOf("\n  qa-artifacts:", StringComparison.Ordinal)..];
         job = job[..job.IndexOf("\n  license-scan:", StringComparison.Ordinal)];
         Assert.Contains("python docs/tutorial/gen_coverage.py --check\n", job);
         Assert.Contains("python docs/tutorial/gen_coverage.py --check-quotes\n", job);
+        Assert.Contains("- name: Course coverage and quote currency\n        if: needs.changes.outputs.course == 'true'\n", job);
+        Assert.Contains("python3 docs/tutorial/gen_coverage.py --quoted-files", ci);
         // ...and the generator honours those flags (a renamed flag would silently check nothing).
         var generator = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "tutorial", "gen_coverage.py"));
         Assert.Contains("\"--check\" in sys.argv", generator);
         Assert.Contains("\"--check-quotes\" in sys.argv", generator);
+        Assert.Contains("\"--quoted-files\" in sys.argv", generator);
     }
 
     [Fact]

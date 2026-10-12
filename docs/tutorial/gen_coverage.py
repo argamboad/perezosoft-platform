@@ -15,6 +15,8 @@ Run from the repo root:  python docs/tutorial/gen_coverage.py
                   stale quote. A block the reader writes and the repo does not keep is headed
                   `// path (yours)`.
   --orphans       files the map assigns to a lesson whose text never names them (informational)
+  --quoted-files  every repo file a lesson quotes, one per line: CI's classifier runs the course check
+                  only when the course or one of these changes (Pkg 1.4). Reads no git.
 """
 from __future__ import annotations
 
@@ -726,6 +728,14 @@ def check_quotes(root: Path) -> int:
     return 1 if stale else 0
 
 
+def quoted_files(root: Path) -> int:
+    """The repo files the lessons quote: a change must touch one of them (or the course) for the quote check to matter."""
+    paths = {path for lesson in (root / LESSONS_DIR).glob("*.md")
+             for path, note, _ in quoted_blocks(lesson.read_text(encoding="utf-8")) if not note.startswith("(yours")}
+    print("\n".join(sorted(paths)))
+    return 0
+
+
 def orphans(root: Path, by_lesson: dict[str, list[tuple[str, str]]]) -> int:
     """Files a lesson is credited with but never names — not a failure, a reading list for the next reconcile."""
     count = 0
@@ -749,7 +759,9 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     if "--check-quotes" in sys.argv:
         return check_quotes(root)
-    check = "--check" in sys.argv
+    if "--quoted-files" in sys.argv:
+        return quoted_files(root)
+    check ="--check" in sys.argv
     files = subprocess.run(
         ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=True
     ).stdout.splitlines()

@@ -738,7 +738,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (124 files)
+## 8.3 — The deploy pipeline & CI gates (137 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -753,6 +753,19 @@
 - `tests/ci-logic/cases/changes-classifier/build-props/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/files/added.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-only/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-only/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-only/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/doc-a-test-reads/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -1085,7 +1098,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (255 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (259 files)
 
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
@@ -1323,6 +1336,10 @@
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `tests/E2E.Tests/README.md` — docs
 - `tests/E2E.Tests/journey-seconds.tsv` — CI tuning data: measured seconds per journey so the e2e shards are dealt evenly (Env L28)
+- `tests/ci-logic/cases/changes-classifier/course-added-file/files/docs/tutorial/lessons/1.1-fixture.md` — docs
+- `tests/ci-logic/cases/changes-classifier/course-backend-only-skips/files/docs/tutorial/lessons/1.1-fixture.md` — docs
+- `tests/ci-logic/cases/changes-classifier/course-only/files/docs/tutorial/lessons/1.1-fixture.md` — docs
+- `tests/ci-logic/cases/changes-classifier/course-quoted-file/files/docs/tutorial/lessons/1.1-fixture.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/base.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/colon-separator-reformatted/files/head.md` — docs
 - `tests/ci-logic/cases/qa-runlog-append-only/executed-row-rewritten/files/base.md` — docs
@@ -1343,4 +1360,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1176 tracked files · 808 built in lessons · 368 bucketed · 0 unmapped
+**Totals:** 1193 tracked files · 821 built in lessons · 372 bucketed · 0 unmapped
