@@ -21,14 +21,18 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (19 files)
+## 1.1 — Solution, projects & supply chain (24 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
+- `Directory.Build.targets` — imported after every project: the local source switch's second half (Pkg 2.4)
 - `Directory.Packages.props` — Central Package Management (R25/R27)
 - `Perezosoft.slnx`
+- `build/PlatformSource.props` — the local source switch: PLATFORM_SOURCE in .env turns platform packages into project references to a checkout (Pkg 2.4, ADR-034)
+- `build/PlatformSource.targets` — the local source switch: PLATFORM_SOURCE in .env turns platform packages into project references to a checkout (Pkg 2.4, ADR-034)
 - `global.json` — single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles
 - `nuget.config` — NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)
+- `platform-packages.props` — the platform's package map: package id -> the project that packs it, read by an app's source switch (Pkg 2.4)
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
 - `src/Api/Properties/launchSettings.json`
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
@@ -38,6 +42,7 @@
 - `src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Properties/launchSettings.json`
 - `tests/Api.Tests/Perezosoft.Api.Tests.csproj` — created here; PackageReferences added as lessons need them
+- `tests/Api.Tests/PlatformSourceTests.cs` — the local source switch: every packable project is in the package map; the switch reads .env and never touches the committed lockfile (Pkg 2.4)
 - `tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/E2E.Tests/Perezosoft.E2E.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
@@ -1384,4 +1389,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1217 tracked files · 843 built in lessons · 374 bucketed · 0 unmapped
+**Totals:** 1222 tracked files · 848 built in lessons · 374 bucketed · 0 unmapped

@@ -53,6 +53,12 @@
   <Import Project="$(MSBuildThisFileDirectory)local-ports.props" />
 
   <!--
+    The local source switch (Pkg 2.4, ADR-034): PLATFORM_SOURCE in .env, or -p:PlatformSource=…, builds an app against a
+    platform checkout instead of the packages. Decided here; the references are swapped in Directory.Build.targets.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)build/PlatformSource.props" />
+
+  <!--
     The platform stamp travels with the API (Arch A2, R160): platform-stamp.json is copied beside the binaries of the
     *.Api project (and so into the published container), where /api/version reads the platform commit this build is
     synced to. The test host reads the same copy.

@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    The platform's package map (Pkg 2.4, ADR-034): every package the platform publishes, and the project in this repo
+    that packs it. An app's local source switch (build/PlatformSource.targets, PLATFORM_SOURCE in the app's .env) reads
+    this file FROM THE PLATFORM CHECKOUT it points at, and turns each PackageReference listed here into a
+    ProjectReference to that project. PlatformSourceTests holds it to the packable projects: add a line in the same
+    commit that makes a project packable.
+  -->
+  <ItemGroup>
+    <PlatformPackage Include="Perezosoft.Platform.DryRun" Source="tools/release/dry-run/Perezosoft.Platform.DryRun.csproj" />
+  </ItemGroup>
+</Project>
