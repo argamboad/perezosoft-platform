@@ -1,0 +1,3 @@
+VERSION=0.0.1-dry.1
+DRY_RUN=true
+REF_NAME=pkg/m2-adr-feed

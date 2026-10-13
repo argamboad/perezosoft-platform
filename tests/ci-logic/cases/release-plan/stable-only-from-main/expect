@@ -1,0 +1,3 @@
+exit 1
++::error::a stable release (no prerelease suffix) comes only from main
+-tag=

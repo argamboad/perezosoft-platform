@@ -1,0 +1,3 @@
+exit 1
++::error::a release comes from develop or main, not pkg/m3-backend
+-tag=
