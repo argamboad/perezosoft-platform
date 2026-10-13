@@ -2046,3 +2046,19 @@ DataProtection purposes) stands; its downstream convention and Backlog §10's "d
 is the *Platform packaging* project (platform milestones M2–M7): jigger-jot converts on the beta as the pilot (a
 clone restructured to references, compared side by side with its current tree), vuelto on 1.0, and new apps start
 from the starter (`dotnet new`). Until an app converts, it stays a clone kept in step by the port tool.
+
+*Amendment (2026-10-13, Pkg 2.5, #430) — what the publisher keeps, and what the brand map never renames.* The first
+port of M2 into jigger-jot (jigger-jot#192) showed two holes. (1) The release machinery — `release.yml`, the note
+template, `tools/release/**` (the dry-run package), its ci-logic cases and `platform-packages.props` — only makes sense
+in the publisher, yet the port forced it on the app, and removing it failed five gates. It is now a fifth ownership
+class, **`producer`**: the port tool never writes it downstream (an old copy is reported for removal), the manifest
+leaves it out, and the gates that read it run only in the platform (`PlatformOwnership.IsThePlatform`: the stamp's
+commit is null); `ProducerFiles_ExistInThePlatform_AndNowhereElseAreDemanded` keeps them demanded here. (2) The brand map
+renamed the platform's package ids (`Perezosoft.Platform.*` → `JiggerJot.Platform.*`) and the feed key — so, once an app
+referenced a platform package, its source mapping would have missed it (sending it to nuget.org's `*`: a
+dependency-confusion opening) and the source switch would never fire. `platform-ownership.json` now carries a
+**`keep`** list (`Perezosoft.Platform.`, `key="perezosoft"`) that the port tool reads from the platform commit it ports
+to and never rewrites; `PlatformOwnership.LocalPath` spells paths with the same list. The gate hashes the app's own text,
+where a kept token is already the platform's, so the list changes no hash — the tool and the gate agree by construction,
+and the port-tool test proves it on a real port. The ci-logic course cases now declare `requires` the course and skip
+in an app; `no-course-here` runs everywhere.

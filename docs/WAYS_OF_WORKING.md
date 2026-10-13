@@ -250,6 +250,10 @@ each package id to the project that packs it, which `PlatformSourceTests` holds 
 - **The committed lockfile is safe.** While the switch is on, restore writes its lock to
   `obj/platform-source.packages.lock.json` and never runs in locked mode; switch off and the committed
   `packages.lock.json` is checked again, unchanged.
+- **The ids are the platform's in every app.** The port never renames `Perezosoft.Platform.*` or the feed key
+  `perezosoft` (the ownership map's `keep` list, Pkg 2.5), so `nuget.config`'s source mapping and this switch both key
+  on the same ids downstream. The map itself (`platform-packages.props`) lives only in the platform: the switch reads
+  it from the checkout it points at.
 - **CI never sets it**, so a pull request always builds against the released packages. A platform change an app needs
   ships as a release (DEPLOYMENT §12) before the app's PR can rely on it.
 - A path that is not a platform checkout fails the build, instead of quietly building against the packages.
