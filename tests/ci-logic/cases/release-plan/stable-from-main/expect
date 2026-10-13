@@ -1,0 +1,4 @@
+exit 0
++tag=v1.0.0
++prerelease=false
++pack=Perezosoft.slnx

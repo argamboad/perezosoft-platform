@@ -1,0 +1,180 @@
+name: Release
+
+# Pkg 2.3 (ADR-034 §7): the platform's packages leave this repo only from here, and only by hand.
+#   - A manual "Run workflow" (ADR-031: no push trigger, no schedule). About 5 billed minutes a run.
+#   - The version is a git tag `v<version>` that MinVer reads (Directory.Build.props): every packable project packs
+#     at exactly that version. Prereleases (`1.0.0-alpha.1`) from develop or main; a stable version only from main.
+#   - Order: plan (the version is checked before anything is built) → tag locally → pack → push the packages to
+#     GitHub Packages → push the tag → publish the release note. A failed push leaves no tag behind.
+#   - dry_run: packs only tools/release/dry-run (Perezosoft.Platform.DryRun) at a `-dry.` version, pushes it, restores
+#     it back the way an app would, and writes the note to the run's summary. No tag is pushed, no GitHub release.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without the v: 1.0.0-alpha.1, 1.0.0 — or 0.0.1-dry.1 with dry_run"
+        required: true
+        type: string
+      dry_run:
+        description: Dry run — pack and publish only the sample package (tools/release/dry-run)
+        type: boolean
+        default: false
+      schema_change:
+        description: "Release note — Schema change: no / yes: what to migrate and which ApplyPlatformStep(...)"
+        type: string
+        default: "no"
+      register_change:
+        description: "Release note — Register change: none / the files and the port recipe"
+        type: string
+        default: "none"
+      breaking:
+        description: "Release note — Breaking: no / yes: what an app must change"
+        type: string
+        default: "no"
+
+permissions:
+  contents: read
+
+# One release at a time, and never cancelled halfway: a release half-pushed is worse than a slow one.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write   # the tag and the GitHub release
+      packages: write   # push to GitHub Packages (the GITHUB_TOKEN, never a personal token)
+    env:
+      FEED: https://nuget.pkg.github.com/argamboad/index.json
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false # v4 audit DEP-14: never leave the job token in .git/config
+          fetch-depth: 0             # MinVer reads the tags and the history
+
+      - id: plan
+        name: Plan — check the version, the branch and the tag
+        env:
+          VERSION: ${{ inputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # ci-logic begin: release-plan
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$'; then
+            echo "::error::$VERSION is not a semantic version (1.0.0, 1.0.0-alpha.1; no leading v)"; exit 1
+          fi
+          case "$VERSION" in *-dry.*) isdry=true ;; *) isdry=false ;; esac
+          if [ "$DRY_RUN" = "true" ]; then
+            [ "$isdry" = true ] || { echo "::error::a dry run publishes only a -dry. version (0.0.1-dry.1), not $VERSION"; exit 1; }
+            pack=tools/release/dry-run/Perezosoft.Platform.DryRun.csproj
+          else
+            [ "$isdry" = false ] || { echo "::error::a -dry. version is for a dry run only — tick dry_run, or drop the suffix"; exit 1; }
+            case "$REF_NAME" in
+              main) ;;
+              develop) case "$VERSION" in *-*) ;; *) echo "::error::a stable release (no prerelease suffix) comes only from main"; exit 1 ;; esac ;;
+              *) echo "::error::a release comes from develop or main, not $REF_NAME"; exit 1 ;;
+            esac
+            pack=Perezosoft.slnx
+          fi
+          if git tag --list | grep -qxF "v$VERSION"; then
+            echo "::error::tag v$VERSION already exists — a version is released once; pick the next one"; exit 1
+          fi
+          case "$VERSION" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          {
+            echo "tag=v$VERSION"
+            echo "prerelease=$prerelease"
+            echo "pack=$pack"
+            echo "dry=$DRY_RUN"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release v$VERSION (prerelease=$prerelease, dry=$DRY_RUN) packing $pack from $REF_NAME"
+          # ci-logic end: release-plan
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Tag locally (MinVer reads it)
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -a "$TAG" -m "Release $TAG"
+
+      - name: Pack
+        env:
+          PACK: ${{ steps.plan.outputs.pack }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          dotnet restore "$PACK" --locked-mode
+          dotnet pack "$PACK" -c Release --no-restore -o artifacts
+          ls artifacts/*.nupkg >/dev/null 2>&1 || { echo "::error::nothing was packed — no project is IsPackable yet"; exit 1; }
+          # Every package carries exactly the tagged version (MinVer), or nothing is published.
+          for p in artifacts/*.nupkg; do
+            case "$(basename "$p")" in *".${TAG#v}.nupkg") echo "packed $(basename "$p")" ;;
+              *) echo "::error::$(basename "$p") does not carry version ${TAG#v} — is MinVer referenced?"; exit 1 ;; esac
+          done
+
+      - name: Push the packages to GitHub Packages
+        env:
+          TOKEN: ${{ github.token }}
+        run: dotnet nuget push "artifacts/*.nupkg" --source "$FEED" --api-key "$TOKEN"
+
+      - name: Restore it back, as an app would (dry run)
+        if: steps.plan.outputs.dry == 'true'
+        env:
+          TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          # The feed answers a fresh package after a few seconds; try for a minute.
+          app="$RUNNER_TEMP/consumer"; mkdir -p "$app" && cp nuget.config "$app/" && cd "$app"
+          dotnet new classlib -n Consumer -o . --force >/dev/null
+          dotnet nuget update source perezosoft --configfile nuget.config --username "$ACTOR" --password "$TOKEN" --store-password-in-clear-text >/dev/null
+          for i in 1 2 3 4 5 6; do
+            dotnet add package Perezosoft.Platform.DryRun --version "${TAG#v}" >/dev/null 2>&1 && { echo "restored Perezosoft.Platform.DryRun ${TAG#v} from the feed"; exit 0; }
+            sleep 10
+          done
+          echo "::error::published, but Perezosoft.Platform.DryRun ${TAG#v} did not restore from the feed"; exit 1
+
+      - name: Push the tag
+        if: steps.plan.outputs.dry != 'true'
+        env:
+          TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          # The checkout keeps no token, so this one push authenticates for itself.
+          AUTH="$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin "refs/tags/$TAG"
+
+      - name: Release note
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          PRERELEASE: ${{ steps.plan.outputs.prerelease }}
+          DRY: ${{ steps.plan.outputs.dry }}
+          SCHEMA_CHANGE: ${{ inputs.schema_change }}
+          REGISTER_CHANGE: ${{ inputs.register_change }}
+          BREAKING: ${{ inputs.breaking }}
+          REF: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          # Filled from .github/release-note-template.md; the three answers come from the run's inputs (ADR-034 §7).
+          packages=$(for p in artifacts/*.nupkg; do printf -- '- `%s`\n' "$(basename "$p" .nupkg)"; done)
+          TEMPLATE=.github/release-note-template.md VERSION="${TAG#v}" PACKAGES="$packages" \
+            python3 - > note.md <<'PY'
+          import os
+          t = open(os.environ["TEMPLATE"], encoding="utf-8").read()
+          for k in ("TAG", "VERSION", "REF", "SHA", "SCHEMA_CHANGE", "REGISTER_CHANGE", "BREAKING", "PACKAGES"):
+              t = t.replace("{{" + k + "}}", os.environ[k])
+          print(t, end="")
+          PY
+          cat note.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$DRY" = "true" ]; then
+            echo "Dry run: the note is in this run's summary; no tag, no GitHub release."
+          else
+            flag=""; [ "$PRERELEASE" = "true" ] && flag="--prerelease"
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file note.md $flag
+          fi

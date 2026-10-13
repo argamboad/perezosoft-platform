@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The release workflow's dry run (Pkg 2.3): a package with nothing in it but one type, published at a -dry. version
+    (0.0.1-dry.1) to prove the whole path — MinVer, pack, push to GitHub Packages, restore it back as an app would —
+    before any real platform package exists. Not in the solution; the workflow packs it by path. Undo: delete the
+    dry versions on the package's GitHub page.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.DryRun</PackageId>
+    <Description>Release-pipeline probe for the Perezosoft Platform packages. Holds no platform code.</Description>
+  </PropertyGroup>
+
+</Project>

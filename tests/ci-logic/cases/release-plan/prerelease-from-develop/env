@@ -1,0 +1,4 @@
+VERSION=1.0.0-alpha.1
+DRY_RUN=false
+REF_NAME=develop
+FAKE_GIT_TAGS=v0.1.0 pre-packaging

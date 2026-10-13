@@ -128,6 +128,9 @@ RULES: list[tuple[str, str, str]] = [
     # ---- Part 1 ----
     ("Perezosoft.slnx", "1.1", ""),
     ("Directory.Build.props", "1.1", "warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)"),
+    ("Directory.Build.targets", "1.1", "imported after every project: the local source switch\x27s second half (Pkg 2.4)"),
+    ("build/PlatformSource.*", "1.1", "the local source switch: PLATFORM_SOURCE in .env turns platform packages into project references to a checkout (Pkg 2.4, ADR-034)"),
+    ("platform-packages.props", "1.1", "the platform\x27s package map: package id -> the project that packs it, read by an app\x27s source switch (Pkg 2.4)"),
     ("local-ports.props", "0.2", "the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)"),
     ("platform-ownership.json", "9.1", "which files are the platform's, which an app adapts, which are the app's (Arch A2)"),
     ("platform-stamp.json", "9.1", "the platform commit this repo is synced to; null on the platform (Arch A2)"),
@@ -140,6 +143,7 @@ RULES: list[tuple[str, str, str]] = [
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
+    ("tests/Api.Tests/PlatformSourceTests.cs", "1.1", "the local source switch: every packable project is in the package map; the switch reads .env and never touches the committed lockfile (Pkg 2.4)"),
     ("tests/Api.Tests/CiWorkflowTests.cs", "8.3", "the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)"),
     ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),
     ("tests/Api.Tests/EnforcementGateTests.cs", "1.4", "SDK-pin agreement, host index.html parity, QA-count sync, CI-classifier and image-pin gates (v3 T60: R61/R68/R75)"),
@@ -551,6 +555,9 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Integration/SingleOriginHostingTests.cs", "8.1", ""),
     ("Dockerfile", "8.2", "DEPLOY-2"),
     (".dockerignore", "8.2", ""),
+    (".github/workflows/release.yml", "8.3", "the manual release of the platform packages: plan, tag, pack (MinVer), push to GitHub Packages, note (Pkg 2.3, ADR-034)"),
+    (".github/release-note-template.md", "8.3", "the release note: schema change / register change / breaking (ADR-034 §7)"),
+    ("tools/release/dry-run/*", "8.3", "the release pipeline\x27s probe package (Pkg 2.3): published at a -dry. version, restored back"),
     (".github/workflows/ci.yml", "1.6", "born here (build+test+secret/license gates); every part adds jobs — e2e 3.6, docker 8.2, deploy 8.3, native A.1"),
     (".github/forbidden-licenses.json", "1.6", "copyleft ban (R26)"),
     (".github/*", "8.3", ""),
@@ -639,6 +646,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Infrastructure/TenantPermissionGate.cs", "6.1", "test double for the permission seam"),
 
     # ---- v3 audit remediation + NATIVE-12 (2026-07) — mapped to the lesson that teaches each seam ----
+    ("nuget.config", "1.1", "NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)"),
     ("global.json", "1.1", "single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles"),
     ("tests/Api.Tests/PasswordlessConcurrencyTests.cs", "2.4", "atomic single-use consume + lockout counter (v3 LB-AUTH-2/3)"),
     ("tests/Api.Tests/Architecture/TenantHatchGuard.cs", "2.6", "polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)"),

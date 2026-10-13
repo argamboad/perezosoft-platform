@@ -21,13 +21,18 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (17 files)
+## 1.1 — Solution, projects & supply chain (24 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
+- `Directory.Build.targets` — imported after every project: the local source switch's second half (Pkg 2.4)
 - `Directory.Packages.props` — Central Package Management (R25/R27)
 - `Perezosoft.slnx`
+- `build/PlatformSource.props` — the local source switch: PLATFORM_SOURCE in .env turns platform packages into project references to a checkout (Pkg 2.4, ADR-034)
+- `build/PlatformSource.targets` — the local source switch: PLATFORM_SOURCE in .env turns platform packages into project references to a checkout (Pkg 2.4, ADR-034)
 - `global.json` — single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles
+- `nuget.config` — NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)
+- `platform-packages.props` — the platform's package map: package id -> the project that packs it, read by an app's source switch (Pkg 2.4)
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
 - `src/Api/Properties/launchSettings.json`
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
@@ -37,9 +42,11 @@
 - `src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Properties/launchSettings.json`
 - `tests/Api.Tests/Perezosoft.Api.Tests.csproj` — created here; PackageReferences added as lessons need them
+- `tests/Api.Tests/PlatformSourceTests.cs` — the local source switch: every packable project is in the package map; the switch reads .env and never touches the committed lockfile (Pkg 2.4)
 - `tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/E2E.Tests/Perezosoft.E2E.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
+- `tools/release/dry-run/Perezosoft.Platform.DryRun.csproj` — created here; PackageReferences added as lessons need them
 
 ## 1.2 — First endpoint, first test (6 files)
 
@@ -738,11 +745,12 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (137 files)
+## 8.3 — The deploy pipeline & CI gates (157 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
 - `.github/workflows/postman-sync.yml`
+- `.github/workflows/release.yml` — the manual release of the platform packages: plan, tag, pack (MinVer), push to GitHub Packages, note (Pkg 2.3, ADR-034)
 - `docs/QA_TEST_PLAN.md` — release readiness: manual QA plan beside the automated gates
 - `tests/Api.Tests/CiWorkflowTests.cs` — the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
@@ -847,6 +855,24 @@
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-intact/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/qa-runlog-guard/ran-and-rewritten/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/dry-run-needs-a-dry-version/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/dry-run-needs-a-dry-version/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/dry-run/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/dry-run/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/not-a-version/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/not-a-version/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/prerelease-from-develop/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/prerelease-from-develop/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/release-only-from-develop-or-main/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/release-only-from-develop-or-main/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/release-refuses-a-dry-version/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/release-refuses-a-dry-version/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/stable-from-main/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/stable-from-main/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/stable-only-from-main/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/stable-only-from-main/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/tag-already-exists/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/tag-already-exists/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/run-plan/dispatch-all-devices/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/run-plan/dispatch-all-devices/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/run-plan/dispatch-android-only/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -877,6 +903,7 @@
 - `tests/ci-logic/stubs/dotnet` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/stubs/git` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/targets` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tools/release/dry-run/DryRun.cs` — the release pipeline's probe package (Pkg 2.3): published at a -dry. version, restored back
 
 ## 8.4 — The RLS tenancy backstop (16 files)
 
@@ -979,7 +1006,7 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (62 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (63 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Core/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1043,6 +1070,7 @@
 - `tests/Core.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/E2E.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/Ui.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `tools/release/dry-run/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 
 ## [VENDORED] Third-party asset shipped by a template/package — copied, not written (51 files)
 
@@ -1098,8 +1126,9 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (259 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (260 files)
 
+- `.github/release-note-template.md` — docs
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
 - `CLAUDE.md` — docs
 - `CONTRIBUTING.md` — docs
@@ -1360,4 +1389,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1193 tracked files · 821 built in lessons · 372 bucketed · 0 unmapped
+**Totals:** 1222 tracked files · 848 built in lessons · 374 bucketed · 0 unmapped
