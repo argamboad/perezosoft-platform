@@ -88,7 +88,7 @@ $keepName = ([string]$stamp['platform']).Split('/')[-1]
 $keepTokens = [System.Collections.Generic.List[string]]::new()
 function Rebrand([string]$text) {
     # Each kept token is parked behind a private-use character the text does not already contain (a file may hold such
-    # characters itself — the ownership tests do), then restored after the brand map ran.
+    # characters itself: the ownership tests do), then restored after the brand map ran.
     $guards = @{}
     $c = 0xE000
     foreach ($t in (@($keepName) + @($keepTokens) | Where-Object { $_ })) {
