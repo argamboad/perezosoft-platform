@@ -50,10 +50,11 @@
 - `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tools/release/dry-run/Perezosoft.Platform.DryRun.csproj` — created here; PackageReferences added as lessons need them
 
-## 1.2 — First endpoint, first test (6 files)
+## 1.2 — First endpoint, first test (7 files)
 
+- `src/Api/PlatformHosting.cs` — AddPlatform / MapPlatformAsync: every registration and the pipeline Program.cs used to spell out (Pkg 3.3)
 - `src/Host/Perezosoft.Host.http` — REST client scratchpad — grows with each endpoint
-- `src/Host/Program.cs` — born here; every part adds registrations/middleware
+- `src/Host/Program.cs` — born here; since Pkg 3.3 only the composition order: AddPlatform, the app, MapPlatformAsync, the guard
 - `tests/Api.Tests/HarnessSmokeTests.cs`
 - `tests/Api.Tests/Infrastructure/FakeHostEnvironment.cs`
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
@@ -1400,4 +1401,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1233 tracked files · 857 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1234 tracked files · 858 built in lessons · 376 bucketed · 0 unmapped

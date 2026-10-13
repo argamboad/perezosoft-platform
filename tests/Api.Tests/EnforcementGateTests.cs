@@ -712,7 +712,7 @@ public class EnforcementGateTests
         var root = RepoRoot();
         string[] composition =
         [
-            "src/Host/Program.cs", "src/Infrastructure/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
+            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
             "tests/Api.Tests/Infrastructure/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
             "tests/Ui.Tests/Infrastructure/TestHttpHandler.cs",

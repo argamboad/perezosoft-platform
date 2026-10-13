@@ -32,6 +32,9 @@ public class PackagingContractTests
             Assert.Contains($"<PackageId>{id}</PackageId>", text, StringComparison.Ordinal);
             Assert.Matches(@"<Description>[^<]{20,}</Description>", text);
         }
+        // Api references WebAssembly.Server (single-origin hosting), which injects its WASM debug proxy as content: kept out
+        // of the package, or pack fails (NU5100). Removed once by mistake when Api briefly did not need it (Pkg 3.2 → 3.3).
+        Assert.Contains("<IncludeContentInPack>false</IncludeContentInPack>", File.ReadAllText(Path.Combine(root, "src/Api/Perezosoft.Api.csproj")), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -74,8 +77,27 @@ public class PackagingContractTests
         var hostProject = File.ReadAllText(Path.Combine(host, "Perezosoft.Host.csproj"));
         Assert.StartsWith("<Project Sdk=\"Microsoft.NET.Sdk.Web\">", hostProject.TrimStart('﻿'));
         Assert.DoesNotMatch(@"<IsPackable>\s*true", hostProject); // the host is never packed
-        // The platform's controllers come in as an application part by name, not by MVC's discovery.
-        Assert.Contains(".AddApplicationPart(", File.ReadAllText(Path.Combine(host, "Program.cs")), StringComparison.Ordinal);
+        // The platform's controllers come in as an application part by name, not by MVC's discovery (PlatformHosting, Pkg 3.3).
+        Assert.Contains(".AddApplicationPart(", File.ReadAllText(Path.Combine(api, "PlatformHosting.cs")), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ProgramCs_IsTheComposition_Only() // Pkg 3.3
+    {
+        // Program.cs is the same in the platform and every app (the starter ships it): it composes, in this order, the
+        // platform's services (AddPlatform), the app's (AddAppServices — after, so an app can replace a platform service),
+        // the platform's pipeline and endpoints (MapPlatformAsync), the app's endpoints, the route-table guard, Run.
+        // Any registration or middleware of its own would be a fork of the platform in every app.
+        var program = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Host", "Program.cs")).Replace("\r\n", "\n");
+        var code = program.Split('\n').Select(l => l.Trim())
+            .Where(l => l.Length > 0 && !l.StartsWith("//", StringComparison.Ordinal) && !l.StartsWith("using ", StringComparison.Ordinal))
+            .ToList();
+        Assert.True(code.Count <= 10, $"Program.cs carries {code.Count} lines of code; the composition is ~8:\n{string.Join('\n', code)}");
+        int At(string call) { var i = program.IndexOf(call, StringComparison.Ordinal); Assert.True(i >= 0, $"Program.cs does not call {call}"); return i; }
+        var order = new[] { "LocalDotEnv.Load()", "builder.AddPlatform()", "builder.Services.AddAppServices(builder.Configuration)",
+                            "builder.Build()", "await app.MapPlatformAsync()", "app.MapAppEndpoints()", "RouteTableGuard.EnsureUnique(", "app.Run()" };
+        var positions = order.Select(At).ToList();
+        Assert.True(positions.SequenceEqual(positions.Order()), "Program.cs composes out of order: " + string.Join(" → ", order));
     }
 
     [Fact]

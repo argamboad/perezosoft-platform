@@ -14,8 +14,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Serve the published Blazor WASM client single-origin (DEPLOY-1, ADR-017): UseBlazorFrameworkFiles. -->
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
     <!-- The EF design-time host (the startup project of dotnet ef): AppDbContextFactory lives here. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
