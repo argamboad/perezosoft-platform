@@ -6,7 +6,7 @@
 .DESCRIPTION
   The repo's block of local ports lives in local-ports.props. Code reads it through the generated LocalPorts class
   (Directory.Build.props); the files that cannot read MSBuild are rewritten by this script: the docker-compose
-  defaults, both launch profiles, src/Api/appsettings.Development.json, src/Web/wwwroot/appsettings.json,
+  defaults, both launch profiles, src/Host/appsettings.Development.json, src/Web/wwwroot/appsettings.json,
   .env.example, tests/E2E.Tests/playwright.runsettings, the Postman local environment and this repo's row in the
   README's "Local ports" table. LocalPortsTests runs the same comparison in CI and fails on any disagreement.
 
@@ -55,7 +55,7 @@ $sites = [ordered]@{
         $t = [regex]::Replace($t, '\$\{MAIL_UI_PORT:-\d+\}', ('${MAIL_UI_PORT:-' + $block.MailUi + '}'))
         [regex]::Replace($t, '\$\{APP_PORT:-\d+\}', ('${APP_PORT:-' + $block.App + '}'))
     }
-    'src/Api/Properties/launchSettings.json' = {
+    'src/Host/Properties/launchSettings.json' = {
         param($t)
         $t = [regex]::Replace($t, 'https://localhost:\d+', "https://localhost:$($block.ApiHttps)")
         [regex]::Replace($t, 'http://localhost:\d+', "http://localhost:$($block.ApiHttp)")
@@ -65,7 +65,7 @@ $sites = [ordered]@{
         $t = [regex]::Replace($t, 'https://localhost:\d+', "https://localhost:$($block.WebHttps)")
         [regex]::Replace($t, 'http://localhost:\d+', "http://localhost:$($block.WebHttp)")
     }
-    'src/Api/appsettings.Development.json' = {
+    'src/Host/appsettings.Development.json' = {
         param($t)
         $t = [regex]::Replace($t, 'https://localhost:\d+', "https://localhost:$($block.WebHttps)")
         $t = [regex]::Replace($t, 'http://localhost:\d+', "http://localhost:$($block.WebHttp)")

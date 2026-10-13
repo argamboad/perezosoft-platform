@@ -31,7 +31,7 @@ public class ArchitectureTests
         // RLS bypass tag (both the RlsTags identifier AND the raw "rls:cross-tenant" literal — RLS-6)
         // outright, and QueryAllTenants except in a *DataContributor.cs (dissolve/export). QueryAllTenants
         // internally applies the tag; writing either directly self-sanctions to the DB-level backstop.
-        var sources = SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Features"))
+        var sources = SourceFiles(Path.Combine(RepoRoot(), "src", "Host", "Features"))
             .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Endpoints")))
             .Select(f => (f, File.ReadAllText(f)));
 
@@ -50,6 +50,7 @@ public class ArchitectureTests
         // the wrong rows under the DB RLS policy. Set-based writes must EnterTenant(target) and use Query()/
         // IgnoreQueryFilters instead. Cross-tenant READS via QueryAllTenants() are fine.
         var sources = SourceFiles(Path.Combine(RepoRoot(), "src", "Api"))
+            .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Host")))
             .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Infrastructure")))
             .Select(f => (f, File.ReadAllText(f)));
 
@@ -83,7 +84,7 @@ public class ArchitectureTests
 
         foreach (var (file, reason) in AppAllowlists.EnterTenantRowSupplied) rowSupplied[file] = reason; // the app's (Arch A1)
 
-        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure") };
+        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Host"), Path.Combine(RepoRoot(), "src", "Infrastructure") };
         var sites = dirs.SelectMany(d => SourceFiles(d)).Where(f => File.ReadAllText(f).Contains("EnterTenant(")).Select(Path.GetFileName).ToList();
         Assert.Contains("BillingWebhookHandler.cs", sites); // probe alive
 
@@ -394,7 +395,7 @@ public class ArchitectureTests
         // R15/GAP-4/LOGIC-B3: server code takes TimeProvider, so a cookie/URL/token lifetime can't drift
         // from the injected clock. Entity default-value helpers and the WASM client (no injected clock)
         // live in Core/Shared.Ui and are outside this scan; migrations are excluded.
-        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure") };
+        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Host"), Path.Combine(RepoRoot(), "src", "Infrastructure") };
 
         var offenders = dirs.SelectMany(d => SourceFiles(d))
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}"))
@@ -413,7 +414,7 @@ public class ArchitectureTests
         // A storage key, a period bucket or a file name built that way changes meaning with the request's
         // culture — the quota's monthly counter split per calendar (LB-BILL-26). Every yyyy format in server
         // code names CultureInfo.InvariantCulture on the same line; comments and migrations are outside the scan.
-        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Infrastructure"), Path.Combine(RepoRoot(), "src", "Core") };
+        var dirs = new[] { Path.Combine(RepoRoot(), "src", "Api"), Path.Combine(RepoRoot(), "src", "Host"), Path.Combine(RepoRoot(), "src", "Infrastructure"), Path.Combine(RepoRoot(), "src", "Core") };
         var offenders = new List<string>();
         foreach (var f in dirs.SelectMany(d => SourceFiles(d)).Where(f => !f.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}")))
         {
@@ -530,7 +531,7 @@ public class ArchitectureTests
         // v4 T67: ANY directory under src/Api — a [Route] attribute or a Map*Group literal in Services/ or
         // Program.cs collides just the same; the directory convention is not what keeps prefixes unique.
         var apiDir = Path.Combine(RepoRoot(), "src", "Api");
-        var apiSources = SourceFiles(apiDir).Select(File.ReadAllText).ToList();
+        var apiSources = SourceFiles(apiDir).Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Host"))).Select(File.ReadAllText).ToList();
         var controllerSources = apiSources;
         var groupSources = apiSources;
 
@@ -545,7 +546,7 @@ public class ArchitectureTests
         // R7/TR-9: a vertical slice under Features/<X>/ must stay self-contained — it may not reference
         // another slice's Features.<Y> namespace. Keeps slices independently deletable. The match is
         // boundary-aware (v4 ADV-P4-12), so slices named Reports and Reports2 can live side by side.
-        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        var featuresDir = Path.Combine(RepoRoot(), "src", "Host", "Features");
         var slices = Directory.Exists(featuresDir)
             ? Directory.GetDirectories(featuresDir).Select(Path.GetFileName).ToList()
             : [];
@@ -573,7 +574,7 @@ public class ArchitectureTests
         // slices' entities, which is its point; it must write none). Now each entity has ONE writing slice, declared in
         // AppAllowlists.EntityWriters; other slices read it, or call a Core contract the owner implements. Platform
         // entities are written by platform services, never by a slice. Reads are free (SliceWriteInspector decides).
-        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        var featuresDir = Path.Combine(RepoRoot(), "src", "Host", "Features");
         var slices = Directory.Exists(featuresDir) ? Directory.GetDirectories(featuresDir).Select(d => Path.GetFileName(d)!).ToList() : [];
         var writers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal); // entity → slices that write it
         foreach (var slice in slices)
@@ -608,7 +609,7 @@ public class ArchitectureTests
         }
         foreach (var (entity, owner) in declared.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            if (!slices.Contains(owner)) problems.Add($"{entity}: declared writer {owner} is not a slice under src/Api/Features/");
+            if (!slices.Contains(owner)) problems.Add($"{entity}: declared writer {owner} is not a slice under src/Host/Features/");
             else if (!writers.TryGetValue(entity, out var set) || !set.Contains(owner)) problems.Add($"{entity}: declared writer {owner} writes it nowhere — drop the entry, or the owner lost its write");
         }
         Assert.True(problems.Count == 0, "one owning slice writes an entity (Arch A8):\n  " + string.Join("\n  ", problems));
@@ -618,12 +619,12 @@ public class ArchitectureTests
     public void OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures()
     {
         // R8, as amended by Arch A1 (R159): composition happens in one app-owned place — AppComposition.cs registers
-        // and maps the slices. Nothing else outside src/Api/Features/ may reach into Perezosoft.Api.Features.*, and
+        // and maps the slices. Nothing else outside src/Host/Features/ may reach into Perezosoft.Api.Features.*, and
         // Program.cs in particular names no slice, which is what lets it stay identical in every app.
         var apiDir = Path.Combine(RepoRoot(), "src", "Api");
         var featuresPath = $"{Path.DirectorySeparatorChar}Features{Path.DirectorySeparatorChar}";
 
-        var offenders = SourceFiles(apiDir)
+        var offenders = SourceFiles(apiDir).Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Host")))
             .Where(f => !f.Contains(featuresPath))                     // scope: outside the Features tree
             .Where(f => Path.GetFileName(f) != "AppComposition.cs")    // the app's composition file is the sanctioned composer
             .Where(f => File.ReadAllText(f).Contains("Perezosoft.Api.Features", StringComparison.Ordinal))
@@ -642,7 +643,7 @@ public class ArchitectureTests
         // app.MapGroup(...). Config-gated PLATFORM surfaces (PUBAPI/HOOKS) that legitimately need a
         // raw MapGroup live under src/Api/Endpoints/, not Features/ (amended ADR-004) — so this scan
         // stays clean. It fails the moment a future slice reaches for a raw MapGroup.
-        var featuresDir = Path.Combine(RepoRoot(), "src", "Api", "Features");
+        var featuresDir = Path.Combine(RepoRoot(), "src", "Host", "Features");
 
         var offenders = SourceFiles(featuresDir)
             .Where(f => File.ReadAllText(f).Contains(".MapGroup(", StringComparison.Ordinal))
@@ -760,7 +761,7 @@ public class ArchitectureTests
         // (the post-campaign reconcile found a straggler in BillingWebhookController the narrower
         // scope missed); the exemplar models the right shape.
         var anonError = new Regex(@"new\s*\{\s*error\b");
-        var offenders = SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Features"))
+        var offenders = SourceFiles(Path.Combine(RepoRoot(), "src", "Host", "Features"))
             .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Endpoints")))
             .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Controllers")))
             .Where(f => anonError.IsMatch(File.ReadAllText(f)))
@@ -781,7 +782,7 @@ public class ArchitectureTests
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src", "Api", "Features")))
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "CLAUDE.md")))
             dir = dir.Parent;
         return dir?.FullName ?? throw new InvalidOperationException("Could not locate the repo root from the test assembly.");
     }

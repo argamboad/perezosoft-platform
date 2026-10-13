@@ -56,6 +56,29 @@ public class PackagingContractTests
     }
 
     [Fact]
+    public void TheApiPackage_IsALibrary_AndTheHostCarriesTheApp() // Pkg 3.2
+    {
+        // The package must hold the platform and nothing an app owns: no Program, no app composition, no slice (the Notes
+        // sample would otherwise ship to every app), no host configuration. All of that is the host's (src/Host here).
+        var root = RepoRoot();
+        if (!Architecture.PlatformOwnership.IsThePlatform(root)) return;
+        var api = Path.Combine(root, "src", "Api");
+        var host = Path.Combine(root, "src", "Host");
+        Assert.StartsWith("<Project Sdk=\"Microsoft.NET.Sdk\">", File.ReadAllText(Path.Combine(api, "Perezosoft.Api.csproj")).TrimStart('﻿'));
+        foreach (var hostOnly in new[] { "Program.cs", "AppComposition.cs", "AppDbContextFactory.cs", "appsettings.json", "Features", Path.Combine("Properties", "launchSettings.json") })
+        {
+            Assert.False(File.Exists(Path.Combine(api, hostOnly)) || Directory.Exists(Path.Combine(api, hostOnly)), $"src/Api/{hostOnly} belongs to the host, not the package");
+            Assert.True(File.Exists(Path.Combine(host, hostOnly)) || Directory.Exists(Path.Combine(host, hostOnly)), $"src/Host/{hostOnly} is missing");
+        }
+        Assert.True(Directory.Exists(Path.Combine(host, "Features", "Notes")), "probe: the sample slice lives in the host");
+        var hostProject = File.ReadAllText(Path.Combine(host, "Perezosoft.Host.csproj"));
+        Assert.StartsWith("<Project Sdk=\"Microsoft.NET.Sdk.Web\">", hostProject.TrimStart('﻿'));
+        Assert.DoesNotMatch(@"<IsPackable>\s*true", hostProject); // the host is never packed
+        // The platform's controllers come in as an application part by name, not by MVC's discovery.
+        Assert.Contains(".AddApplicationPart(", File.ReadAllText(Path.Combine(host, "Program.cs")), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PackagingSettings_LiveOnceInDirectoryBuildProps()
     {
         var props = File.ReadAllText(Path.Combine(RepoRoot(), "Directory.Build.props"));

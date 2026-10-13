@@ -9,7 +9,7 @@
       "label": "build: api",
       "command": "dotnet",
       "type": "process",
-      "args": ["build", "${workspaceFolder}/src/Api", "-v", "q"],
+      "args": ["build", "${workspaceFolder}/src/Host", "-v", "q"],
       "problemMatcher": "$msCompile"
     },
     {

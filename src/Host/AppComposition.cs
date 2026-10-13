@@ -4,7 +4,7 @@ using Perezosoft.Core.Abstractions;
 namespace Perezosoft.Api;
 
 /// <summary>
-/// The app's half of composition (Arch A1, R159): the one file outside <c>src/Api/Features/</c> that may name a
+/// The app's half of composition (Arch A1, R159): the one file outside <c>src/Host/Features/</c> that may name a
 /// slice (R8, as amended). <c>Program.cs</c> calls <see cref="AddAppServices"/> once after the platform's
 /// registrations and <see cref="MapAppEndpoints"/> once after the platform's routes, and is otherwise identical in
 /// the platform and every app. A slice registers its handler, its <see cref="ITenantDataContributor"/> and any

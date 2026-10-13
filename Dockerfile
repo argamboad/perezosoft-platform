@@ -21,15 +21,17 @@ COPY build/ build/
 COPY src/Core/Perezosoft.Core.csproj src/Core/packages.lock.json src/Core/
 COPY src/Infrastructure/Perezosoft.Infrastructure.csproj src/Infrastructure/packages.lock.json src/Infrastructure/
 COPY src/Api/Perezosoft.Api.csproj src/Api/packages.lock.json src/Api/
+COPY src/Host/Perezosoft.Host.csproj src/Host/packages.lock.json src/Host/
 COPY src/Shared.Ui/Perezosoft.Shared.Ui.csproj src/Shared.Ui/packages.lock.json src/Shared.Ui/
 COPY src/Web/Perezosoft.Web.csproj src/Web/packages.lock.json src/Web/
 
-# Restore the two entry projects. The API side restores in LOCKED mode (same guarantee as CI). The WASM
+# Restore the two entry projects: the host (src/Host, which pulls in the Api library — Pkg 3.2) and the WASM client.
+# The host side restores in LOCKED mode (same guarantee as CI). The WASM
 # project is restored without locked-mode: the Blazor SDK injects an implicit, SDK-patch-specific package
 # (Microsoft.AspNetCore.App.Internal.Assets) whose presence differs between the SDK that wrote the lockfile
 # and the base image, which would trip --locked-mode on Web alone. CI (build-test job) is the authoritative
 # lockfile gate for Web; here we just need a reproducible publish.
-RUN dotnet restore src/Api/Perezosoft.Api.csproj --locked-mode \
+RUN dotnet restore src/Host/Perezosoft.Host.csproj --locked-mode \
  && dotnet restore src/Web/Perezosoft.Web.csproj
 
 # Now the sources.
@@ -39,7 +41,7 @@ COPY src/ src/
 # API serves it single-origin. Overwrite the client's appsettings.json so no baked-in ApiBaseUrl remains —
 # with it absent the WASM defaults to its own origin (DEPLOY-1), which is exactly the single-origin case.
 RUN dotnet publish src/Web/Perezosoft.Web.csproj -c Release --no-restore -o /publish/web \
- && dotnet publish src/Api/Perezosoft.Api.csproj -c Release --no-restore -o /publish/api \
+ && dotnet publish src/Host/Perezosoft.Host.csproj -c Release --no-restore -o /publish/api \
  && mkdir -p /publish/api/wwwroot \
  && cp -r /publish/web/wwwroot/. /publish/api/wwwroot/ \
  && echo '{}' > /publish/api/wwwroot/appsettings.json
@@ -76,4 +78,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS "http://localhost:${PORT:-8080}/health" || exit 1
 
 # exec so dotnet is PID 1 (receives SIGTERM for graceful shutdown). Bind $PORT (default 8080).
-ENTRYPOINT ["sh", "-c", "exec dotnet Perezosoft.Api.dll --urls http://0.0.0.0:${PORT:-8080}"]
+ENTRYPOINT ["sh", "-c", "exec dotnet Perezosoft.Host.dll --urls http://0.0.0.0:${PORT:-8080}"]

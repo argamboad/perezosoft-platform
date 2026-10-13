@@ -67,10 +67,10 @@
 
   <!--
     The platform stamp travels with the API (Arch A2, R160): platform-stamp.json is copied beside the binaries of the
-    *.Api project (and so into the published container), where /api/version reads the platform commit this build is
+    *.Host project — the web app that runs, Pkg 3.2 — (and so into the published container), where /api/version reads the platform commit this build is
     synced to. The test host reads the same copy.
   -->
-  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Api'))">
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Host'))">
     <Content Include="$(MSBuildThisFileDirectory)platform-stamp.json" Link="platform-stamp.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

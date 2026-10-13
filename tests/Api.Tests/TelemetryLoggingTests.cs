@@ -18,7 +18,7 @@ public class TelemetryLoggingTests
     [InlineData("Development")]
     public void HttpClientRequestLogs_StayOutOfTheTelemetryExport(string environment)
     {
-        var api = Path.Combine(RepoRoot(), "src", "Api");
+        var api = Path.Combine(RepoRoot(), "src", "Host"); // the host carries appsettings (Pkg 3.2)
         var config = new ConfigurationBuilder()
             .SetBasePath(api)
             .AddJsonFile("appsettings.json")

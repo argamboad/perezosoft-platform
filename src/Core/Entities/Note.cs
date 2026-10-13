@@ -2,7 +2,7 @@ namespace Perezosoft.Core.Entities;
 
 /// <summary>
 /// SAMPLE feature entity — a tenant-scoped note. It exists only to demonstrate the
-/// vertical-slice convention (see <c>src/Api/Features/Notes</c> and
+/// vertical-slice convention (see <c>src/Host/Features/Notes</c> and
 /// <c>docs/WAYS_OF_WORKING.md</c>).
 /// <para>
 /// 🗑️ DELETE-ME: when you build your first real feature, remove this entity, the

@@ -63,7 +63,7 @@ jobs:
       # shells are excluded (not built in CI, no committed lockfile).
       - name: Restore (locked mode)
         run: |
-          dotnet restore src/Api/Perezosoft.Api.csproj --locked-mode
+          dotnet restore src/Host/Perezosoft.Host.csproj --locked-mode
           dotnet restore src/Web/Perezosoft.Web.csproj --locked-mode
           dotnet restore tests/E2E.Tests/Perezosoft.E2E.Tests.csproj --locked-mode
           dotnet restore tests/Core.Tests/Perezosoft.Core.Tests.csproj --locked-mode
@@ -76,7 +76,7 @@ jobs:
       # --no-restore: reuse the locked-mode restore above (don't let the build re-restore loosely).
       - name: Build (warnings-as-errors)
         run: |
-          dotnet build src/Api/Perezosoft.Api.csproj -c Release --no-restore
+          dotnet build src/Host/Perezosoft.Host.csproj -c Release --no-restore
           dotnet build src/Web/Perezosoft.Web.csproj -c Release --no-restore
           dotnet build tests/E2E.Tests/Perezosoft.E2E.Tests.csproj -c Release --no-restore
 
@@ -124,7 +124,7 @@ jobs:
           dotnet tool restore
           dotnet tool run dotnet-ef migrations has-pending-model-changes \
             --project src/Infrastructure/Perezosoft.Infrastructure.csproj \
-            --startup-project src/Api/Perezosoft.Api.csproj
+            --startup-project src/Host/Perezosoft.Host.csproj
 
   # Secret scan (v2 audit B11-5). Runs the gitleaks OSS binary directly (no marketplace action, so no
   # org-license requirement) over the full history + working tree. Config + allowlist in .gitleaks.toml;
@@ -263,7 +263,7 @@ jobs:
           # pinned because a new release could change the license table or the forbidden-list
           # semantics and flip this gate's verdict on an untouched dependency graph (DEP-9).
           dotnet tool restore
-          for proj in src/Api/Perezosoft.Api.csproj src/Web/Perezosoft.Web.csproj; do
+          for proj in src/Host/Perezosoft.Host.csproj src/Web/Perezosoft.Web.csproj; do
             dotnet restore "$proj"
             dotnet tool run dotnet-project-licenses \
               --input "$proj" \
@@ -649,8 +649,8 @@ jobs:
         run: |
           dotnet build src/Maui/Perezosoft.Maui.csproj -f net10.0-maccatalyst -c Debug
           dotnet build src/Maui/Perezosoft.Maui.csproj -f net10.0-ios -c Debug
-          dotnet restore src/Api/Perezosoft.Api.csproj --locked-mode
-          dotnet build src/Api/Perezosoft.Api.csproj -c Debug --no-restore
+          dotnet restore src/Host/Perezosoft.Host.csproj --locked-mode
+          dotnet build src/Host/Perezosoft.Host.csproj -c Debug --no-restore
 
       - name: Start Postgres (Homebrew)
         # macOS runners can't host Linux service containers; brew's postgresql@17 fills in.
@@ -695,7 +695,7 @@ jobs:
           # The dotted logging key can't be a shell export (invalid identifier) — env(1) sets it.
           # It raises AspNetCore request logging so the provider probe is grep-able below.
           env 'Logging__LogLevel__Microsoft.AspNetCore=Information' \
-            dotnet run --project src/Api/Perezosoft.Api.csproj -c Debug --no-build --urls http://localhost:5238 > api.log 2>&1 &
+            dotnet run --project src/Host/Perezosoft.Host.csproj -c Debug --no-build --urls http://localhost:5238 > api.log 2>&1 &
 
           echo "Waiting for the API…"
           for i in $(seq 1 60); do
@@ -791,8 +791,8 @@ jobs:
         # The boot-probe drives no CDP/Playwright, so E2E.Tests isn't built here (the Linux `e2e` job
         # already compiles it). API + the Windows MAUI app are all this leg needs.
         run: |
-          dotnet restore src/Api/Perezosoft.Api.csproj --locked-mode
-          dotnet build src/Api/Perezosoft.Api.csproj -c Debug --no-restore
+          dotnet restore src/Host/Perezosoft.Host.csproj --locked-mode
+          dotnet build src/Host/Perezosoft.Host.csproj -c Debug --no-restore
           dotnet build src/Maui/Perezosoft.Maui.csproj -f net10.0-windows10.0.19041.0 -c Debug
 
       - name: Start Postgres (preinstalled)
@@ -822,7 +822,7 @@ jobs:
           # key can't be a PowerShell $env: assignment — the '.' parses as member access — so set it
           # via the environment API; Start-Process inherits it).
           [Environment]::SetEnvironmentVariable('Logging__LogLevel__Microsoft.AspNetCore', 'Information')
-          $api = Start-Process dotnet -ArgumentList "run --project src/Api/Perezosoft.Api.csproj -c Debug --no-build --urls http://localhost:5238" -PassThru -RedirectStandardOutput api.log -RedirectStandardError api.err.log
+          $api = Start-Process dotnet -ArgumentList "run --project src/Host/Perezosoft.Host.csproj -c Debug --no-build --urls http://localhost:5238" -PassThru -RedirectStandardOutput api.log -RedirectStandardError api.err.log
 
           Write-Host "Waiting for the API..."
           $ready = $false
@@ -929,8 +929,8 @@ jobs:
         run: |
           dotnet build src/Maui/Perezosoft.Maui.csproj -f net10.0-android -c Debug \
             -p:AcceptAndroidSDKLicenses=true -p:EmbedAssembliesIntoApk=true
-          dotnet restore src/Api/Perezosoft.Api.csproj --locked-mode
-          dotnet build src/Api/Perezosoft.Api.csproj -c Debug --no-restore
+          dotnet restore src/Host/Perezosoft.Host.csproj --locked-mode
+          dotnet build src/Host/Perezosoft.Host.csproj -c Debug --no-restore
           npm ci --prefix tests/native-smoke-android
 
       - name: Enable KVM (hardware-accelerated emulator)
@@ -992,7 +992,7 @@ jobs:
           # platform-tools was installed by sdkmanager this job — it is NOT on the runner's PATH
           # (run 4 died with `adb: command not found`); the Node smoke needs adb reachable too.
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          dotnet run --project src/Api/Perezosoft.Api.csproj -c Debug --no-build --urls http://localhost:5238 > api.log 2>&1 &
+          dotnet run --project src/Host/Perezosoft.Host.csproj -c Debug --no-build --urls http://localhost:5238 > api.log 2>&1 &
 
           echo "Waiting for the API…"
           for i in $(seq 1 60); do
@@ -1089,13 +1089,13 @@ jobs:
 
       - name: Restore (locked mode)
         run: |
-          dotnet restore src/Api/Perezosoft.Api.csproj --locked-mode
+          dotnet restore src/Host/Perezosoft.Host.csproj --locked-mode
           dotnet restore src/Web/Perezosoft.Web.csproj --locked-mode
           dotnet restore tests/E2E.Tests/Perezosoft.E2E.Tests.csproj --locked-mode
 
       - name: Build API + Web + E2E
         run: |
-          dotnet build src/Api/Perezosoft.Api.csproj -c Debug --no-restore
+          dotnet build src/Host/Perezosoft.Host.csproj -c Debug --no-restore
           dotnet build src/Web/Perezosoft.Web.csproj -c Debug --no-restore
           dotnet build tests/E2E.Tests/Perezosoft.E2E.Tests.csproj -c Debug --no-restore
 
@@ -1140,7 +1140,7 @@ jobs:
           Auth__AppBaseUrl: "http://localhost:5169"
         run: |
           set -e
-          dotnet run --project src/Api/Perezosoft.Api.csproj -c Debug --no-build --urls http://localhost:5238 > api.log 2>&1 &
+          dotnet run --project src/Host/Perezosoft.Host.csproj -c Debug --no-build --urls http://localhost:5238 > api.log 2>&1 &
           dotnet run --project src/Web/Perezosoft.Web.csproj -c Debug --no-build --urls http://localhost:5169 > web.log 2>&1 &
 
           echo "Waiting for API + Web…"
@@ -1254,7 +1254,7 @@ jobs:
             curl -s -o /dev/null http://localhost:5238/health/ready && { sleep 2; continue; }
             break
           done
-          dotnet run --project src/Api/Perezosoft.Api.csproj -c Debug --no-build --urls http://localhost:5238 > api-gates.log 2>&1 &
+          dotnet run --project src/Host/Perezosoft.Host.csproj -c Debug --no-build --urls http://localhost:5238 > api-gates.log 2>&1 &
           echo "Waiting for the gates-off API…"
           for i in $(seq 1 60); do
             api=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5238/health/ready || echo 000)

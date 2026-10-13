@@ -34,18 +34,18 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
 
         // The decisions of the Architecture milestone, pinned: the A1 seams are the app's, the composition files the platform's,
         // the UI the app's (#368), the rules file the platform's.
-        Assert.Equal(Class.App, Classify("src/Api/AppComposition.cs", rules));
+        Assert.Equal(Class.App, Classify("src/Host/AppComposition.cs", rules));
         Assert.Equal(Class.App, Classify("src/Infrastructure/Persistence/AppDbContext.App.cs", rules));
         Assert.Equal(Class.App, Classify("tests/Api.Tests/App/AppAllowlists.cs", rules));
-        Assert.Equal(Class.App, Classify("src/Api/Features/Budget/BudgetHandler.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Api/Program.cs", rules));
+        Assert.Equal(Class.App, Classify("src/Host/Features/Budget/BudgetHandler.cs", rules));
+        Assert.Equal(Class.Platform, Classify("src/Host/Program.cs", rules));
         Assert.Equal(Class.Platform, Classify("src/Infrastructure/Persistence/AppDbContext.cs", rules));
         Assert.Equal(Class.Platform, Classify("tests/Api.Tests/ArchitectureTests.cs", rules));
         Assert.Equal(Class.Platform, Classify("docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md", rules));
         Assert.Equal(Class.Adapts, Classify("src/Shared.Ui/Pages/Household.razor", rules));
         Assert.Equal(Class.Adapts, Classify("tests/E2E.Tests/SessionJourneyTests.cs", rules));
         Assert.Equal(Class.Adapts, Classify(".github/workflows/ci.yml", rules));
-        Assert.Equal(Class.Sample, Classify("src/Api/Features/Notes/NotesHandler.cs", rules));
+        Assert.Equal(Class.Sample, Classify("src/Host/Features/Notes/NotesHandler.cs", rules));
         // Pkg 2.5: the release machinery is the publisher's alone — never ported, never demanded downstream.
         foreach (var producer in new[] { ".github/workflows/release.yml", ".github/release-note-template.md", "tools/release/dry-run/DryRun.cs",
                                          "tests/ci-logic/cases/release-plan/dry-run/env", "platform-packages.props" })

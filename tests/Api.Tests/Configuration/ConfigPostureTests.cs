@@ -51,7 +51,7 @@ public class ConfigPostureTests
 
     private static IConfiguration Config(string which) => which == "empty"
         ? new ConfigurationBuilder().Build()
-        : new ConfigurationBuilder().AddJsonFile(Path.Combine(RepoRoot(), "src", "Api", "appsettings.json")).Build();
+        : new ConfigurationBuilder().AddJsonFile(Path.Combine(RepoRoot(), "src", "Host", "appsettings.json")).Build();
 
     private static object Bind(Type t, IConfiguration config)
     {
@@ -168,7 +168,7 @@ public class ConfigPostureTests
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src", "Api", "Features")))
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "CLAUDE.md")))
             dir = dir.Parent;
         return dir?.FullName ?? throw new InvalidOperationException("Could not locate the repo root from the test assembly.");
     }

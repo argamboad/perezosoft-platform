@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    The platform's reference host (Pkg 3.2, ADR-034): the web app that runs the platform. Program.cs composes the
+    platform (Perezosoft.Api, a library) with the app's half (AppComposition.cs, Features/ — here only the Notes sample),
+    and holds what a host owns: configuration (appsettings*.json), launch profiles, the .http scratchpad and the EF
+    design-time factory. Downstream, an app's own host plays this part. Never packed.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>c0339958-6cea-40c1-8433-087f53b886e7</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Serve the published Blazor WASM client single-origin (DEPLOY-1, ADR-017): UseBlazorFrameworkFiles. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
+    <!-- The EF design-time host (the startup project of dotnet ef): AppDbContextFactory lives here. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Api\Perezosoft.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The integration tests boot this host (WebApplicationFactory<Program>) and exercise the sample slice. -->
+    <InternalsVisibleTo Include="Perezosoft.Api.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -29,6 +29,10 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Declared, not left transitive (Pkg 3.2): this assembly compiles against the central EF line (10.0.11, which the
+         private Design package pulls in), while Npgsql's own floor is lower. Without this the package would let a consumer
+         resolve the lower Relational and fail to load at runtime (MSB3277 in the pack proof). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Stripe.net" />
   </ItemGroup>
 

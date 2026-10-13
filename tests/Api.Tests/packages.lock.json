@@ -416,12 +416,18 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "perezosoft.host": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.AspNetCore.Components.WebAssembly.Server": "[10.0.11, )",
+          "Perezosoft.Platform.Api": "[1.0.0, )"
+        }
+      },
       "Perezosoft.Platform.Api": {
         "type": "Project",
         "dependencies": {
           "DotNetEnv": "[3.2.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.11, )",
-          "Microsoft.AspNetCore.Components.WebAssembly.Server": "[10.0.11, )",
           "OpenTelemetry.Exporter.Console": "[1.16.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.16.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.16.0, )",
@@ -445,6 +451,7 @@
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.11, )",
           "Microsoft.AspNetCore.Authentication.MicrosoftAccount": "[10.0.11, )",
           "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": "[10.0.11, )",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.11, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
           "Perezosoft.Platform.Core": "[1.0.0, )",
           "Stripe.net": "[52.1.0, )"

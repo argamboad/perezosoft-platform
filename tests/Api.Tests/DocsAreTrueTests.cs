@@ -275,7 +275,7 @@ public class DocsAreTrueTests
         var paths = new HashSet<string>(StringComparer.Ordinal);
 
         // The API's appsettings, plus the Web client's (wwwroot) for the client's own reads (ApiBaseUrl).
-        foreach (var json in Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src", "Api"), "appsettings*.json")
+        foreach (var json in Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src", "Host"), "appsettings*.json")
                      .Concat(Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src", "Web", "wwwroot"), "appsettings*.json")))
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(json));

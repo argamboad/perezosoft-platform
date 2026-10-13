@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (25 files)
+## 1.1 — Solution, projects & supply chain (26 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -34,8 +34,9 @@
 - `nuget.config` — NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)
 - `platform-packages.props` — the platform's package map: package id -> the project that packs it, read by an app's source switch (Pkg 2.4)
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
-- `src/Api/Properties/launchSettings.json`
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
+- `src/Host/Perezosoft.Host.csproj` — created here; PackageReferences added as lessons need them
+- `src/Host/Properties/launchSettings.json`
 - `src/Infrastructure/Perezosoft.Infrastructure.csproj` — created here; PackageReferences added as lessons need them
 - `src/Maui/Perezosoft.Maui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Shared.Ui/Perezosoft.Shared.Ui.csproj` — created here; PackageReferences added as lessons need them
@@ -51,8 +52,8 @@
 
 ## 1.2 — First endpoint, first test (6 files)
 
-- `src/Api/Perezosoft.Api.http` — REST client scratchpad — grows with each endpoint
-- `src/Api/Program.cs` — born here; every part adds registrations/middleware
+- `src/Host/Perezosoft.Host.http` — REST client scratchpad — grows with each endpoint
+- `src/Host/Program.cs` — born here; every part adds registrations/middleware
 - `tests/Api.Tests/HarnessSmokeTests.cs`
 - `tests/Api.Tests/Infrastructure/FakeHostEnvironment.cs`
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
@@ -60,7 +61,7 @@
 
 ## 1.3 — Database & the test container (14 files)
 
-- `src/Api/AppDbContextFactory.cs` — design-time factory for dotnet ef
+- `src/Host/AppDbContextFactory.cs` — design-time factory for dotnet ef
 - `src/Infrastructure/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
 - `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
 - `tests/Api.Tests/App/AppTestComposition.cs` — the app's half of the test chassis: its contributors and host pins (Arch A1)
@@ -81,8 +82,8 @@
 - `src/Api/Configuration/SettingsProvider.cs`
 - `src/Api/Configuration/SettingsRegistration.cs` — the one blessed Bind+ValidateOnStart pattern (R22)
 - `src/Api/LocalDotEnv.cs` — the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)
-- `src/Api/appsettings.Development.json` — non-secret config; grows every config lesson
-- `src/Api/appsettings.json` — non-secret config; grows every config lesson
+- `src/Host/appsettings.Development.json` — non-secret config; grows every config lesson
+- `src/Host/appsettings.json` — non-secret config; grows every config lesson
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
 - `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)
 - `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
@@ -247,15 +248,15 @@
 
 ## 3.2 — Anatomy of a vertical slice (Notes) (12 files)
 
-- `src/Api/AppComposition.cs` — the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)
 - `src/Api/Configuration/AuthPolicies.cs`
 - `src/Api/Endpoints/FeatureEndpointExtensions.cs` — MapTenantFeatureGroup (R6)
-- `src/Api/Features/Notes/NotesDataContributor.cs` — the reference slice — deleted in 9.1
-- `src/Api/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
-- `src/Api/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
-- `src/Api/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
 - `src/Core/Abstractions/IStartupTask.cs` — work that needs the schema, run by Program.cs after Migrate(); registered in AppComposition (Arch A1)
 - `src/Core/Entities/Note.cs`
+- `src/Host/AppComposition.cs` — the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)
+- `src/Host/Features/Notes/NotesDataContributor.cs` — the reference slice — deleted in 9.1
+- `src/Host/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
+- `src/Host/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
+- `src/Host/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
 - `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
@@ -1014,10 +1015,11 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (63 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (64 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Core/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Host/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Infrastructure/Persistence/Migrations/20260617235537_InitialCreate.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/20260617235537_InitialCreate.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/Persistence/Migrations/20260619174431_AddUserLocale.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
@@ -1398,4 +1400,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1231 tracked files · 856 built in lessons · 375 bucketed · 0 unmapped
+**Totals:** 1233 tracked files · 857 built in lessons · 376 bucketed · 0 unmapped

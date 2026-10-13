@@ -38,7 +38,10 @@ var billingSettings = new BillingSettings();
 builder.Configuration.GetSection(BillingSettings.SectionName).Bind(billingSettings);
 builder.Services.AddSingleton(billingSettings);
 
-builder.Services.AddControllers(o => o.Conventions.Add(new BillingGateConvention(billingSettings)));
+// The platform's controllers live in Perezosoft.Api, a library (Pkg 3.2): added as an application part by name, not left
+// to MVC's discovery of referenced assemblies, so a host that references the package gets exactly them.
+builder.Services.AddControllers(o => o.Conventions.Add(new BillingGateConvention(billingSettings)))
+    .AddApplicationPart(typeof(BillingGateConvention).Assembly);
 
 // GATES-2 (ADR-027): the signup green list. Empty ⇒ open, which is the right default for a template but
 // also the one posture a typo can produce silently — so the startup log states which one is in effect.

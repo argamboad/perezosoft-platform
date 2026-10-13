@@ -1,28 +1,41 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
 
+  <!--
+    The platform's API as a library (Pkg 3.2, ADR-034): controllers, auth, tenancy, billing, jobs, observability and the
+    endpoint conventions every app inherits. It has no Program: a host (src/Host here; an app's own host downstream)
+    references it, adds its controllers as an application part and composes the app around it.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <GenerateLocalPorts>true</GenerateLocalPorts> <!-- LocalPorts.* from local-ports.props (Arch A10) -->
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>c0339958-6cea-40c1-8433-087f53b886e7</UserSecretsId>
-    <!-- Published as a package (Pkg 3.1, ADR-034). Until the host is split out (Pkg 3.2) this is still the web app itself. -->
+    <!-- Published as a package (Pkg 3.1, ADR-034). -->
     <IsPackable>true</IsPackable>
-    <!-- The Web SDK would pack the WASM debug-proxy's content files (a dozen .dll under contentFiles/): not part of the package. -->
-    <IncludeContentInPack>false</IncludeContentInPack>
     <PackageId>Perezosoft.Platform.Api</PackageId>
     <Description>Perezosoft Platform API: controllers, auth, tenancy, billing, jobs and the endpoints every app inherits.</Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The implicit usings the Web SDK gave this code when it was the web app, kept so no source file changes. -->
+    <Using Include="System.Net.Http.Json" />
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Hosting" />
+    <Using Include="Microsoft.AspNetCore.Http" />
+    <Using Include="Microsoft.AspNetCore.Routing" />
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Hosting" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="DotNetEnv" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
-    <!-- Serve the published Blazor WASM client single-origin (DEPLOY-1, ADR-017): UseBlazorFrameworkFiles. -->
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="OpenTelemetry.Exporter.Console" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />

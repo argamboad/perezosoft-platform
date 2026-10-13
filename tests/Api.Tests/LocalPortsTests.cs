@@ -34,9 +34,9 @@ public class LocalPortsTests
         Expect("docker-compose.yml MAIL_UI_PORT default", ComposeDefault("MAIL_UI_PORT"), block.MailUi);
         Expect("docker-compose.yml APP_PORT default", ComposeDefault("APP_PORT"), block.App);
 
-        var (apiHttps, apiHttp) = LaunchPorts("src/Api/Properties/launchSettings.json");
-        Expect("src/Api launchSettings https", apiHttps, block.ApiHttps);
-        Expect("src/Api launchSettings http", apiHttp, block.ApiHttp);
+        var (apiHttps, apiHttp) = LaunchPorts("src/Host/Properties/launchSettings.json");
+        Expect("src/Host launchSettings https", apiHttps, block.ApiHttps);
+        Expect("src/Host launchSettings http", apiHttp, block.ApiHttp);
         var (webHttps, webHttp) = LaunchPorts("src/Web/Properties/launchSettings.json");
         Expect("src/Web launchSettings https", webHttps, block.WebHttps);
         Expect("src/Web launchSettings http", webHttp, block.WebHttp);
@@ -49,7 +49,7 @@ public class LocalPortsTests
         Expect(".env.example connection string Port",
             Regex.Match(env, @"(?m)^ConnectionStrings__DefaultConnection=.*?Port=(\d+)") is { Success: true } c ? c.Groups[1].Value : null, block.Db);
 
-        using (var dev = JsonDocument.Parse(Read("src/Api/appsettings.Development.json")))
+        using (var dev = JsonDocument.Parse(Read("src/Host/appsettings.Development.json")))
         {
             Expect("appsettings.Development Email:Smtp:Port", Path(dev.RootElement, "Email", "Smtp", "Port"), block.Smtp);
             Expect("appsettings.Development Auth:AppBaseUrl", Path(dev.RootElement, "Auth", "AppBaseUrl"), $"https://localhost:{block.WebHttps}");

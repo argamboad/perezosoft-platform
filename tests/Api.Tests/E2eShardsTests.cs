@@ -50,7 +50,7 @@ public class E2eShardsTests
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src", "Api", "Features")))
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "CLAUDE.md")))
             dir = dir.Parent;
         return dir?.FullName ?? throw new InvalidOperationException("Could not locate the repo root from the test assembly.");
     }

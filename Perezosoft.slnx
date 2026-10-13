@@ -3,6 +3,9 @@
   <Folder Name="/src/Api/">
     <Project Path="src/Api/Perezosoft.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Host/">
+    <Project Path="src/Host/Perezosoft.Host.csproj" />
+  </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/Perezosoft.Core.csproj" />
   </Folder>

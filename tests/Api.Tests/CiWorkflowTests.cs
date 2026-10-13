@@ -178,7 +178,7 @@ public class CiWorkflowTests
                                      "Directory.Packages.props", "global.json", ".github/workflows/ci.yml",
                                      ".config/dotnet-tools.json", ".github/forbidden-licenses.json" })
             Assert.True(maui.IsMatch(path), $"{path} can break the MAUI build, so it must count as maui");
-        foreach (var path in new[] { "src/Api/Program.cs", "src/Core/Entities/Tenant.cs", "src/Infrastructure/Email/BrandedEmail.cs",
+        foreach (var path in new[] { "src/Host/Program.cs", "src/Core/Entities/Tenant.cs", "src/Infrastructure/Email/BrandedEmail.cs",
                                      "src/Web/Program.cs", "tests/Api.Tests/AuthTests.cs", "tests/E2E.Tests/Journeys.cs", "docs/notes/not-a-real-doc.md" })
             Assert.False(maui.IsMatch(path), $"{path} cannot affect the MAUI app (it references only Shared.Ui)");
     }

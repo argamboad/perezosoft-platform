@@ -93,12 +93,12 @@ function Project([string]$folder) {
     if (-not $p) { throw "No project in src/$folder." }
     $p
 }
-$api, $web, $maui = (Project Api), (Project Web), (Project Maui)
+$api, $web, $maui = (Project Host), (Project Web), (Project Maui)
 function HttpsProfileUrls([string]$folder) {
     $settings = Get-Content (Join-Path $repo "src/$folder/Properties/launchSettings.json") -Raw | ConvertFrom-Json
     $settings.profiles.https.applicationUrl -split ';'
 }
-$apiUrls = HttpsProfileUrls Api
+$apiUrls = HttpsProfileUrls Host
 $webUrl = HttpsProfileUrls Web | Where-Object { $_ -like 'https://*' } | Select-Object -First 1
 $apiTfm = ([xml](Get-Content $api.FullName -Raw)).Project.PropertyGroup.TargetFramework | Where-Object { $_ } | Select-Object -First 1
 $mauiText = Get-Content $maui.FullName -Raw
@@ -150,7 +150,7 @@ $hidden = [ordered]@{ hidden = $true }
 $winOut = "$ws/src/Maui/bin/Debug/$windowsTfm/$rid"
 $configs = @(
     [ordered]@{ name = '[API]'; type = 'coreclr'; request = 'launch'; preLaunchTask = 'build: api'
-        program = "$ws/src/Api/bin/Debug/$apiTfm/$($api.BaseName).dll"; cwd = "$ws/src/Api"
+        program = "$ws/src/Host/bin/Debug/$apiTfm/$($api.BaseName).dll"; cwd = "$ws/src/Host"
         env = [ordered]@{ ASPNETCORE_ENVIRONMENT = 'Development'; ASPNETCORE_URLS = ($apiUrls -join ';') }; presentation = $hidden }
     [ordered]@{ name = '[Web]'; type = 'blazorwasm'; request = 'launch'; preLaunchTask = 'build: web'
         cwd = "$ws/src/Web"; url = $webUrl; browser = 'chrome'; presentation = $hidden }
