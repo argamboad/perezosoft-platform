@@ -82,6 +82,7 @@
     { "glob": "Directory.Build.props", "class": "platform" },
     { "glob": "Directory.Packages.props", "class": "adapts" },
     { "glob": "global.json", "class": "platform" },
+    { "glob": "nuget.config", "class": "platform" },
     { "glob": "*.slnx", "class": "adapts" },
     { "glob": "Dockerfile", "class": "adapts" },
     { "glob": ".dockerignore", "class": "platform" },

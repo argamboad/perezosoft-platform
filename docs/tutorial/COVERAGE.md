@@ -21,13 +21,14 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (17 files)
+## 1.1 — Solution, projects & supply chain (18 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
 - `Directory.Packages.props` — Central Package Management (R25/R27)
 - `Perezosoft.slnx`
 - `global.json` — single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles
+- `nuget.config` — NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
 - `src/Api/Properties/launchSettings.json`
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
@@ -1360,4 +1361,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1193 tracked files · 821 built in lessons · 372 bucketed · 0 unmapped
+**Totals:** 1194 tracked files · 822 built in lessons · 372 bucketed · 0 unmapped

@@ -639,6 +639,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Infrastructure/TenantPermissionGate.cs", "6.1", "test double for the permission seam"),
 
     # ---- v3 audit remediation + NATIVE-12 (2026-07) — mapped to the lesson that teaches each seam ----
+    ("nuget.config", "1.1", "NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)"),
     ("global.json", "1.1", "single SDK pin source (v3 DEP-4) — pairs with the committed lockfiles"),
     ("tests/Api.Tests/PasswordlessConcurrencyTests.cs", "2.4", "atomic single-use consume + lockout counter (v3 LB-AUTH-2/3)"),
     ("tests/Api.Tests/Architecture/TenantHatchGuard.cs", "2.6", "polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)"),
