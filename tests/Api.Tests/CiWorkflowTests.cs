@@ -108,7 +108,8 @@ public class CiWorkflowTests
         // any workflow, keeps it.
         var workflows = Directory.EnumerateFiles(Path.Combine(RepoRoot(), ".github", "workflows"), "*.yml")
             .Select(f => ".github/workflows/" + Path.GetFileName(f)).ToList();
-        Assert.Contains(".github/workflows/release.yml", workflows); // probe: the walk sees every workflow
+        if (Architecture.PlatformOwnership.IsThePlatform(RepoRoot())) // release.yml is producer-only (Pkg 2.5): an app has none
+            Assert.Contains(".github/workflows/release.yml", workflows); // probe: the walk sees every workflow
         foreach (var file in workflows)
         {
             var lines = Read(file).Split('\n');
@@ -189,6 +190,15 @@ public class CiWorkflowTests
         // timeout, never cancelled halfway (a release half-pushed is worse than a slow one). The version is a tag MinVer
         // reads, decided and checked by the release-plan block (its cases are in tests/ci-logic) before anything is packed;
         // the tag is pushed only after the packages are, so a failed push leaves no orphan tag.
+        // MinVer gives every packable project its version from the tag; nothing is packable unless it says so. These props
+        // travel to every app (an app packs nothing, so they are inert there).
+        var props = Read("Directory.Build.props");
+        Assert.Contains("<IsPackable Condition=\"'$(IsPackable)' == ''\">false</IsPackable>", props, StringComparison.Ordinal);
+        Assert.Contains("<PackageReference Include=\"MinVer\"", props, StringComparison.Ordinal);
+        Assert.Contains("<MinVerTagPrefix>v</MinVerTagPrefix>", props, StringComparison.Ordinal);
+
+        // The workflow and its note template are producer-only (Pkg 2.5): held here, in the platform; an app has neither.
+        if (!Architecture.PlatformOwnership.IsThePlatform(RepoRoot())) return;
         const string Release = ".github/workflows/release.yml";
         var yml = Read(Release);
         var on = yml[yml.IndexOf("\non:\n", StringComparison.Ordinal)..yml.IndexOf("\njobs:\n", StringComparison.Ordinal)];
@@ -208,11 +218,6 @@ public class CiWorkflowTests
         var tag = At("push origin \"refs/tags/");
         Assert.True(plan < pack && pack < push && push < tag, "release.yml must plan, then pack, then push the packages, then push the tag");
 
-        // MinVer gives every packable project its version from the tag; nothing is packable unless it says so.
-        var props = Read("Directory.Build.props");
-        Assert.Contains("<IsPackable Condition=\"'$(IsPackable)' == ''\">false</IsPackable>", props, StringComparison.Ordinal);
-        Assert.Contains("<PackageReference Include=\"MinVer\"", props, StringComparison.Ordinal);
-        Assert.Contains("<MinVerTagPrefix>v</MinVerTagPrefix>", props, StringComparison.Ordinal);
         Assert.Contains(".github/release-note-template.md", job, StringComparison.Ordinal);
         foreach (var section in new[] { "Schema change", "Register change", "Breaking" }) // ADR-034 §7
             Assert.Contains(section, Read(".github/release-note-template.md"), StringComparison.Ordinal);

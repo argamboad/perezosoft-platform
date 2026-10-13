@@ -806,8 +806,15 @@ public class EnforcementGateTests
             Assert.True(targets.Any(t => t[0] == "block" && t[1] == block && t.Skip(2).Contains(file)),
                 $"{file} anchors `{block}` but tests/ci-logic/targets does not run it there");
 
+        // Downstream, a target over a producer-only file (the platform's release machinery, Pkg 2.5) has neither its file nor
+        // its cases; run.py skips it the same way. In the platform every target must have both.
+        var platform = Architecture.PlatformOwnership.IsThePlatform(root);
+        var rules = Architecture.PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         foreach (var t in targets)
         {
+            if (!platform && t.Skip(2).All(f => !File.Exists(Path.Combine(root, f))
+                    && Architecture.PlatformOwnership.Classify(f, rules) == Architecture.PlatformOwnership.Class.Producer))
+                continue;
             var cases = Path.Combine(root, "tests", "ci-logic", "cases", t[1]);
             Assert.True(Directory.Exists(cases) && Directory.EnumerateDirectories(cases).Any(), $"target `{t[1]}` has no cases");
             foreach (var file in t.Skip(2))

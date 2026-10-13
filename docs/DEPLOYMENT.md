@@ -515,8 +515,12 @@ about **5 billed minutes** a run). The workflow's own `GITHUB_TOKEN` publishes; 
 What a run does, in order: check the version, the branch and that the tag is new (the `release-plan` block, held by
 its ci-logic cases) → tag locally → `dotnet pack` every project with `<IsPackable>true</IsPackable>` (MinVer gives each
 exactly the tag's version; nothing else packs) → push the packages → push the tag → create the GitHub release (a
-prerelease for a `-` version). A push that fails leaves no tag. The run can be dispatched only once the workflow is on
-`main` (GitHub lists dispatchable workflows from the default branch).
+prerelease for a `-` version). A push that fails leaves no tag. The workflow is dispatched from the default branch, `develop`
+(`main` is not involved).
+
+**Producer-only (Pkg 2.5).** `release.yml`, the note template, `tools/release/**`, its ci-logic cases and
+`platform-packages.props` are classed `producer` in `platform-ownership.json`: the platform publishes, an app never
+does, so the port tool never writes them downstream and the gates that read them run only in the platform.
 
 **After the first publish** (the dry run): on the package's page (github.com/argamboad?tab=packages → the package →
 *Package settings*), under **Manage Actions access**, add `jigger-jot` and `vuelto` with **Read**, so their CI can

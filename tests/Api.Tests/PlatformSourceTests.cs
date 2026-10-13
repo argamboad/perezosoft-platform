@@ -15,6 +15,9 @@ public class PlatformSourceTests
     public void EveryPackableProject_IsInThePackageMap_AtItsPath()
     {
         var root = RepoRoot();
+        // The map and the packable projects are the publisher's (producer-only, Pkg 2.5): an app's switch reads the map
+        // from the platform checkout it points at, never from its own tree, and an app packs nothing.
+        if (!Architecture.PlatformOwnership.IsThePlatform(root)) return;
         var packable = Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
             .Select(f => (Path: Path.GetRelativePath(root, f).Replace('\\', '/'), File: f))
             .Where(p => !p.Path.Contains("/obj/", StringComparison.Ordinal) && !p.Path.Contains("/bin/", StringComparison.Ordinal)
