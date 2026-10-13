@@ -285,7 +285,7 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "perezosoft.core": {
+      "Perezosoft.Platform.Core": {
         "type": "Project"
       },
       "perezosoft.shared.ui": {

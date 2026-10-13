@@ -143,6 +143,7 @@ RULES: list[tuple[str, str, str]] = [
     ("Directory.Packages.props", "1.1", "Central Package Management (R25/R27)"),
     (".config/dotnet-tools.json", "1.1", "committed CI tool-version manifest (v3 T51/R63)"),
     ("tests/Api.Tests/DataProtectionIdentityTests.cs", "6.5", "DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)"),
+    ("tests/Api.Tests/PackagingContractTests.cs", "1.1", "the packages the platform publishes: the three ids, each depends only on published projects, versions from MinVer only when packing, the pdb inside the nupkg (Pkg 3.1)"),
     ("tests/Api.Tests/PlatformSourceTests.cs", "1.1", "the local source switch: every packable project is in the package map; the switch reads .env and never touches the committed lockfile (Pkg 2.4)"),
     ("tests/Api.Tests/CiWorkflowTests.cs", "8.3", "the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)"),
     ("tests/Api.Tests/LocalPortsTests.cs", "0.2", "each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)"),

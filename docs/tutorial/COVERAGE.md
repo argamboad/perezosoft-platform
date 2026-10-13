@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (24 files)
+## 1.1 — Solution, projects & supply chain (25 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -41,6 +41,7 @@
 - `src/Shared.Ui/Perezosoft.Shared.Ui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Properties/launchSettings.json`
+- `tests/Api.Tests/PackagingContractTests.cs` — the packages the platform publishes: the three ids, each depends only on published projects, versions from MinVer only when packing, the pdb inside the nupkg (Pkg 3.1)
 - `tests/Api.Tests/Perezosoft.Api.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Api.Tests/PlatformSourceTests.cs` — the local source switch: every packable project is in the package map; the switch reads .env and never touches the committed lockfile (Pkg 2.4)
 - `tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
@@ -1397,4 +1398,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1230 tracked files · 855 built in lessons · 375 bucketed · 0 unmapped
+**Totals:** 1231 tracked files · 856 built in lessons · 375 bucketed · 0 unmapped

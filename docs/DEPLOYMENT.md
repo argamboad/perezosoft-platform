@@ -512,6 +512,10 @@ about **5 billed minutes** a run). The workflow's own `GITHUB_TOKEN` publishes; 
 | `dry_run` | Packs only `tools/release/dry-run` (`Perezosoft.Platform.DryRun`) at a `-dry.` version (`0.0.1-dry.1`), pushes it, restores it back the way an app would, and writes the note to the run's summary. No tag, no GitHub release. |
 | `schema_change`, `register_change`, `breaking` | The three answers every release note gives (ADR-034 §7), filled into `.github/release-note-template.md`. |
 
+What a release publishes (Pkg 3.1): `Perezosoft.Platform.Core`, `.Infrastructure` and `.Api` — the packable projects of
+`Perezosoft.slnx` (the dry-run sample is outside it). Each carries its .pdb inside the .nupkg (GitHub Packages serves no
+symbol package) with SourceLink to the commit; `Api` depends on the other two at the same version.
+
 What a run does, in order: check the version, the branch and that the tag is new (the `release-plan` block, held by
 its ci-logic cases) → tag locally → `dotnet pack` every project with `<IsPackable>true</IsPackable>` (MinVer gives each
 exactly the tag's version; nothing else packs) → push the packages → push the tag → create the GitHub release (a

@@ -32,6 +32,13 @@
     <IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+    <!--
+      Pkg 3.1. Versions are stamped only when packing: an ordinary build needs none, and a Docker build has no .git, where
+      MinVer would warn (and warnings are errors). `dotnet pack` sets _IsPacking, so the release stamps the tag. (The
+      packable projects' symbol and SourceLink settings are in Directory.Build.targets, where IsPackable is known.)
+      PackagingContractTests holds these.
+    -->
+    <MinVerSkip Condition="'$(_IsPacking)' != 'true' and '$(MinVerSkip)' == ''">true</MinVerSkip>
     <RepositoryUrl>https://github.com/argamboad/perezosoft-platform</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <Authors>Perezosoft</Authors>

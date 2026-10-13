@@ -46,6 +46,12 @@
           "Newtonsoft.Json": "13.0.4"
         }
       },
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
+      },
       "OpenTelemetry.Exporter.Console": {
         "type": "Direct",
         "requested": "[1.16.0, )",
@@ -439,10 +445,10 @@
         "resolved": "9.0.0",
         "contentHash": "CJW+x/F6fmRQ7N6K8paasTw9PDZp4t7G76UjGNlSDgoHPF0h08vTzLYbLZpOLEJSg35d5wy2jCXGo84EN05DpQ=="
       },
-      "perezosoft.core": {
+      "Perezosoft.Platform.Core": {
         "type": "Project"
       },
-      "perezosoft.infrastructure": {
+      "Perezosoft.Platform.Infrastructure": {
         "type": "Project",
         "dependencies": {
           "AWSSDK.S3": "[4.0.100, )",
@@ -451,7 +457,7 @@
           "Microsoft.AspNetCore.Authentication.MicrosoftAccount": "[10.0.11, )",
           "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": "[10.0.11, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
-          "Perezosoft.Core": "[1.0.0, )",
+          "Perezosoft.Platform.Core": "[1.0.0, )",
           "Stripe.net": "[52.1.0, )"
         }
       },

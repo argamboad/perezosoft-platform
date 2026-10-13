@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>c0339958-6cea-40c1-8433-087f53b886e7</UserSecretsId>
+    <!-- Published as a package (Pkg 3.1, ADR-034). Until the host is split out (Pkg 3.2) this is still the web app itself. -->
+    <IsPackable>true</IsPackable>
+    <!-- The Web SDK would pack the WASM debug-proxy's content files (a dozen .dll under contentFiles/): not part of the package. -->
+    <IncludeContentInPack>false</IncludeContentInPack>
+    <PackageId>Perezosoft.Platform.Api</PackageId>
+    <Description>Perezosoft Platform API: controllers, auth, tenancy, billing, jobs and the endpoints every app inherits.</Description>
   </PropertyGroup>
 
   <ItemGroup>
