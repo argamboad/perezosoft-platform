@@ -685,14 +685,14 @@ public class EnforcementGateTests
         var platformPaths = File.Exists(manifestPath)
             ? Architecture.PlatformOwnership.ParseManifest(File.ReadAllText(manifestPath)).Entries.Select(e => e.Path).ToHashSet(StringComparer.Ordinal)
             : null;
-        var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Infrastructure", "Persistence", "Migrations"), "*.cs")
+        var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Host", "Persistence", "Migrations"), "*.cs")
             .Where(f => !f.EndsWith("ModelSnapshot.cs", StringComparison.Ordinal) && !f.EndsWith(".Designer.cs", StringComparison.Ordinal))
             .Select(f => (Rel: Path.GetRelativePath(root, f).Replace('\\', '/'),
                           Text: string.Join('\n', File.ReadLines(f).Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)))))
             .Where(m => platformPaths is null || platformPaths.Contains(m.Rel))
             .ToList();
         var sample = migrations.Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) == Architecture.PlatformOwnership.Class.Sample).Select(m => m.Rel).ToList();
-        if (Directory.Exists(Path.Combine(root, "src", "Api", "Features", "Notes"))) // an app that removed the sample keeps none of its migrations
+        if (Directory.Exists(Path.Combine(root, "src", "Host", "Features", "Notes"))) // an app that removed the sample keeps none of its migrations
             Assert.True(sample.Count >= 2, "probe: the sample's own migrations (AddNotesSample, NotesSampleRlsPolicy) are classed `sample`");
         var offenders = migrations
             .Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) != Architecture.PlatformOwnership.Class.Sample)
@@ -712,7 +712,7 @@ public class EnforcementGateTests
         var root = RepoRoot();
         string[] composition =
         [
-            "src/Api/Program.cs", "src/Infrastructure/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
+            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Host/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
             "tests/Api.Tests/Infrastructure/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
             "tests/Ui.Tests/Infrastructure/TestHttpHandler.cs",
@@ -726,7 +726,7 @@ public class EnforcementGateTests
             .ToList();
         Assert.True(offenders.Count == 0, "a platform composition file names the sample slice — the seam leaks (Arch A1): " + string.Join(", ", offenders));
         foreach (var f in composition) Assert.True(File.Exists(Path.Combine(root, f)), $"composition file moved: {f}");
-        Assert.DoesNotContain("Features.", File.ReadAllText(Path.Combine(root, "src", "Api", "Program.cs")).Replace("MapTenantFeatureGroup", ""));
+        Assert.DoesNotContain("Features.", File.ReadAllText(Path.Combine(root, "src", "Host", "Program.cs")).Replace("MapTenantFeatureGroup", ""));
     }
 
     [Fact]

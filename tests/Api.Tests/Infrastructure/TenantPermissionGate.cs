@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Perezosoft.Api.Authentication;
+using Perezosoft.Core.Authorization;
 using Perezosoft.Core.Repositories;
 
 namespace Perezosoft.Api.Tests.Infrastructure;
@@ -22,15 +23,17 @@ namespace Perezosoft.Api.Tests.Infrastructure;
 /// </summary>
 public static class TenantPermissionGate
 {
+    /// <param name="roles">The host's role→permission matrix (Pkg 3.8); the platform's default when omitted.</param>
     public static async Task<IActionResult?> RunAsync(
-        Type controllerType, string actionName, ITenantRepository tenants, Guid callerUserId, Guid callerTenantId)
+        Type controllerType, string actionName, ITenantRepository tenants, Guid callerUserId, Guid callerTenantId,
+        RolePermissions? roles = null)
     {
         var attribute = controllerType.GetMethod(actionName)!
             .GetCustomAttribute<RequireTenantPermissionAttribute>()
             ?? throw new InvalidOperationException(
                 $"{controllerType.Name}.{actionName} has no [RequireTenantPermission].");
 
-        var services = new ServiceCollection().AddSingleton(tenants).BuildServiceProvider();
+        var services = new ServiceCollection().AddSingleton(tenants).AddSingleton(roles ?? TestPermissions.Default).BuildServiceProvider();
         // The principal carries the JWT tenant_id — authz resolves membership for that tenant (LB-ADM-3).
         var user = new ClaimsPrincipal(new ClaimsIdentity(
             [new Claim(ClaimTypes.NameIdentifier, callerUserId.ToString()),

@@ -31,8 +31,8 @@ public abstract class TenantApiControllerBase(ITenantRepository tenants) : Contr
             : Task.FromResult<TenantMembership?>(null);
 
     /// <summary>True if the caller's role grants <paramref name="permission"/> (ADR-009 matrix).</summary>
-    protected static bool HasPermission(TenantMembership membership, Permission permission) =>
-        RolePermissions.Grants(membership.Role, permission);
+    protected bool HasPermission(TenantMembership membership, Permission permission) =>
+        HttpContext.RequestServices.GetRequiredService<RolePermissions>().Grants(membership.Role, permission);
 
     /// <summary>401 with the standard envelope — the caller's token is missing/invalid.</summary>
     protected IActionResult InvalidToken() =>

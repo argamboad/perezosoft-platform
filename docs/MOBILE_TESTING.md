@@ -15,7 +15,7 @@ Start the backing services and the API:
 
 ```bash
 docker compose up -d                                   # Postgres (5433) + Mailpit (1025/8025)
-dotnet run --project src/Api --launch-profile https    # serves https:7160 AND http:5238
+dotnet run --project src/Host --launch-profile https    # serves https:7160 AND http:5238
 ```
 
 The `https` profile binds **both** `https://localhost:7160` (web/desktop) and

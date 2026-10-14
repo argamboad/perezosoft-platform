@@ -72,7 +72,7 @@ instead). **Admin** requires your email in that environment's `Admin__StaffEmail
 ## Quick start (local)
 
 1. `docker compose up -d` (Postgres + Mailpit) and run the API with the **https** profile
-   (`dotnet run --project src/Api --launch-profile https` → `https://localhost:7160`).
+   (`dotnet run --project src/Host --launch-profile https` → `https://localhost:7160`).
 2. Import the collection + both environments, select **Perezosoft — local dev**.
 3. **SMTP must point at Mailpit** (`localhost:1025`). If your local `.env` overrides SMTP to a
    real provider (e.g. Brevo), switch it back — the OTP auto-fetch reads Mailpit's API.

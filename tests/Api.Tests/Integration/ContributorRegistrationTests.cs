@@ -28,9 +28,10 @@ public class ContributorRegistrationTests(IntegrationTestFactory factory)
 
     private void AssertAllRegistered<TContributor>() where TContributor : class
     {
-        // Every non-abstract implementation in the app's own assemblies (Api incl. Features/, and
-        // Infrastructure — where AuditDataContributor lives)…
-        var declared = new[] { typeof(Program).Assembly, typeof(Perezosoft.Infrastructure.ServiceCollectionExtensions).Assembly }
+        // Every non-abstract implementation in the app's own assemblies — the host (Program, Features/), the API library
+        // (Pkg 3.2: the platform's contributors moved there with it) and Infrastructure, where AuditDataContributor lives…
+        var declared = new[] { typeof(Program).Assembly, typeof(Perezosoft.Api.Configuration.BillingGateConvention).Assembly,
+                               typeof(Perezosoft.Infrastructure.ServiceCollectionExtensions).Assembly }
             .SelectMany(a => a.GetTypes())
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(TContributor).IsAssignableFrom(t))
             .ToList();

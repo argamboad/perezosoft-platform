@@ -22,7 +22,7 @@ public class QuotaServiceTests(PostgresFixture fixture) : PostgresTestBase(fixtu
     // Catalog example limits this suite pins to: Free export=3; Pro seats=10. The Free SEAT limit is read
     // from the catalog rather than copied, so re-tuning it (GATES-1 moved it 3 → 5) re-tunes these tests
     // with it — what they actually assert is the rule at the boundary, not the number.
-    private static readonly int FreeSeats = PlanCatalog.Get(PlanKeys.Free).SeatLimit!.Value;
+    private static readonly int FreeSeats = TestPlans.Default.Get(PlanKeys.Free).SeatLimit!.Value;
 
     [Fact]
     public async Task Seats_UnderFreeLimit_CanAdd()
@@ -63,6 +63,24 @@ public class QuotaServiceTests(PostgresFixture fixture) : PostgresTestBase(fixtu
         var quota = BuildQuota(db, tenant);
 
         Assert.Equal(FreeSeats, (await quota.GetSeatUsageAsync()).Used);
+        Assert.False(await quota.CanAddSeatsAsync());
+    }
+
+    [Fact]
+    public async Task Seats_FollowTheHostsOwnPlans() // Pkg 3.7
+    {
+        var options = new Perezosoft.Core.PlatformOptions();
+        options.Plans.Clear();
+        options.Plans.Add(new Plan(PlanKeys.Free, new HashSet<string>(), SeatLimit: 2));
+        var tenant = Guid.CreateVersion7();
+        await SeedTenantWithMembersAsync(tenant, members: 2);
+
+        await using var db = Fixture.CreateContext(tenant);
+        var quota = new QuotaService(new EfRepository<Subscription>(db), new TenantRepository(db), new TenantInvitationRepository(db),
+            new EfRepository<UsageCounter>(db), new TestCurrentTenant { TenantId = tenant }, TestPlans.From(options), TimeProvider.System);
+
+        var usage = await quota.GetSeatUsageAsync();
+        Assert.Equal(2, usage.Limit);
         Assert.False(await quota.CanAddSeatsAsync());
     }
 
@@ -286,7 +304,7 @@ public class QuotaServiceTests(PostgresFixture fixture) : PostgresTestBase(fixtu
         var quota = new QuotaService(
             new EfRepository<Subscription>(db), new TenantRepository(db), new TenantInvitationRepository(db),
             new ThrowingUsageRepository(new EfRepository<UsageCounter>(db)), // throws a NON-23505 on insert
-            new TestCurrentTenant { TenantId = tenant }, TimeProvider.System);
+            new TestCurrentTenant { TenantId = tenant }, TestPlans.Default, TimeProvider.System);
 
         await Assert.ThrowsAsync<DbUpdateException>(() => quota.TryConsumeAsync(UsageKeys.Export));
     }
@@ -308,7 +326,7 @@ public class QuotaServiceTests(PostgresFixture fixture) : PostgresTestBase(fixtu
 
     private static QuotaService BuildQuota(Perezosoft.Infrastructure.Persistence.AppDbContext db, Guid tenant, TimeProvider? clock = null) =>
         new(new EfRepository<Subscription>(db), new TenantRepository(db), new TenantInvitationRepository(db),
-            new EfRepository<UsageCounter>(db), new TestCurrentTenant { TenantId = tenant }, clock ?? TimeProvider.System);
+            new EfRepository<UsageCounter>(db), new TestCurrentTenant { TenantId = tenant }, TestPlans.Default, clock ?? TimeProvider.System);
 
     /// <summary>Seeds a tenant with <paramref name="members"/> memberships; returns the owner's user id.</summary>
     private async Task<Guid> SeedTenantWithMembersAsync(Guid tenant, int members)

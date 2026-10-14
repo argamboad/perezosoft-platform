@@ -71,6 +71,17 @@ public static class RlsDdl
         ];
     }
 
+    /// <summary>
+    /// The reverse of <see cref="StatementsFor(string, string)"/> for one table: the policy dropped, RLS unforced and
+    /// disabled. The rows stay — a migration's Down that calls it loses no data.
+    /// </summary>
+    public static IReadOnlyList<string> DropStatementsFor(string table) =>
+    [
+        $"""DROP POLICY IF EXISTS {PolicyName} ON "{table}";""",
+        $"""ALTER TABLE "{table}" NO FORCE ROW LEVEL SECURITY;""",
+        $"""ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY;""",
+    ];
+
     // ── The shared-or-tenant shape (Arch A4, ISharedOrTenantScoped) ──────────────────────────────────────────────
     // The policy above cannot express a shared row: it tests TenantId = current, so a row with a NULL TenantId
     // matches nothing and a seeded catalog would be invisible at the database. ISharedOrTenantScoped tables get

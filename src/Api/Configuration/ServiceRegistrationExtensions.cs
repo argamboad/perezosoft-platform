@@ -1,7 +1,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Perezosoft.Api.Services;
+using Perezosoft.Core;
 using Perezosoft.Core.Abstractions;
+using Perezosoft.Core.Authorization;
+using Perezosoft.Core.Billing;
+using Perezosoft.Infrastructure.Email;
 
 namespace Perezosoft.Api.Configuration;
 
@@ -12,6 +16,24 @@ namespace Perezosoft.Api.Configuration;
 /// </summary>
 public static class ServiceRegistrationExtensions
 {
+    /// <summary>
+    /// The host's options (Pkg 3.7, ADR-034 §4): <see cref="PlatformOptions"/> is built from the platform's defaults, handed to
+    /// the host's <paramref name="configure"/> once, and registered as a singleton; the objects the platform derives from it
+    /// are built here too, so a bad option (a plan list without Free) stops the host at startup, not at the first request.
+    /// Returns the options, for the registrations that read them while the host is still being built (the billing gate's
+    /// controller convention, Pkg 3.10).
+    /// </summary>
+    public static PlatformOptions AddPlatformOptions(this IServiceCollection services, Action<PlatformOptions>? configure = null)
+    {
+        var options = new PlatformOptions();
+        configure?.Invoke(options);
+        services.AddSingleton(options);
+        services.AddSingleton(new PlanCatalog(options.Plans));
+        services.AddSingleton(new RolePermissions(options.Permissions));
+        services.AddSingleton(new BrandedEmail(options.Brand));
+        return options;
+    }
+
     /// <summary>Auth services.</summary>
     public static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
@@ -40,10 +62,10 @@ public static class ServiceRegistrationExtensions
     public static IServiceCollection AddTenantServices(this IServiceCollection services)
     {
         // Current-tenant accessor — reads the JWT tenant_id claim; drives the global tenant
-        // query filter in AppDbContext and is the slice-facing tenancy entry point.
+        // query filter in PlatformDbContext and is the slice-facing tenancy entry point.
         services.AddHttpContextAccessor();
         // One scoped HttpCurrentTenant backs both interfaces, so entering a tenant via ITenantContext is seen
-        // by ICurrentTenant (and thus the AppDbContext filter/stamping) within the same scope.
+        // by ICurrentTenant (and thus the PlatformDbContext filter/stamping) within the same scope.
         services.AddScoped<HttpCurrentTenant>();
         services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<HttpCurrentTenant>());
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<HttpCurrentTenant>());

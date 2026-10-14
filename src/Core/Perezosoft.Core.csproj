@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Published as a package (Pkg 3.1, ADR-034): the platform's domain core — entities, abstractions, rules. -->
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Core</PackageId>
+    <Description>Perezosoft Platform core: tenant-scoped entities, abstractions and domain rules shared by every app.</Description>
   </PropertyGroup>
 
 </Project>

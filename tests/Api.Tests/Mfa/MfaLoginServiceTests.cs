@@ -222,7 +222,7 @@ public class MfaLoginServiceTests(PostgresFixture fixture) : PostgresTestBase(fi
     {
         var mfa = new MfaService(
             new EfRepository<UserMfa>(db), new EfRepository<MfaRecoveryCode>(db), new UserRepository(db),
-            ctx.Dp, new RecoveryCodeHasher(new TestJwtSettings()), ctx.Settings, ctx.Clock);
+            ctx.Dp, new RecoveryCodeHasher(new TestJwtSettings()), ctx.Settings, new Perezosoft.Core.PlatformOptions(), ctx.Clock);
         var challenges = new MfaChallengeService(ctx.Dp, ctx.Cache);
         var harness = new ServiceHarness(db);
         return (new MfaLoginService(mfa, challenges, harness.SessionService(), harness.UserService()), mfa);
@@ -254,7 +254,7 @@ public class MfaLoginServiceTests(PostgresFixture fixture) : PostgresTestBase(fi
         var mfa = new MfaService(
             new EfRepository<UserMfa>(db), new EfRepository<MfaRecoveryCode>(db), new UserRepository(db),
             new EphemeralDataProtectionProvider(), new RecoveryCodeHasher(new TestJwtSettings()),
-            mfaSettings ?? new TestMfaSettings(), clock ?? TimeProvider.System);
+            mfaSettings ?? new TestMfaSettings(), new Perezosoft.Core.PlatformOptions(), clock ?? TimeProvider.System);
         var challenges = new MfaChallengeService(new EphemeralDataProtectionProvider(), new MemoryCache(new MemoryCacheOptions()));
         var harness = new ServiceHarness(db);
         var login = new MfaLoginService(mfa, challenges, harness.SessionService(), harness.UserService());

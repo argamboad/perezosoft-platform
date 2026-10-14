@@ -6,7 +6,7 @@ using Perezosoft.Infrastructure.Persistence;
 namespace Perezosoft.Infrastructure.Repositories;
 
 /// <summary>EF Core implementation of <see cref="ITenantInvitationRepository"/>.</summary>
-public class TenantInvitationRepository(AppDbContext db) : ITenantInvitationRepository
+public class TenantInvitationRepository(PlatformDbContext db) : ITenantInvitationRepository
 {
     public async Task<TenantInvitation> CreateAsync(TenantInvitation invitation, CancellationToken cancellationToken = default)
     {

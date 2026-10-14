@@ -211,7 +211,7 @@ public class SubscriptionLapseSweepJobTests(PostgresFixture fixture) : PostgresT
             new TenantRepository(db),
             new NotificationService(
                 new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-                new UserRepository(db), emailSender, clock));
+                new UserRepository(db), emailSender, TestEmails.Default, clock));
 
         var job = new SubscriptionLapseSweepJob(
             new EfRepository<Subscription>(db), ctx, notifier, new EfUnitOfWork(db),

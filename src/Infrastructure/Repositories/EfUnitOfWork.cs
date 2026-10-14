@@ -19,7 +19,7 @@ namespace Perezosoft.Infrastructure.Repositories;
 /// scope commits the transaction. An un-committed inner scope rolls back to the
 /// savepoint without aborting the outer transaction.
 /// </summary>
-public class EfUnitOfWork(AppDbContext db) : IUnitOfWork
+public class EfUnitOfWork(PlatformDbContext db) : IUnitOfWork
 {
     public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
@@ -47,7 +47,7 @@ public class EfUnitOfWork(AppDbContext db) : IUnitOfWork
         public ValueTask DisposeAsync() => transaction.DisposeAsync();
     }
 
-    private sealed class SavepointScope(IDbContextTransaction transaction, AppDbContext db, string name) : ITransactionScope
+    private sealed class SavepointScope(IDbContextTransaction transaction, PlatformDbContext db, string name) : ITransactionScope
     {
         private bool _committed;
 

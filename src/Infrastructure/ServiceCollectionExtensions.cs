@@ -34,22 +34,30 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public const string ExternalScheme = "External";
 
-    public static IServiceCollection AddInfrastructure(
+    /// <param name="services">The app's services.</param>
+    /// <typeparam name="TContext">The app's context (Pkg 3.5): derives from <see cref="PlatformDbContext"/>, lives in the
+    /// app's assembly with its migrations. Registered as itself; platform code resolves <see cref="PlatformDbContext"/>
+    /// (and its factory), which map to the same scoped instance.</typeparam>
+    public static IServiceCollection AddInfrastructure<TContext>(
         this IServiceCollection services,
         IConfiguration configuration,
         IHostEnvironment environment,
         bool billingEnabled)
+        where TContext : PlatformDbContext
     {
         // Persistence
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddDbContext<TContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+        services.AddScoped<PlatformDbContext>(sp => sp.GetRequiredService<TContext>());
         // A SCOPED context factory for services that must write OUT-OF-BAND of the ambient
         // transaction — the webhook delivery recorder persists failed-attempt rows through it, so
         // they survive the OutboxProcessor's rollback (HOOKS-2). Scoped (not the default
-        // singleton) because AppDbContext takes the scoped ICurrentTenant in its constructor.
-        services.AddDbContextFactory<AppDbContext>(options =>
+        // singleton) because the context takes the scoped ICurrentTenant in its constructor.
+        services.AddDbContextFactory<TContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")),
             ServiceLifetime.Scoped);
+        services.AddScoped<IDbContextFactory<PlatformDbContext>>(sp =>
+            new PlatformDbContextFactory<TContext>(sp.GetRequiredService<IDbContextFactory<TContext>>()));
 
         // Data Protection — keys stored in DB so the OAuth correlation/nonce cookies
         // survive server restarts/redeploys.
@@ -58,7 +66,7 @@ public static class ServiceCollectionExtensions
         // secrets, in-flight tokens — undecryptable. Kept through the Perezosoft rename;
         // change only alongside a deliberate re-encryption migration.
         services.AddDataProtection()
-            .PersistKeysToDbContext<AppDbContext>()
+            .PersistKeysToDbContext<TContext>()
             .SetApplicationName("template");
 
         // Email — dev: points to Mailpit via appsettings.Development.json

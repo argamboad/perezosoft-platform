@@ -18,19 +18,20 @@ namespace Perezosoft.Api.Tests.Rbac;
 public class PermissionServiceTests(PostgresFixture fixture) : PostgresTestBase(fixture)
 {
     // The three role theories below together pin the COMPLETE role×permission matrix — every
-    // Permission member appears in each (v3 TB-ADM-11/12, T45a). MemberData over the enum keeps the
+    // platform permission appears in each (v3 TB-ADM-11/12, T45a). MemberData over Permission.Platform keeps the
     // owner row future-proof; a NEW permission must then be placed in the admin/member theories
-    // explicitly, which is the point: its author decides the row, not a default.
-    public static TheoryData<Permission> AllPermissions =>
-        [.. Enum.GetValues<Permission>()];
+    // explicitly, which is the point: its author decides the row, not a default. Names, not values: an
+    // attribute argument must be a constant (Pkg 3.8).
+    public static TheoryData<string> AllPermissions =>
+        [.. Permission.Platform.Select(p => p.Name)];
 
     [Theory]
     [MemberData(nameof(AllPermissions))]
-    public async Task Owner_HasEveryPermission(Permission permission)
+    public async Task Owner_HasEveryPermission(string permission)
     {
         var tenantId = Guid.CreateVersion7();
         var ownerId = await SeedMembershipAsync(tenantId, TenantRoles.Owner);
-        Assert.True(await NewService(ownerId, tenantId).HasAsync(permission));
+        Assert.True(await NewService(ownerId, tenantId).HasAsync(new Permission(permission)));
     }
 
     [Fact]
@@ -48,41 +49,41 @@ public class PermissionServiceTests(PostgresFixture fixture) : PostgresTestBase(
     }
 
     [Theory]
-    [InlineData(Permission.ViewTenant, true)]
-    [InlineData(Permission.RenameTenant, true)]
-    [InlineData(Permission.ManageMembers, true)]
-    [InlineData(Permission.ManageRoles, false)]        // privilege escalation — owner-only
-    [InlineData(Permission.ManageBilling, false)]      // financial — owner-only
-    [InlineData(Permission.ExportData, false)]         // GDPR export — owner-only
-    [InlineData(Permission.TransferOwnership, false)]
-    [InlineData(Permission.DissolveTenant, false)]
-    [InlineData(Permission.ManageApiKeys, false)]      // programmatic tenant access — owner-only (TB-ADM-12)
-    [InlineData(Permission.ManageWebhooks, false)]     // outbound data flow — owner-only (TB-ADM-12)
-    public async Task Admin_HasManagementButNotOwnerOnly(Permission permission, bool granted)
+    [InlineData(nameof(Permission.ViewTenant), true)]
+    [InlineData(nameof(Permission.RenameTenant), true)]
+    [InlineData(nameof(Permission.ManageMembers), true)]
+    [InlineData(nameof(Permission.ManageRoles), false)]        // privilege escalation — owner-only
+    [InlineData(nameof(Permission.ManageBilling), false)]      // financial — owner-only
+    [InlineData(nameof(Permission.ExportData), false)]         // GDPR export — owner-only
+    [InlineData(nameof(Permission.TransferOwnership), false)]
+    [InlineData(nameof(Permission.DissolveTenant), false)]
+    [InlineData(nameof(Permission.ManageApiKeys), false)]      // programmatic tenant access — owner-only (TB-ADM-12)
+    [InlineData(nameof(Permission.ManageWebhooks), false)]     // outbound data flow — owner-only (TB-ADM-12)
+    public async Task Admin_HasManagementButNotOwnerOnly(string permission, bool granted)
     {
         var tenantId = Guid.CreateVersion7();
         await SeedMembershipAsync(tenantId, TenantRoles.Owner);
         var adminId = await SeedMembershipAsync(tenantId, TenantRoles.Admin);
-        Assert.Equal(granted, await NewService(adminId, tenantId).HasAsync(permission));
+        Assert.Equal(granted, await NewService(adminId, tenantId).HasAsync(new Permission(permission)));
     }
 
     [Theory]
-    [InlineData(Permission.ViewTenant, true)]
-    [InlineData(Permission.RenameTenant, false)]
-    [InlineData(Permission.ManageMembers, false)]
-    [InlineData(Permission.ManageRoles, false)]
-    [InlineData(Permission.ManageBilling, false)]
-    [InlineData(Permission.ExportData, false)]
-    [InlineData(Permission.TransferOwnership, false)]
-    [InlineData(Permission.DissolveTenant, false)]
-    [InlineData(Permission.ManageApiKeys, false)]
-    [InlineData(Permission.ManageWebhooks, false)]
-    public async Task Member_HasOnlyViewTenant(Permission permission, bool granted)
+    [InlineData(nameof(Permission.ViewTenant), true)]
+    [InlineData(nameof(Permission.RenameTenant), false)]
+    [InlineData(nameof(Permission.ManageMembers), false)]
+    [InlineData(nameof(Permission.ManageRoles), false)]
+    [InlineData(nameof(Permission.ManageBilling), false)]
+    [InlineData(nameof(Permission.ExportData), false)]
+    [InlineData(nameof(Permission.TransferOwnership), false)]
+    [InlineData(nameof(Permission.DissolveTenant), false)]
+    [InlineData(nameof(Permission.ManageApiKeys), false)]
+    [InlineData(nameof(Permission.ManageWebhooks), false)]
+    public async Task Member_HasOnlyViewTenant(string permission, bool granted)
     {
         var tenantId = Guid.CreateVersion7();
         await SeedMembershipAsync(tenantId, TenantRoles.Owner);
         var memberId = await SeedMembershipAsync(tenantId, TenantRoles.Member);
-        Assert.Equal(granted, await NewService(memberId, tenantId).HasAsync(permission));
+        Assert.Equal(granted, await NewService(memberId, tenantId).HasAsync(new Permission(permission)));
     }
 
     [Fact]
@@ -92,17 +93,35 @@ public class PermissionServiceTests(PostgresFixture fixture) : PostgresTestBase(
         // its admin/member rows must fail HERE, not silently default to untested.
         var admin = RowsOf(nameof(Admin_HasManagementButNotOwnerOnly));
         var member = RowsOf(nameof(Member_HasOnlyViewTenant));
-        foreach (var p in Enum.GetValues<Permission>())
+        foreach (var p in Permission.Platform.Select(p => p.Name))
         {
             Assert.Contains(p, admin);
             Assert.Contains(p, member);
         }
 
-        static HashSet<Permission> RowsOf(string methodName) =>
+        static HashSet<string> RowsOf(string methodName) =>
             [.. typeof(PermissionServiceTests).GetMethod(methodName)!
                 .GetCustomAttributes(typeof(InlineDataAttribute), false)
                 .Cast<InlineDataAttribute>()
-                .Select(a => (Permission)a.GetData(null!).Single()[0]!)];
+                .Select(a => (string)a.GetData(null!).Single()[0]!)];
+    }
+
+    [Fact]
+    public async Task AnAppPermission_ResolvesThroughTheHostsMatrix() // Pkg 3.8
+    {
+        // An app registered "ManageProjects" for admins in AddPlatform(o => o.Permissions.Add(...)): .RequirePermission(...)
+        // asks this service, so the app's own capability is checked exactly like a platform one.
+        var manageProjects = new Permission("ManageProjects");
+        var roles = new RolePermissions(new PermissionRegistry().Add(manageProjects, TenantRoles.Admin));
+        var tenantId = Guid.CreateVersion7();
+        var ownerId = await SeedMembershipAsync(tenantId, TenantRoles.Owner);
+        var adminId = await SeedMembershipAsync(tenantId, TenantRoles.Admin);
+        var memberId = await SeedMembershipAsync(tenantId, TenantRoles.Member);
+
+        Assert.True(await NewService(ownerId, tenantId, roles).HasAsync(manageProjects));
+        Assert.True(await NewService(adminId, tenantId, roles).HasAsync(manageProjects));
+        Assert.False(await NewService(memberId, tenantId, roles).HasAsync(manageProjects));
+        Assert.False(await NewService(ownerId, tenantId).HasAsync(manageProjects)); // a host that never registered it: nobody holds it
     }
 
     [Fact]
@@ -116,20 +135,20 @@ public class PermissionServiceTests(PostgresFixture fixture) : PostgresTestBase(
     {
         var service = new PermissionService(
             new HttpContextAccessor { HttpContext = new DefaultHttpContext() },
-            new TenantRepository(Fixture.CreateContext()));
+            new TenantRepository(Fixture.CreateContext()), TestPermissions.Default);
 
         Assert.False(await service.HasAsync(Permission.ViewTenant));
     }
 
     // The principal carries BOTH the user id and the JWT tenant_id — authz resolves the membership for that
     // tenant (LB-ADM-3), exactly as a real request does.
-    private PermissionService NewService(Guid currentUserId, Guid tenantId)
+    private PermissionService NewService(Guid currentUserId, Guid tenantId, RolePermissions? roles = null)
     {
         var user = new ClaimsPrincipal(new ClaimsIdentity(
             [new Claim(ClaimTypes.NameIdentifier, currentUserId.ToString()), new Claim(JwtClaims.TenantId, tenantId.ToString())],
             authenticationType: "test"));
         var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } };
-        return new PermissionService(accessor, new TenantRepository(Fixture.CreateContext()));
+        return new PermissionService(accessor, new TenantRepository(Fixture.CreateContext()), roles ?? TestPermissions.Default);
     }
 
     /// <summary>Adds a (Tenant, User, TenantMembership) and returns the new user id. Not tenant-scoped.</summary>

@@ -11,7 +11,9 @@
 
 ## 1. Startup
 
-`src/Api/Program.cs` top to bottom. The two DB steps are fail-closed: migrations can run on a
+`src/Host/Program.cs` top to bottom — its two platform calls, `AddPlatform` and `MapPlatformAsync`, live in
+`src/Api/PlatformHosting.cs` (Packaging M3), with the app's options and services between them. The two DB steps are
+fail-closed: migrations can run on a
 separate owner connection (ADR-020 two-role topology), and the app refuses to boot if the runtime
 DB role could bypass row-level security.
 

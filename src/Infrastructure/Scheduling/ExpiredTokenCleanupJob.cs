@@ -10,7 +10,7 @@ namespace Perezosoft.Infrastructure.Scheduling;
 /// a revoked-but-unexpired refresh token is kept because its hash still backs rotation/replay
 /// detection until it expires. Copy this shape for trial-expiry sweeps, quota resets, etc.
 /// </summary>
-public sealed class ExpiredTokenCleanupJob(AppDbContext db, TimeProvider clock) : IScheduledJob
+public sealed class ExpiredTokenCleanupJob(PlatformDbContext db, TimeProvider clock) : IScheduledJob
 {
     public string Name => "expired-token-cleanup";
     public TimeSpan Interval => TimeSpan.FromHours(1);

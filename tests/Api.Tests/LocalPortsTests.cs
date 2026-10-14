@@ -34,9 +34,9 @@ public class LocalPortsTests
         Expect("docker-compose.yml MAIL_UI_PORT default", ComposeDefault("MAIL_UI_PORT"), block.MailUi);
         Expect("docker-compose.yml APP_PORT default", ComposeDefault("APP_PORT"), block.App);
 
-        var (apiHttps, apiHttp) = LaunchPorts("src/Api/Properties/launchSettings.json");
-        Expect("src/Api launchSettings https", apiHttps, block.ApiHttps);
-        Expect("src/Api launchSettings http", apiHttp, block.ApiHttp);
+        var (apiHttps, apiHttp) = LaunchPorts("src/Host/Properties/launchSettings.json");
+        Expect("src/Host launchSettings https", apiHttps, block.ApiHttps);
+        Expect("src/Host launchSettings http", apiHttp, block.ApiHttp);
         var (webHttps, webHttp) = LaunchPorts("src/Web/Properties/launchSettings.json");
         Expect("src/Web launchSettings https", webHttps, block.WebHttps);
         Expect("src/Web launchSettings http", webHttp, block.WebHttp);
@@ -49,7 +49,7 @@ public class LocalPortsTests
         Expect(".env.example connection string Port",
             Regex.Match(env, @"(?m)^ConnectionStrings__DefaultConnection=.*?Port=(\d+)") is { Success: true } c ? c.Groups[1].Value : null, block.Db);
 
-        using (var dev = JsonDocument.Parse(Read("src/Api/appsettings.Development.json")))
+        using (var dev = JsonDocument.Parse(Read("src/Host/appsettings.Development.json")))
         {
             Expect("appsettings.Development Email:Smtp:Port", Path(dev.RootElement, "Email", "Smtp", "Port"), block.Smtp);
             Expect("appsettings.Development Auth:AppBaseUrl", Path(dev.RootElement, "Auth", "AppBaseUrl"), $"https://localhost:{block.WebHttps}");
@@ -160,6 +160,27 @@ public class LocalPortsTests
                 failures.Add($"{file}: {services.Count} Mailpit job(s) but {pins.Count} Email__Smtp__Port: \"1025\" pin(s) - host networking ignores ports:, so the API must be sent to 1025");
         }
         Assert.True(failures.Count == 0, "CI mail wiring disagrees with this repo's block:\n  " + string.Join("\n  ", failures));
+    }
+
+    [Fact]
+    public void TheToolsScripts_NameProjectsThatExist() // Pkg 3.2 slip, found running tools/e2e.ps1 for PR #435
+    {
+        // The local scripts run outside CI, so a moved project breaks them silently: after the host split e2e.ps1 still read
+        // the API's launch profile from src/Api (a library now, no launchSettings) and failed before starting anything.
+        // Every src/<project> a tools script names exists, and every launch profile it reads (Get-HttpsUrl '<project>') is there.
+        var root = RepoRoot();
+        var failures = new List<string>();
+        foreach (var script in Directory.EnumerateFiles(System.IO.Path.Combine(root, "tools"), "*.ps1"))
+        {
+            var text = File.ReadAllText(script);
+            var name = System.IO.Path.GetFileName(script);
+            foreach (var project in Regex.Matches(text, @"src/([A-Za-z][A-Za-z.]*)").Select(m => m.Groups[1].Value).Distinct())
+                if (!Directory.Exists(System.IO.Path.Combine(root, "src", project))) failures.Add($"{name}: src/{project} does not exist");
+            foreach (var project in Regex.Matches(text, @"Get-HttpsUrl '([^']+)'").Select(m => m.Groups[1].Value).Distinct())
+                if (!File.Exists(System.IO.Path.Combine(root, "src", project, "Properties", "launchSettings.json")))
+                    failures.Add($"{name}: Get-HttpsUrl '{project}' — src/{project} has no Properties/launchSettings.json");
+        }
+        Assert.True(failures.Count == 0, "tools scripts name projects that moved:\n  " + string.Join("\n  ", failures));
     }
 
     [Fact]

@@ -8,7 +8,7 @@ namespace Perezosoft.Infrastructure.Scheduling;
 /// <summary>
 /// Runs registered <see cref="IScheduledJob"/>s on their own intervals (ADR-007). Wakes every
 /// <see cref="ScheduledJobsOptions.TickInterval"/>, resolves a fresh DI scope (so jobs get scoped
-/// services like a new <c>AppDbContext</c>), and runs each job whose interval has elapsed. One job's
+/// services like a new <c>PlatformDbContext</c>), and runs each job whose interval has elapsed. One job's
 /// failure is logged and isolated — it never stops the other jobs or the host.
 /// <para>
 /// In-process, single-instance for the platform; a distributed scheduler (Hangfire/Quartz) is the

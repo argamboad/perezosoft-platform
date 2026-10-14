@@ -26,6 +26,24 @@ public class TelemetryLogsExportTests
         return services.BuildServiceProvider();
     }
 
+    [Theory]
+    [InlineData(null, "Perezosoft.Api")]       // the platform's default brand
+    [InlineData("Vuelto.Api", "Vuelto.Api")]   // a host's own (Brand.ServiceName, Pkg 3.9b #433)
+    public void TracesAreFiledUnderTheHostsServiceName(string? serviceName, string expected)
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["OpenTelemetry:Otlp:Endpoint"] = "https://collector.example/otlp",
+        }).Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        if (serviceName is null) services.AddAppTelemetry(config); else services.AddAppTelemetry(config, serviceName);
+        using var sp = services.BuildServiceProvider();
+
+        var resource = OpenTelemetry.ProviderExtensions.GetResource(sp.GetRequiredService<OpenTelemetry.Trace.TracerProvider>());
+        Assert.Contains(resource.Attributes, a => a.Key == "service.name" && (string)a.Value == expected);
+    }
+
     [Fact]
     public void WithAnEndpoint_TheOpenTelemetryLogProvider_IsRegistered_WithMessageAndScopes()
     {

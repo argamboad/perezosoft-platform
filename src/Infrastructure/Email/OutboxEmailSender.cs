@@ -18,7 +18,7 @@ namespace Perezosoft.Infrastructure.Email;
 /// (<c>OutboxUserDataContributor</c>, v4 audit H7).
 /// </para>
 /// </summary>
-public sealed class OutboxEmailSender(IOutbox outbox, AppDbContext db, ICurrentTenant currentTenant) : IEmailSender
+public sealed class OutboxEmailSender(IOutbox outbox, PlatformDbContext db, ICurrentTenant currentTenant) : IEmailSender
 {
     /// <summary>The <see cref="Perezosoft.Core.Entities.OutboxMessage.Type"/> for email messages.</summary>
     public const string MessageType = "email";

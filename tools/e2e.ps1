@@ -76,7 +76,7 @@ $dbUser = Get-DbSetting 'DB_USER'
 $dbPassword = Get-DbSetting 'DB_PASSWORD'
 $smtpPort = Get-ComposeDefault 'MAIL_SMTP_PORT'
 $mailUi = "http://localhost:$(Get-ComposeDefault 'MAIL_UI_PORT')"
-$api = Get-HttpsUrl 'Api'
+$api = Get-HttpsUrl 'Host'
 $web = Get-HttpsUrl 'Web'
 $repo = Split-Path $root -Leaf
 Write-Host "E2E for $repo - API $api, web $web, Mailpit $mailUi (SMTP $smtpPort)"
@@ -103,7 +103,7 @@ if ($LASTEXITCODE -ne 0) { throw "could not recreate the e2e database in this re
 Write-Host 'E2E database: e2e (recreated; your dev database is not touched)'
 
 if (-not $NoBuild) {
-    foreach ($project in 'src/Api', 'src/Web', 'tests/E2E.Tests') {
+    foreach ($project in 'src/Host', 'src/Web', 'tests/E2E.Tests') {
         dotnet build $project -c Debug --nologo -v q
         if ($LASTEXITCODE -ne 0) { throw "build failed: $project" }
     }
@@ -159,9 +159,9 @@ function Wait-Ready([string]$url, $process, [string]$log) {
 
 $exit = 1
 try {
-    $apiProc = Start-App 'src/Api' $overrides; $script:started += $apiProc
+    $apiProc = Start-App 'src/Host' $overrides; $script:started += $apiProc
     $webProc = Start-App 'src/Web' @(); $script:started += $webProc
-    Wait-Ready "$api/health/ready" $apiProc (Join-Path $logs 'Api.log')
+    Wait-Ready "$api/health/ready" $apiProc (Join-Path $logs 'Host.log')
     Wait-Ready $web $webProc (Join-Path $logs 'Web.log')
     Write-Host 'Stack ready - running tests/E2E.Tests'
 

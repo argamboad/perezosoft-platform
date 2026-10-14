@@ -69,6 +69,7 @@ public sealed class NotificationService(
     IRepository<NotificationPreference> preferences,
     IUserRepository users,
     IEmailSender emailSender,
+    BrandedEmail emails,
     TimeProvider clock) : INotificationService
 {
     public async Task NotifyAsync(Guid userId, string kind, string title, string body, object? metadata = null, CancellationToken cancellationToken = default)
@@ -97,7 +98,7 @@ public sealed class NotificationService(
             {
                 // Brand the copy via the shared template (title/body are HTML-encoded inside). The
                 // app-facing IEmailSender is the outbox-backed decorator (ADR-007) — reliable + retried.
-                var emailBody = BrandedEmail.Notification(title, body, BrandedEmail.ResolveCulture(user.Locale));
+                var emailBody = emails.Notification(title, body, BrandedEmail.ResolveCulture(user.Locale));
                 await emailSender.SendAsync(user.Email, emailBody.Subject, emailBody.Html, emailBody.InlineImages, cancellationToken: cancellationToken);
             }
         }

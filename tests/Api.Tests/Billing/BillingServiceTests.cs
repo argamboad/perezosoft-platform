@@ -21,7 +21,7 @@ public class BillingServiceTests(PostgresFixture fixture) : PostgresTestBase(fix
     {
         await using var db = Fixture.CreateContext();
         var fake = new FakeBillingProvider();
-        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db));
+        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db), TestPlans.Default);
         var tenantId = Guid.CreateVersion7();
 
         var result = await service.CreateCheckoutAsync(tenantId, PlanKeys.Pro);
@@ -41,7 +41,7 @@ public class BillingServiceTests(PostgresFixture fixture) : PostgresTestBase(fix
     {
         await using var db = Fixture.CreateContext();
         var fake = new FakeBillingProvider();
-        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db));
+        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db), TestPlans.Default);
 
         var result = await service.CreateCheckoutAsync(Guid.CreateVersion7(), planKey);
 
@@ -57,7 +57,7 @@ public class BillingServiceTests(PostgresFixture fixture) : PostgresTestBase(fix
 
         await using var db = Fixture.CreateContext(tenant); // scoped to the tenant
         var fake = new FakeBillingProvider();
-        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db));
+        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db), TestPlans.Default);
 
         var result = await service.CreatePortalAsync();
 
@@ -71,7 +71,7 @@ public class BillingServiceTests(PostgresFixture fixture) : PostgresTestBase(fix
     {
         await using var db = Fixture.CreateContext(Guid.CreateVersion7());
         var fake = new FakeBillingProvider();
-        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db));
+        var service = new BillingService(fake, new TestAppSettings(), new EfRepository<Subscription>(db), TestPlans.Default);
 
         var result = await service.CreatePortalAsync();
 

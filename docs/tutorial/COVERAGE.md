@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (24 files)
+## 1.1 — Solution, projects & supply chain (26 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -34,13 +34,15 @@
 - `nuget.config` — NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)
 - `platform-packages.props` — the platform's package map: package id -> the project that packs it, read by an app's source switch (Pkg 2.4)
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
-- `src/Api/Properties/launchSettings.json`
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
+- `src/Host/Perezosoft.Host.csproj` — created here; PackageReferences added as lessons need them
+- `src/Host/Properties/launchSettings.json`
 - `src/Infrastructure/Perezosoft.Infrastructure.csproj` — created here; PackageReferences added as lessons need them
 - `src/Maui/Perezosoft.Maui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Shared.Ui/Perezosoft.Shared.Ui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Properties/launchSettings.json`
+- `tests/Api.Tests/PackagingContractTests.cs` — the packages the platform publishes: the three ids, each depends only on published projects, versions from MinVer only when packing, the pdb inside the nupkg (Pkg 3.1)
 - `tests/Api.Tests/Perezosoft.Api.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Api.Tests/PlatformSourceTests.cs` — the local source switch: every packable project is in the package map; the switch reads .env and never touches the committed lockfile (Pkg 2.4)
 - `tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
@@ -48,20 +50,24 @@
 - `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tools/release/dry-run/Perezosoft.Platform.DryRun.csproj` — created here; PackageReferences added as lessons need them
 
-## 1.2 — First endpoint, first test (6 files)
+## 1.2 — First endpoint, first test (7 files)
 
-- `src/Api/Perezosoft.Api.http` — REST client scratchpad — grows with each endpoint
-- `src/Api/Program.cs` — born here; every part adds registrations/middleware
+- `src/Api/PlatformHosting.cs` — AddPlatform / MapPlatformAsync: every registration and the pipeline Program.cs used to spell out (Pkg 3.3)
+- `src/Host/Perezosoft.Host.http` — REST client scratchpad — grows with each endpoint
+- `src/Host/Program.cs` — born here; since Pkg 3.3 only the composition order: AddPlatform, the app, MapPlatformAsync, the guard
 - `tests/Api.Tests/HarnessSmokeTests.cs`
 - `tests/Api.Tests/Infrastructure/FakeHostEnvironment.cs`
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 
-## 1.3 — Database & the test container (14 files)
+## 1.3 — Database & the test container (18 files)
 
-- `src/Api/AppDbContextFactory.cs` — design-time factory for dotnet ef
-- `src/Infrastructure/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
-- `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
+- `src/Api/PlatformDesignTimeDbContextFactory.cs` — the design-time factory every host derives from in one line (Pkg 3.5)
+- `src/Host/AppDbContextFactory.cs` — design-time factory for dotnet ef
+- `src/Host/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
+- `src/Host/Persistence/AppDbContext.cs` — the app's context: derives from PlatformDbContext and owns the migrations (Pkg 3.5)
+- `src/Infrastructure/Persistence/PlatformDbContext.cs` — born here as AppDbContext; filter added 2.6, interceptors 2.7/4.6, DbSets throughout; the packaged base since Pkg 3.5
+- `src/Infrastructure/Persistence/PlatformDbContextFactory.cs` — IDbContextFactory<PlatformDbContext> over the app's own factory (Pkg 3.5)
 - `tests/Api.Tests/App/AppTestComposition.cs` — the app's half of the test chassis: its contributors and host pins (Arch A1)
 - `tests/Api.Tests/AppDbContextFactoryTests.cs`
 - `tests/Api.Tests/Infrastructure/CapturingLogger.cs` — the one log double the suite shares
@@ -73,17 +79,21 @@
 - `tests/Api.Tests/Infrastructure/ServiceHarness.cs`
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
+- `tests/Api.Tests/PlatformDbContextTests.cs` — the packaged base, the app's context and migrations in the host, DI hands platform code the app's context (Pkg 3.5)
 
-## 1.4 — Configuration & the options pattern (12 files)
+## 1.4 — Configuration & the options pattern (15 files)
 
+- `src/Api/Configuration/PlatformDefaults.cs` — adds the embedded defaults as the lowest configuration source (Pkg 3.4)
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
 - `src/Api/Configuration/SettingsRegistration.cs` — the one blessed Bind+ValidateOnStart pattern (R22)
 - `src/Api/LocalDotEnv.cs` — the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)
-- `src/Api/appsettings.Development.json` — non-secret config; grows every config lesson
-- `src/Api/appsettings.json` — non-secret config; grows every config lesson
+- `src/Api/platform-defaults.json` — the platform's configuration defaults, embedded in Perezosoft.Platform.Api (Pkg 3.4)
+- `src/Host/appsettings.Development.json` — the host's overrides only (Pkg 3.4); the platform's defaults ship in the package
+- `src/Host/appsettings.json` — the host's overrides only (Pkg 3.4); the platform's defaults ship in the package
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
 - `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)
+- `tests/Api.Tests/Configuration/PlatformDefaultsTests.cs` — the defaults ship in the assembly, sit below every other source, and the host only overrides (Pkg 3.4)
 - `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
 - `tests/Api.Tests/DocsAreTrueTests.cs` — every fact that compares a document with the code: DATA_MODEL, config keys, ARCHITECTURE/FLOWS, Postman descriptions, QA count, course gate (Pkg 1.2)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, QA-count sync, CI-classifier and image-pin gates (v3 T60: R61/R68/R75)
@@ -138,15 +148,20 @@
 - `tests/Api.Tests/CookieServiceTests.cs`
 - `tests/Api.Tests/SessionServiceTests.cs`
 
-## 2.3 — Email I — the IEmailSender seam (9 files)
+## 2.3 — Email I — the IEmailSender seam (14 files)
 
 - `src/Core/Abstractions/IEmailSender.cs` — the ONLY way to send email
+- `src/Core/PlatformBrand.cs` — the mails' brand as a host option: name, tagline, palette, logo, string overrides (Pkg 3.9)
 - `src/Infrastructure/Email/Assets/logo.png`
-- `src/Infrastructure/Email/BrandedEmail.cs` — inline-branded templates — the rebrand trap
+- `src/Infrastructure/Email/BrandedEmail.cs` — inline-branded templates — the rebrand trap; branded from PlatformOptions.Brand since Pkg 3.9
 - `src/Infrastructure/Email/EmailStrings.resx` — localized in 3.5
 - `src/Infrastructure/Email/SmtpEmailSender.cs` — MailKit quarantined here
 - `src/Infrastructure/Email/SmtpSettings.cs`
+- `tests/Api.Tests/Email/BrandedEmailTests.cs` — default brand = the platform's; an app brand renders; the app's strings win one culture at a time (Pkg 3.9)
+- `tests/Api.Tests/Email/ScratchAppEmailStrings.es.resx` — a scratch app's partial string overrides, for BrandedEmailTests (Pkg 3.9)
+- `tests/Api.Tests/Email/ScratchAppEmailStrings.resx` — a scratch app's partial string overrides, for BrandedEmailTests (Pkg 3.9)
 - `tests/Api.Tests/Email/SmtpMessageBuilderTests.cs` — MIME shape: CID images + attachment parts (JOBS-4)
+- `tests/Api.Tests/Infrastructure/TestEmails.cs` — the mails a default host builds (Pkg 3.9)
 - `tests/Api.Tests/SmtpSettingsTests.cs` — incl. the SMTP-revocation knob (PR #125)
 - `tests/Core.Tests/EmailAttachmentTests.cs` — attachment guard: 7 MiB raw total incl. inline images (10 MiB on the wire), ≤ 20 parts, strict type/subtype, safe base name (JOBS-4, v4 T40)
 
@@ -246,16 +261,16 @@
 
 ## 3.2 — Anatomy of a vertical slice (Notes) (12 files)
 
-- `src/Api/AppComposition.cs` — the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)
 - `src/Api/Configuration/AuthPolicies.cs`
 - `src/Api/Endpoints/FeatureEndpointExtensions.cs` — MapTenantFeatureGroup (R6)
-- `src/Api/Features/Notes/NotesDataContributor.cs` — the reference slice — deleted in 9.1
-- `src/Api/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
-- `src/Api/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
-- `src/Api/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
 - `src/Core/Abstractions/IStartupTask.cs` — work that needs the schema, run by Program.cs after Migrate(); registered in AppComposition (Arch A1)
 - `src/Core/Entities/Note.cs`
-- `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`
+- `src/Host/AppComposition.cs` — the app's half of composition: every slice registers and maps here, Program.cs stays the platform's (Arch A1)
+- `src/Host/Features/Notes/NotesDataContributor.cs` — the reference slice — deleted in 9.1
+- `src/Host/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
+- `src/Host/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
+- `src/Host/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
+- `src/Host/Persistence/Configurations/NoteConfiguration.cs`
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
@@ -515,7 +530,7 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (28 files)
+## 5.1 — Billing abstraction & entitlements (31 files)
 
 - `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
 - `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
@@ -528,11 +543,13 @@
 - `src/Api/Services/EntitlementService.cs`
 - `src/Core/Abstractions/IBillingProvider.cs`
 - `src/Core/Abstractions/IEntitlementService.cs`
-- `src/Core/Billing/PlanCatalog.cs`
+- `src/Core/Billing/PlanCatalog.cs` — built per host from PlatformOptions.Plans (Pkg 3.7)
 - `src/Core/Entities/Subscription.cs` — projection, not source of truth
+- `src/Core/PlatformOptions.cs` — what a host tells the platform: plans today, more seams to come (Pkg 3.7, ADR-034 §4)
 - `src/Infrastructure/Billing/FakeBillingProvider.cs` — throws outside Development (R1)
 - `src/Infrastructure/Persistence/Configurations/SubscriptionConfiguration.cs`
 - `src/Shared.Ui/Pages/Billing.razor` — BILLING-8 billing summary page
+- `tests/Api.Tests/Billing/AppBillingGateTests.cs` — an app's own billing-only controller follows the gate (Pkg 3.10)
 - `tests/Api.Tests/Billing/BillingControllerTests.cs`
 - `tests/Api.Tests/Billing/BillingGateTests.cs` — GATES-1
 - `tests/Api.Tests/Billing/BillingPostureCheckTests.cs` — the posture warning: counts live Stripe-managed rows, silent with the gate on (v4 T46)
@@ -542,6 +559,7 @@
 - `tests/Api.Tests/Billing/PlanCatalogTests.cs` — GATES-1 pins the catalog's fail-closed Free fallback
 - `tests/Api.Tests/Billing/RequireEntitlementFilterTests.cs`
 - `tests/Api.Tests/Billing/SubscriptionTenantIsolationTests.cs`
+- `tests/Api.Tests/Infrastructure/TestPlans.cs` — the catalog tests build from the platform's default options (Pkg 3.7)
 - `tests/Api.Tests/Integration/FeaturesEndpointTests.cs` — GATES-1
 - `tests/E2E.Tests/BillingJourneyTests.cs` — fake-provider upgrade loop
 - `tests/E2E.Tests/GateJourneyTests.cs` — GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48
@@ -574,7 +592,7 @@
 - `tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs`
 - `tests/E2E.Tests/SeatQuotaJourneyTests.cs` — seat-quota 402 UX
 
-## 6.1 — RBAC: roles & the permission seam (16 files)
+## 6.1 — RBAC: roles & the permission seam (20 files)
 
 - `src/Api/Authentication/RequireTenantPermissionAttribute.cs`
 - `src/Api/Controllers/TenantApiControllerBase.cs` — controllers inherit the gate (R4)
@@ -582,13 +600,17 @@
 - `src/Api/Services/PermissionService.cs`
 - `src/Core/Abstractions/IPermissionService.cs`
 - `src/Core/Authorization/Permission.cs`
-- `src/Core/Authorization/RolePermissions.cs` — matrix: coarse capabilities, not ACLs
+- `src/Core/Authorization/PermissionRegistry.cs` — the host's permissions and their rows: the platform's, plus what an app adds (Pkg 3.8)
+- `src/Core/Authorization/RolePermissions.cs` — matrix: coarse capabilities, not ACLs; built per host from its registry (Pkg 3.8)
 - `src/Shared.Ui/Pages/Household.razor` — admin-aware roster UI
 - `tests/Api.Tests/Infrastructure/TenantPermissionGate.cs` — test double for the permission seam
+- `tests/Api.Tests/Infrastructure/TestPermissions.cs` — the matrix a default host builds (Pkg 3.8)
 - `tests/Api.Tests/Integration/RbacForbiddenIntegrationTests.cs`
+- `tests/Api.Tests/Rbac/AppPermissionTests.cs`
 - `tests/Api.Tests/Rbac/MemberRoleManagementTests.cs`
 - `tests/Api.Tests/Rbac/PermissionServiceTests.cs`
 - `tests/Api.Tests/Rbac/RequirePermissionFilterTests.cs`
+- `tests/Core.Tests/PermissionRegistryTests.cs` — an open set: app permissions, additive only (Pkg 3.8)
 - `tests/Core.Tests/RolePermissionsTests.cs`
 - `tests/E2E.Tests/MembershipLifecycleTests.cs` — transfer/leave/dissolve/delete-account journeys
 - `tests/E2E.Tests/RosterJourneyTests.cs`
@@ -730,9 +752,12 @@
 - `tests/Core.Tests/Auth/ImpersonationIdentityTests.cs` — client identity swap raises AuthService.IdentityChanged so the header re-sources on impersonate
 - `tests/E2E.Tests/AnnouncementJourneyTests.cs` — ADMIN-3 announce -> NOTIFY fan-out
 
-## 8.1 — Single-origin hosting (5 files)
+## 8.1 — Single-origin hosting (8 files)
 
 - `src/Api/Configuration/ProxyForwardingExtensions.cs` — config-gated forwarded headers
+- `tests/Api.Tests/Hosting/AppPolicyTests.cs`
+- `tests/Api.Tests/Hosting/AppRoutePrefixTests.cs`
+- `tests/Api.Tests/Hosting/BrandStringsTests.cs`
 - `tests/Api.Tests/Hosting/ProxyForwardingTests.cs`
 - `tests/Api.Tests/Hosting/RouteTableGuardTests.cs`
 - `tests/Api.Tests/Infrastructure/TempWebRoot.cs`
@@ -912,15 +937,17 @@
 - `tests/ci-logic/targets` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tools/release/dry-run/DryRun.cs` — the release pipeline's probe package (Pkg 2.3): published at a -dry. version, restored back
 
-## 8.4 — The RLS tenancy backstop (16 files)
+## 8.4 — The RLS tenancy backstop (18 files)
 
 - `docker/db/provision-rls-runtime-role.sql` — non-BYPASSRLS runtime role — mirrors prod (Neon) provisioning
+- `src/Infrastructure/Persistence/PlatformSteps.cs` — published platform steps a migration applies by name (ApplyPlatformStep); the backstop is the first (Pkg 3.6)
 - `src/Infrastructure/Persistence/RlsDdl.cs` — policy DDL — source of the RlsMigrationGateTests parity gate
 - `src/Infrastructure/Persistence/RlsPostureGuard.cs` — gates prod activation (ADR-020)
 - `src/Infrastructure/Persistence/RlsSessionInterceptor.cs` — sets the tenant GUC per connection
 - `src/Infrastructure/Persistence/RlsTags.cs`
 - `tests/Api.Tests/Architecture/CrossTenantWriteGuard.cs` — EnterTenant required on set-based cross-tenant writes — tags don't render for ExecuteUpdate (v3/T7)
 - `tests/Api.Tests/Architecture/CrossTenantWriteGuardTests.cs`
+- `tests/Api.Tests/PlatformStepTests.cs` — every published step is applied by a migration; a published step never changes (Pkg 3.6)
 - `tests/Api.Tests/Rls/CrossTenantTagSiteTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/DissolveUnderForeignTenantTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsBackstopTests.cs` — backstop + migration-parity + posture-guard tests
@@ -940,9 +967,9 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `platform-ownership.json` — which files are the platform's, which an app adapts, which are the app's (Arch A2)
-- `platform-schema.json` — the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
 - `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
 - `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
+- `src/Infrastructure/Persistence/platform-schema.json` — embedded in the Infrastructure package (Pkg 3.5): the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
 - `tests/Api.Tests/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
 - `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
@@ -1013,63 +1040,64 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (63 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (64 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Core/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
-- `src/Infrastructure/Persistence/Migrations/20260617235537_InitialCreate.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260617235537_InitialCreate.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260619174431_AddUserLocale.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260619174431_AddUserLocale.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260620015655_AddNotesSample.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260620015655_AddNotesSample.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625195324_AddOutbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625195324_AddOutbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625203525_AddInbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625203525_AddInbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625210819_AddSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625210819_AddSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260626000352_AddAuditEvent.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260626000352_AddAuditEvent.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701125024_AddMfa.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701125024_AddMfa.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701143154_AddNotifications.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701143154_AddNotifications.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701144106_AddNotificationPreferences.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701144106_AddNotificationPreferences.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701191549_AddUsageCounter.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701191549_AddUsageCounter.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701200224_AddApiKey.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701200224_AddApiKey.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701201826_AddWebhookSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701201826_AddWebhookSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701204754_AddWebhookDelivery.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701204754_AddWebhookDelivery.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260706222645_RlsTenancyBackstop.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260706222645_RlsTenancyBackstop.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260710163540_AddUserTheme.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260710163540_AddUserTheme.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715230641_MfaLockout.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715230641_MfaLockout.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260617235537_InitialCreate.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260619174431_AddUserLocale.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260619174431_AddUserLocale.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260620015655_AddNotesSample.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260620015655_AddNotesSample.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625195324_AddOutbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625195324_AddOutbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625203525_AddInbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625203525_AddInbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625210819_AddSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625210819_AddSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260626000352_AddAuditEvent.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260626000352_AddAuditEvent.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701125024_AddMfa.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701125024_AddMfa.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701143154_AddNotifications.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701143154_AddNotifications.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701144106_AddNotificationPreferences.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701144106_AddNotificationPreferences.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701191549_AddUsageCounter.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701191549_AddUsageCounter.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701200224_AddApiKey.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701200224_AddApiKey.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701201826_AddWebhookSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701201826_AddWebhookSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701204754_AddWebhookDelivery.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701204754_AddWebhookDelivery.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260706222645_RlsTenancyBackstop.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260706222645_RlsTenancyBackstop.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260710163540_AddUserTheme.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260710163540_AddUserTheme.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715230641_MfaLockout.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715230641_MfaLockout.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/AppDbContextModelSnapshot.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1397,4 +1425,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1230 tracked files · 855 built in lessons · 375 bucketed · 0 unmapped
+**Totals:** 1258 tracked files · 882 built in lessons · 376 bucketed · 0 unmapped

@@ -20,7 +20,7 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
     {
         var tenant = Guid.CreateVersion7();
         await using var db = Fixture.CreateContext(tenant);
-        var service = new EntitlementService(new EfRepository<Subscription>(db), TimeProvider.System);
+        var service = new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, TimeProvider.System);
 
         Assert.False(await service.HasAsync(Entitlements.ProFeature));
     }
@@ -46,7 +46,7 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
         await SeedAsync(tenant, PlanKeys.Pro, SubscriptionStatus.Active, periodEnd: null);
 
         await using var db = Fixture.CreateContext(tenant);
-        var service = new EntitlementService(new EfRepository<Subscription>(db), TimeProvider.System);
+        var service = new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, TimeProvider.System);
 
         Assert.True(await service.HasAsync(Entitlements.ProFeature));
     }
@@ -59,7 +59,7 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
         await SeedAsync(tenant, PlanKeys.Pro, SubscriptionStatus.Trialing, periodEnd: clock.GetUtcNow().AddDays(7));
 
         await using var db = Fixture.CreateContext(tenant);
-        var service = new EntitlementService(new EfRepository<Subscription>(db), clock);
+        var service = new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, clock);
 
         Assert.True(await service.HasAsync(Entitlements.ProFeature));
     }
@@ -76,7 +76,7 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
         await SeedAsync(tenant, PlanKeys.Pro, status, periodEnd: null);
 
         await using var db = Fixture.CreateContext(tenant);
-        var service = new EntitlementService(new EfRepository<Subscription>(db), TimeProvider.System);
+        var service = new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, TimeProvider.System);
 
         Assert.False(await service.HasAsync(Entitlements.ProFeature));
     }
@@ -110,9 +110,31 @@ public class EntitlementServiceTests(PostgresFixture fixture) : PostgresTestBase
         await SeedAsync(tenant, PlanKeys.Pro, SubscriptionStatus.Active, periodEnd: clock.GetUtcNow().AddDays(-1));
 
         await using var db = Fixture.CreateContext(tenant);
-        var service = new EntitlementService(new EfRepository<Subscription>(db), clock);
+        var service = new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, clock);
 
         Assert.False(await service.HasAsync(Entitlements.ProFeature));
+    }
+
+    [Fact]
+    public async Task AnAppsOwnPlan_GrantsItsOwnEntitlement_AndThePlatformsProIsGone() // Pkg 3.7
+    {
+        // A scratch app replaces the plans in AddPlatform(o => ...): its "team" plan grants "team-feature", and a subscription
+        // to the platform's "pro" — which that app no longer sells — fails closed to Free.
+        var options = new Perezosoft.Core.PlatformOptions();
+        options.Plans.Clear();
+        options.Plans.Add(new Plan(PlanKeys.Free, new HashSet<string>()));
+        options.Plans.Add(new Plan("team", new HashSet<string> { "team-feature" }));
+        var plans = TestPlans.From(options);
+
+        var teamTenant = Guid.CreateVersion7();
+        await SeedAsync(teamTenant, "team", SubscriptionStatus.Active, periodEnd: null);
+        await using (var db = Fixture.CreateContext(teamTenant))
+            Assert.True(await new EntitlementService(new EfRepository<Subscription>(db), plans, TimeProvider.System).HasAsync("team-feature"));
+
+        var proTenant = Guid.CreateVersion7();
+        await SeedAsync(proTenant, PlanKeys.Pro, SubscriptionStatus.Active, periodEnd: null);
+        await using (var db = Fixture.CreateContext(proTenant))
+            Assert.False(await new EntitlementService(new EfRepository<Subscription>(db), plans, TimeProvider.System).HasAsync(Entitlements.ProFeature));
     }
 
     private async Task SeedAsync(Guid tenant, string plan, string status, DateTimeOffset? periodEnd)

@@ -88,7 +88,7 @@ Open Claude Code in the repo and use **the expected first prompt from `README.md
 
 - Runs **`docs/REBRANDING.md` end to end** — name/wordmark, tagline, logo assets and derived
   icons/favicon/OG image, the **colour palette derived from your logo** (the semantic tokens in
-  `src/Shared.Ui/wwwroot/css/app.css` + the email colours in `BrandedEmail.cs` — the email
+  `src/Shared.Ui/wwwroot/css/app.css` + the email brand in `AppComposition.ConfigurePlatform` — the email
   templates are the classically missed spot), the OAuth callback scheme + `ApplicationId`, and
   the brand strings in every localization `.resx`.
 - Fills the `CLAUDE.md` TODOs (app-specific golden rules, conventions) from your Phase-1 docs.
@@ -107,7 +107,7 @@ restore/build/tests. JiggerJot took API `7260`/`5338`, Web `7108`/`5269`, `DB_PO
 
 The block is stated once, in **`local-ports.props`** (Arch A10). Edit the eight numbers there, then
 `pwsh tools/ports.ps1 -Apply`: it rewrites every file that cannot read MSBuild — both
-`Properties/launchSettings.json`, `src/Api/appsettings.Development.json` (SMTP port, CORS origins,
+`Properties/launchSettings.json`, `src/Host/appsettings.Development.json` (SMTP port, CORS origins,
 `Auth:AppBaseUrl`), `src/Web/wwwroot/appsettings.json`, `docker-compose.yml`'s `${VAR:-default}` fallbacks,
 `.env.example` (`*_PORT` and the connection string), `tests/E2E.Tests/playwright.runsettings`, the Postman
 local environment and this app's row in the README table. Code (the API's dev fallback, `MauiProgram.cs`,
@@ -124,7 +124,7 @@ Your repo is a clone of a platform commit, and it should say so. `platform-stamp
 brand map (`Perezosoft` → your brand, `perezosoft` → its lowercase); `platform-ownership.json` says which files are
 the platform's (`platform`: keep them identical, or list a divergence with a reason in
 `tests/Api.Tests/App/PlatformDivergences.json`), which you are expected to edit (`adapts`: the UI, the journeys, the
-config, the docs) and which are yours (`app`: `src/Api/Features/**`, `AppComposition.cs`, `AppDbContext.App.cs`,
+config, the docs) and which are yours (`app`: `src/Host/Features/**`, `AppComposition.cs`, `AppDbContext.App.cs`,
 `tests/Api.Tests/App/**`). Two more: `producer` files (the platform's release machinery and package map) never reach
 your repo, and the map's `keep` list (the package ids `Perezosoft.Platform.*`, the feed key `perezosoft`) is never
 renamed by the brand map — the platform's packages keep their names in every app (ADR-034, Pkg 2.5). A folder of your own at the top of the repo (jigger-jot's `seed/`)
@@ -147,13 +147,13 @@ migration, your regenerated copy of it must build the same columns, constraints,
 The sample is a removable unit (Arch A6): its code, and its two migrations (`AddNotesSample`, which creates the table,
 and `NotesSampleRlsPolicy`, its RLS policy). No platform migration names it, so removing it is an ordinary app change:
 
-1. Delete the code: `src/Api/Features/Notes/`, `src/Core/Entities/Note.cs`,
-   `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`, `tests/Api.Tests/NotesSliceTests.cs`; the
-   `Notes` lines in `src/Api/AppComposition.cs`, the `DbSet<Note>` in `AppDbContext.App.cs`, the `nameof(Note)` entry
+1. Delete the code: `src/Host/Features/Notes/`, `src/Core/Entities/Note.cs`,
+   `src/Host/Persistence/Configurations/NoteConfiguration.cs`, `tests/Api.Tests/NotesSliceTests.cs`; the
+   `Notes` lines in `src/Host/AppComposition.cs`, the `DbSet<Note>` in `AppDbContext.App.cs`, the `nameof(Note)` entry
    in `tests/Api.Tests/App/AppAllowlists.cs`, the `Notes_*` strings in both resx files, the Notes folder of the Postman
    collection and its `noteId` variable, and the `/notes` page and nav entry in `Shared.Ui`.
-2. Drop the table with an **app migration**: `dotnet ef migrations add RemoveNotesSample --project src/Infrastructure
-   --startup-project src/Api` scaffolds the `DropTable("Notes")` from the model change and regenerates the snapshot.
+2. Drop the table with an **app migration**: `dotnet ef migrations add RemoveNotesSample --project src/Host
+   --startup-project src/Host` scaffolds the `DropTable("Notes")` from the model change and regenerates the snapshot.
    Say "Data loss on Down: the sample's rows" in its summary (the migrations gate asks for it).
 3. Leave `AddNotesSample` and `NotesSampleRlsPolicy` in place as history. **Never delete or edit a platform
    migration**: a repo that deleted `AddNotesSample` had to edit `RlsTenancyBackstop` too, and its platform
@@ -165,7 +165,7 @@ and `NotesSampleRlsPolicy`, its RLS policy). No platform migration names it, so 
 ```bash
 cp .env.example .env          # then fill it — at minimum Jwt__Secret (any ≥32-char string)
 docker compose up -d db mail  # Postgres 17 + Mailpit
-dotnet run --project src/Api --launch-profile https    # API on https://localhost:7160
+dotnet run --project src/Host --launch-profile https    # API on https://localhost:7160
 dotnet run --project src/Web                           # web UI on https://localhost:7008
 ```
 
@@ -221,7 +221,7 @@ The rhythm, per `docs/WAYS_OF_WORKING.md`:
 1. Pick the next epic; Claude writes its user stories into `docs/stories/<epic>.md` (Gherkin).
 2. Each slice = one branch + one PR off `develop`, test-first (the failing test precedes the
    code), end-to-end (API + UI + tests), leaving the app working.
-3. Copy **`src/Api/Features/Notes`** as the reference slice shape; **delete the Notes sample**
+3. Copy **`src/Host/Features/Notes`** as the reference slice shape; **delete the Notes sample**
    when your first real feature lands — the recipe is below ("Removing the Notes sample").
 4. CI gates every PR; once Phase 7 is done, a manual GitHub *Run workflow* with `deploy=staging` deploys
    `develop` to staging (ADR-031).

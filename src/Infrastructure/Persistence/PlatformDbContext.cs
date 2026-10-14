@@ -6,20 +6,22 @@ using Perezosoft.Core.Entities;
 
 namespace Perezosoft.Infrastructure.Persistence;
 
-public partial class AppDbContext : DbContext, IDataProtectionKeyContext
+/// <summary>
+/// The platform's half of the database context (Pkg 3.5, ADR-034), shipped in Perezosoft.Platform.Infrastructure: the
+/// platform's sets, the tenant query filters, the interceptors (tenant stamping, append-only audit, the RLS session) and
+/// the platform's entity configurations. An app's <c>AppDbContext</c> derives from it in the app's own assembly — where
+/// its migrations live, since a migration's <c>[DbContext]</c> ties it to the context's assembly — and adds its sets and
+/// model rules. Platform code depends on this type, never on the app's.
+/// </summary>
+public abstract class PlatformDbContext : DbContext, IDataProtectionKeyContext
 {
     private readonly ICurrentTenant _currentTenant;
 
-    public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant currentTenant)
-        : this((DbContextOptions)options, currentTenant) { }
-
     /// <summary>
-    /// Non-generic-options constructor so a test harness can subclass this context (e.g. to add a
-    /// test-only <c>ITenantScoped</c> fixture entity) with its own <c>DbContextOptions&lt;TDerived&gt;</c>,
-    /// without the platform tests depending on the DELETE-ME sample slice (v2 audit TR-1). Not used by
-    /// the app itself.
+    /// Non-generic options, so every derived context (the app's, and a test harness's subclass of it) passes its own
+    /// <c>DbContextOptions&lt;TDerived&gt;</c>.
     /// </summary>
-    protected AppDbContext(DbContextOptions options, ICurrentTenant currentTenant)
+    protected PlatformDbContext(DbContextOptions options, ICurrentTenant currentTenant)
         : base(options)
     {
         _currentTenant = currentTenant;
@@ -102,8 +104,12 @@ public partial class AppDbContext : DbContext, IDataProtectionKeyContext
         base.OnModelCreating(builder);
 
         // Per-entity mapping lives in one IEntityTypeConfiguration<TEntity> class each, under
-        // Persistence/Configurations (DEBT-4). Discovered + applied from this assembly.
-        builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        // Persistence/Configurations (DEBT-4). Discovered + applied from the platform's assembly, then from the app's
+        // (Pkg 3.5: the app's configurations live with its context, not here) — before the filters below, so the app's
+        // ITenantScoped entities are filtered like the platform's.
+        builder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);
+        foreach (var assembly in AppModelAssemblies.Where(a => a != typeof(PlatformDbContext).Assembly))
+            builder.ApplyConfigurationsFromAssembly(assembly);
 
         // Tenant isolation as a structural guarantee: every ITenantScoped entity is
         // filtered to CurrentTenantId by default, so feature/domain queries can't forget
@@ -126,23 +132,25 @@ public partial class AppDbContext : DbContext, IDataProtectionKeyContext
                     .Invoke(this, [builder]);
         }
 
-        // The app's model rules, if it has any (Arch A1): AppDbContext.App.cs implements the partial method.
-        OnAppModelCreating(builder);
+        // The app's model rules, if it has any (Arch A1): last, as before the split.
+        ApplyAppModel(builder);
     }
 
-    /// <summary>The app's half of the model (Arch A1, R159): its own filters and conventions, in <c>AppDbContext.App.cs</c>.
-    /// Unimplemented on the platform; the compiler drops the call.</summary>
-    partial void OnAppModelCreating(ModelBuilder builder);
+    /// <summary>The assemblies whose entity configurations make the app's half of the model (the app's context's own).</summary>
+    protected virtual IEnumerable<System.Reflection.Assembly> AppModelAssemblies => [];
+
+    /// <summary>The app's half of the model (Arch A1, R159): its own filters and conventions, applied after the platform's.</summary>
+    protected virtual void ApplyAppModel(ModelBuilder builder) { }
 
     private static readonly MethodInfo ApplyTenantFilterMethod =
-        typeof(AppDbContext).GetMethod(nameof(ApplyTenantFilter),
+        typeof(PlatformDbContext).GetMethod(nameof(ApplyTenantFilter),
             BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     private void ApplyTenantFilter<TEntity>(ModelBuilder builder) where TEntity : class, ITenantScoped
         => builder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
 
     private static readonly MethodInfo ApplySharedOrTenantFilterMethod =
-        typeof(AppDbContext).GetMethod(nameof(ApplySharedOrTenantFilter),
+        typeof(PlatformDbContext).GetMethod(nameof(ApplySharedOrTenantFilter),
             BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     /// <summary>

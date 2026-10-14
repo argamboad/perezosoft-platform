@@ -52,9 +52,11 @@ public sealed class MfaService(
     IDataProtectionProvider dataProtection,
     IRecoveryCodeHasher recoveryHasher,
     Configuration.IMfaSettings mfaSettings,
+    Perezosoft.Core.PlatformOptions platform,
     TimeProvider clock) : IMfaService
 {
-    private const string Issuer = "Perezosoft"; // rebrandable — appears in the authenticator app
+    // What the authenticator app lists the account under: the host's brand (Pkg 3.9b) — "Perezosoft" for the platform's own.
+    private readonly string Issuer = platform.Brand.Name;
     private const int RecoveryCodeCount = 10;
     // Recovery codes are HUMAN-entered fallbacks, so they use a short, unambiguous alphabet (no
     // 0/O/1/I/L) formatted as two 5-char groups (e.g. "k7m2q-9xr4t"). NOT the 88-char opaque token

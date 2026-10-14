@@ -355,7 +355,7 @@ public class BillingWebhookHandlerTests(PostgresFixture fixture) : PostgresTestB
             new TenantRepository(db),
             new NotificationService(
                 new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-                new UserRepository(db), new NoopEmailSender(), TimeProvider.System));
+                new UserRepository(db), new NoopEmailSender(), TestEmails.Default, TimeProvider.System));
 
     /// <summary>A tenant that exists — the handler refuses to write for one that doesn't (v4 T24).</summary>
     private async Task<Guid> NewTenantAsync()
@@ -381,7 +381,7 @@ public class BillingWebhookHandlerTests(PostgresFixture fixture) : PostgresTestB
     private async Task<bool> EntitledAsync(Guid tenant)
     {
         await using var db = Fixture.CreateContext(tenant);
-        return await new EntitlementService(new EfRepository<Subscription>(db), TimeProvider.System)
+        return await new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, TimeProvider.System)
             .HasAsync(Entitlements.ProFeature);
     }
 

@@ -16,7 +16,7 @@
   hatch **`IRepository<T>.QueryAllTenants()`** (audited; used by dissolve contributors), and a
   signature-/system-authenticated tenant-scoped write enters its tenant via
   **`ITenantContext.EnterTenant(tenantId)`** — `IgnoreQueryFilters()` is **banned in
-  `src/Api/Features/**`** (a build-time test enforces it). Never leak across tenants.
+  `src/Host/Features/**`** (a build-time test enforces it). Never leak across tenants.
 - "Tenant" is the code term for the household/org/team. The reference implementation labels it
   **Household**; rename per app.
 
@@ -136,7 +136,8 @@ _TODO_
 ### ER diagram — identity & auth foundation
 
 Drawn from the code (entities in `src/Core/Entities/`, constraints in
-`src/Infrastructure/Persistence/Configurations/`). **Solid lines are real FK constraints (there
+`src/Infrastructure/Persistence/Configurations/`; the platform's model is `PlatformDbContext` in the Infrastructure
+package, and the app's `src/Host/Persistence/AppDbContext.cs` derives from it and owns every migration, ADR-034 §5). **Solid lines are real FK constraints (there
 are only four in the whole model, all cascade); dotted lines are logical, application-enforced
 Guid references with no DB constraint.** Invariants are annotated on the columns they protect.
 Decision context: [ADR-002](DECISIONS.md) (custom JWT auth), [ADR-003](DECISIONS.md)
@@ -242,7 +243,8 @@ _TODO_
   applies an incoming event only if strictly newer, so a redelivered/out-of-order older event can't
   clobber newer state — v2 audit LOGIC-B1). A **projection** of Stripe state (Stripe is the source of
   truth for money); absent ⇒ Free tier (fail-closed), as is any non-active/lapsed status. Plan catalog
-  is code (`src/Core/Billing/PlanCatalog.cs`), not a table. Participates in dissolve via
+  is code/config (`src/Core/Billing/PlanCatalog.cs`, built from `PlatformOptions.Plans`; an app replaces the plans in
+  `AddPlatform(o => ...)`), not a table. Participates in dissolve via
   `BillingDataContributor` (cancels the provider sub + wipes the projection).
 - **`UsageCounter`** *(ADR-006 / `docs/stories/billing.md`)* — ✅ **BUILT (BILLING-5)**:
   `src/Core/Entities/UsageCounter.cs`. `ITenantScoped`. A per-tenant, per-period metered-usage counter:

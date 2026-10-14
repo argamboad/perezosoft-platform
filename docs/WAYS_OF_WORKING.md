@@ -39,19 +39,25 @@ Two senses of "vertical" apply, and they're complementary:
   layers it needs and leaves the app working.
 - **Organization-vertical feature folders:** *where the code lives*. The reusable **platform** stays
   horizontal / clean-layered (Core, Infrastructure, and the auth/tenancy controllers), while each
-  **app feature** lives in one self-contained folder: `src/Api/Features/<Feature>/`.
+  **app feature** lives in one self-contained folder: `src/Host/Features/<Feature>/`.
 
 This hybrid is pinned in **ADR-004**. The platform is the durable chassis (JWT auth, membership
 tenancy, the global tenant query filter, email, persistence); features bolt on and *reuse* it.
 
-**A feature slice** (`src/Api/Features/<Feature>/`) typically contains:
+**A feature slice** (`src/Host/Features/<Feature>/`) typically contains:
 - `<Feature>Endpoints.cs` — a minimal-API group registered via
   **`app.MapTenantFeatureGroup("/api/<feature>")`** (NOT a raw
   `MapGroup(...).RequireAuthorization(...)` — the helper applies the shared `AuthPolicies.TenantApi`
   policy so a slice can't forget auth), called from `app.Map<Feature>()` in `AppComposition.MapAppEndpoints`. Gate
   individual endpoints with the **`.RequirePermission(Permission.X)`** (→ 403; ADR-009) and
   **`.RequireEntitlement(...)`** (→ 402; ADR-006) endpoint filters as needed. Features are minimal-API
-  groups; the platform stays controllers.
+  groups; the platform stays controllers. The group call is also the slice's **prefix registration** (Pkg 3.10): at
+  boot `RouteTableGuard` refuses two groups on one prefix, or a prefix on a platform surface (`/api/household`,
+  `/api/billing`… — `RouteTableGuard.PlatformPrefixes`, gated surfaces included). An app's own authorization policy is
+  `services.AddAppPolicy("ProjectsEditor", p => ...)` in `AddAppServices` (a platform policy's name is refused, and
+  the host refuses to boot if one was replaced), then `.RequireAuthorization("ProjectsEditor")` on the group. An app
+  controller that should exist only while billing is on goes in `options.BillingGatedControllers` in
+  `AppComposition.ConfigurePlatform`.
 - `<Feature>Handler.cs` — the orchestration/logic; injects `IRepository<T>` (whose `Query()` is
   already tenant-filtered), `ICurrentTenant`, `IUnitOfWork`, and platform services as needed.
 - `<Feature>Models.cs` — request/response DTOs + validation, co-located.
@@ -64,7 +70,7 @@ tenancy, the global tenant query filter, email, persistence); features bolt on a
 
 **A feature must NOT** reach into another feature's folder, edit a central "has data / wipe data"
 method, author a bespoke per-entity repository (use `IRepository<T>`), use `IgnoreQueryFilters()`
-(banned in `src/Api/Features/**` — use `IRepository<T>.QueryAllTenants()`), or inline UI in the Web
+(banned in `src/Host/Features/**` — use `IRepository<T>.QueryAllTenants()`), or inline UI in the Web
 app (UI components go in the Shared.Ui RCL).
 
 **Add-a-slice mechanical checklist** — measured, not estimated: the v4 audit built a real slice by this
@@ -74,11 +80,13 @@ step here in the same PR.
 1. **Entity** → `src/Core/Entities/<Entity>.cs`, implementing `ITenantScoped` — or `ISharedOrTenantScoped` when
    its rows are either shared (`TenantId` null) or one tenant's (Arch A4; then step 3 uses
    `RlsDdl.SharedOrTenantStatementsFor`, and the four `<Entity>_SharedOrTenant_*` facet tests replace the canary
-   entry of step 5). A slice **cannot declare
-   its own `Permission`**: the enum and `RolePermissions` live in Core (ADR-009's coarse capabilities) —
-   reuse one, or add it to Core in its own commit.
-2. **DbSet + config** → add the `DbSet<>` to `src/Infrastructure/Persistence/AppDbContext.App.cs` (the app's half of
-   the partial context — `AppDbContext.cs` is the platform's and is not edited; Arch A1) and any
+   entry of step 5). A slice that needs **its own `Permission`** registers it in the host's options
+   (Pkg 3.8): `builder.AddPlatform<AppDbContext>(o => o.Permissions.Add(new Permission("ManageProjects"), TenantRoles.Admin))`
+   — the owner holds it automatically, the roles named hold it too (ADR-009's coarse capabilities, never an ACL); gate
+   with `.RequirePermission(...)` or `[RequireTenantPermission("ManageProjects", ...)]`. `PermissionRegistrationGateTests`
+   fails if an endpoint requires a name the host never registered. Or reuse a platform one.
+2. **DbSet + config** → add the `DbSet<>` to `src/Host/Persistence/AppDbContext.App.cs` (the app's half of
+   the partial context — `AppDbContext.cs` and the packaged `PlatformDbContext` are the platform's and are not edited; Arch A1) and any
    `IEntityTypeConfiguration` (discovered from the assembly, no registration).
 3. **Migration + RLS policy, one migration** (ADR-020, v3 audit TR-4): `dotnet ef migrations add
    Add<Entity>` scaffolds **no RLS DDL**, so append the new table's policy to the migration it just
@@ -93,7 +101,7 @@ step here in the same PR.
    `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` — every tenant-owned entity must be reachable
    by dissolve and export, and the canary is where you say which contributor does it.
 6. **DI wiring** → register the handler/services in `AppComposition.AddAppServices` and map the group
-   (`app.Map<Feature>()`) in `AppComposition.MapAppEndpoints` — both in `src/Api/AppComposition.cs`, the app's
+   (`app.Map<Feature>()`) in `AppComposition.MapAppEndpoints` — both in `src/Host/AppComposition.cs`, the app's
    half of composition — behind the slice's `Enabled` setting. Only `AppComposition.cs` may reference
    `Features.*` (R8 as amended by R159, `OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures`);
    `Program.cs` is the platform's, calls those two methods once, and is never edited for a slice.
@@ -120,7 +128,7 @@ There is no fixture step: `PostgresFixture.ResetAsync` derives its table list fr
 TR-3), so a new entity is reset automatically — the old "add the table to the truncate list" step was
 dead for two audits before the measurement caught it.
 
-**Reference:** `src/Api/Features/Notes` is a complete, working example (marked "🗑️ DELETE-ME").
+**Reference:** `src/Host/Features/Notes` is a complete, working example (marked "🗑️ DELETE-ME").
 Copy its shape; delete it when you ship your first real feature — by the recipe in `docs/NEW_APP_GUIDE.md`
 ("Removing the Notes sample"): an app migration drops the table, no platform migration is touched (Arch A6).
 

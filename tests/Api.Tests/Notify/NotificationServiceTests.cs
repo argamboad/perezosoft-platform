@@ -18,7 +18,7 @@ public class NotificationServiceTests(PostgresFixture fixture) : PostgresTestBas
 {
     private static NotificationService NewService(AppDbContext db, IEmailSender? email = null) =>
         new(new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-            new UserRepository(db), email ?? new NoopEmailSender(), TimeProvider.System);
+            new UserRepository(db), email ?? new NoopEmailSender(), TestEmails.Default, TimeProvider.System);
 
     [Fact]
     public async Task Notify_ThenList_ShowsUnread_NewestFirst()

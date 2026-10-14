@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Perezosoft.Api.Controllers;
 
@@ -19,8 +20,31 @@ namespace Perezosoft.Api.Configuration;
 /// worth applying, and an open callback is surface for nothing.
 /// </para>
 /// </summary>
-public sealed class BillingGateConvention(BillingSettings settings) : IApplicationModelConvention
+public sealed class BillingGateConvention : IApplicationModelConvention
 {
+    private readonly BillingSettings _settings;
+
+    /// <param name="settings">The gate.</param>
+    /// <param name="appGated">The app's own billing-only controllers (Pkg 3.10, <c>PlatformOptions.BillingGatedControllers</c>),
+    /// gated alongside the platform's. Each must be an MVC controller: anything else could never be removed, and the gate
+    /// would quietly not hold for it.</param>
+    public BillingGateConvention(BillingSettings settings, IEnumerable<Type>? appGated = null)
+    {
+        _settings = settings;
+        var gated = new HashSet<Type>(GatedControllers);
+        foreach (var type in appGated ?? [])
+        {
+            if (!typeof(ControllerBase).IsAssignableFrom(type) || type.IsAbstract)
+                throw new InvalidOperationException(
+                    $"PlatformOptions.BillingGatedControllers holds {type.FullName}, which is not an MVC controller — only a controller can be gated off.");
+            gated.Add(type);
+        }
+        Gated = gated;
+    }
+
+    /// <summary>Every controller this gate removes while billing is off: the platform's plus the app's.</summary>
+    public IReadOnlySet<Type> Gated { get; }
+
     /// <summary>
     /// The controllers that exist only when billing is on. Public because it is an invariant, not a
     /// detail: <c>BillingControllers_AreAllGated</c> asserts every controller routed under
@@ -35,10 +59,10 @@ public sealed class BillingGateConvention(BillingSettings settings) : IApplicati
 
     public void Apply(ApplicationModel application)
     {
-        if (settings.Enabled) return;
+        if (_settings.Enabled) return;
 
         foreach (var controller in application.Controllers
-                     .Where(c => GatedControllers.Contains(c.ControllerType.AsType()))
+                     .Where(c => Gated.Contains(c.ControllerType.AsType()))
                      .ToList())
         {
             application.Controllers.Remove(controller);

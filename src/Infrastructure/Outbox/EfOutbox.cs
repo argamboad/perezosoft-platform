@@ -6,10 +6,10 @@ namespace Perezosoft.Infrastructure.Outbox;
 
 /// <summary>
 /// EF implementation of <see cref="IOutbox"/>. Stages an <see cref="OutboxMessage"/> on the shared
-/// request-scoped <see cref="AppDbContext"/> without saving, so it commits in the same transaction
+/// request-scoped <see cref="PlatformDbContext"/> without saving, so it commits in the same transaction
 /// as the caller's business change (atomic effects — ADR-007).
 /// </summary>
-public sealed class EfOutbox(AppDbContext db, TimeProvider clock) : IOutbox
+public sealed class EfOutbox(PlatformDbContext db, TimeProvider clock) : IOutbox
 {
     public async Task EnqueueAsync(string type, string payload, Guid? tenantId = null, CancellationToken cancellationToken = default)
     {

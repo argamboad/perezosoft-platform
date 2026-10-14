@@ -19,6 +19,7 @@ public sealed class QuotaService(
     ITenantInvitationRepository invitations,
     IRepository<UsageCounter> usage,
     ICurrentTenant currentTenant,
+    PlanCatalog plans,
     TimeProvider clock) : IQuotaService
 {
     public async Task<SeatUsage> GetSeatUsageAsync(CancellationToken cancellationToken = default)
@@ -92,6 +93,6 @@ public sealed class QuotaService(
     private async Task<Plan> ResolvePlanAsync(CancellationToken cancellationToken)
     {
         var subscription = await subscriptions.Query().FirstOrDefaultAsync(cancellationToken);
-        return PlanCatalog.Get(EntitlementService.ResolvePlanKey(subscription, clock.GetUtcNow()));
+        return plans.Get(EntitlementService.ResolvePlanKey(subscription, clock.GetUtcNow()));
     }
 }

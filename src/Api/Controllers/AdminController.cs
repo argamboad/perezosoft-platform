@@ -34,6 +34,7 @@ public class AdminController(
     IOutbox outbox,
     IUnitOfWork unitOfWork,
     BillingSettings billing,
+    PlanCatalog plans,
     ILogger<AdminController> logger,
     TimeProvider clock) : AdminApiControllerBase(staff)
 {
@@ -124,10 +125,10 @@ public class AdminController(
         if (denied is not null)
             return denied;
 
-        // A valid target is a known catalog plan other than Free (PlanCatalog.Get falls back to Free,
+        // A valid target is a known catalog plan other than Free (the catalog's Get falls back to Free,
         // so require the round-trip key to match — an unknown key must 400, never silently comp Free).
         var planKey = request.PlanKey?.Trim().ToLowerInvariant();
-        if (string.IsNullOrEmpty(planKey) || planKey == PlanKeys.Free || PlanCatalog.Get(planKey).Key != planKey)
+        if (string.IsNullOrEmpty(planKey) || planKey == PlanKeys.Free || plans.Get(planKey).Key != planKey)
             return BadRequest(new ErrorResponse("invalid_plan",
                 $"plan_key must be a known paid plan (e.g. \"{PlanKeys.Pro}\"). To revert to Free, DELETE the subscription."));
 

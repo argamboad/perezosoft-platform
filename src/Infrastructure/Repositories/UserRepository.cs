@@ -9,7 +9,7 @@ namespace Perezosoft.Infrastructure.Repositories;
 /// EF Core implementation of <see cref="IUserRepository"/>.
 /// Encapsulates all user data access logic.
 /// </summary>
-public class UserRepository(AppDbContext db) : IUserRepository
+public class UserRepository(PlatformDbContext db) : IUserRepository
 {
     public async Task<User?> GetByLoginAsync(string provider, string providerUserId, CancellationToken cancellationToken = default)
     {

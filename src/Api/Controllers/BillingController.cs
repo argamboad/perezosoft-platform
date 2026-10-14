@@ -30,7 +30,7 @@ public class BillingController(
     /// plan limit, and whether a provider customer exists (gates the portal button).
     /// </summary>
     [HttpGet]
-    [RequireTenantPermission(Permission.ManageBilling, "Only the household owner can manage billing")]
+    [RequireTenantPermission(nameof(Permission.ManageBilling), "Only the household owner can manage billing")]
     public async Task<IActionResult> Summary(CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);
@@ -52,7 +52,7 @@ public class BillingController(
 
     /// <summary>Starts a hosted checkout to subscribe the tenant to a paid plan (owner only).</summary>
     [HttpPost("checkout")]
-    [RequireTenantPermission(Permission.ManageBilling, "Only the household owner can manage billing")]
+    [RequireTenantPermission(nameof(Permission.ManageBilling), "Only the household owner can manage billing")]
     public async Task<IActionResult> Checkout([FromBody] CreateCheckoutRequest request, CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);
@@ -69,7 +69,7 @@ public class BillingController(
 
     /// <summary>Opens the hosted billing-management portal for the tenant's subscription (owner only).</summary>
     [HttpPost("portal")]
-    [RequireTenantPermission(Permission.ManageBilling, "Only the household owner can manage billing")]
+    [RequireTenantPermission(nameof(Permission.ManageBilling), "Only the household owner can manage billing")]
     public async Task<IActionResult> Portal(CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);

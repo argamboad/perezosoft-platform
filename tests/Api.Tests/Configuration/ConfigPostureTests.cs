@@ -9,8 +9,8 @@ namespace Perezosoft.Api.Tests.Configuration;
 /// <summary>
 /// v3 audit S0-G3, made reflective by v4 T7 (S0-G8, AUTH-11, ADV-P4-15; R122 with the R53 exceptions): every
 /// config-gated feature is CLOSED unless a deployment opts in (ADR-014/015/016/017/027). Two configurations are
-/// checked: an empty one (the settings classes' own defaults) and the shipped <c>appsettings.json</c> (what a
-/// deployment gets before it sets anything).
+/// checked: an empty one (the settings classes' own defaults) and the shipped one — the platform's embedded defaults
+/// under the host's <c>appsettings.json</c> (Pkg 3.4), what a deployment gets before it sets anything.
 /// <para>
 /// The hand list this replaced was complete only while someone remembered to extend it. Now every section-bound
 /// <c>*Settings</c> class with a <c>bool Enabled</c> must have a <see cref="Switches"/> entry saying what it gates,
@@ -51,7 +51,7 @@ public class ConfigPostureTests
 
     private static IConfiguration Config(string which) => which == "empty"
         ? new ConfigurationBuilder().Build()
-        : new ConfigurationBuilder().AddJsonFile(Path.Combine(RepoRoot(), "src", "Api", "appsettings.json")).Build();
+        : new ConfigurationBuilder().AddPlatformDefaults().AddJsonFile(Path.Combine(RepoRoot(), "src", "Host", "appsettings.json")).Build();
 
     private static object Bind(Type t, IConfiguration config)
     {
@@ -168,7 +168,7 @@ public class ConfigPostureTests
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src", "Api", "Features")))
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "CLAUDE.md")))
             dir = dir.Parent;
         return dir?.FullName ?? throw new InvalidOperationException("Could not locate the repo root from the test assembly.");
     }

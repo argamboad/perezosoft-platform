@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Perezosoft.Api.Tests.Infrastructure;
 using Perezosoft.Core.Billing;
 
 namespace Perezosoft.Api.Tests.Billing;
@@ -11,8 +12,8 @@ namespace Perezosoft.Api.Tests.Billing;
 /// </summary>
 public class CatalogNumbersTests
 {
-    private static int Free => PlanCatalog.Get(PlanKeys.Free).SeatLimit!.Value;
-    private static int Pro => PlanCatalog.Get(PlanKeys.Pro).SeatLimit!.Value;
+    private static int Free => TestPlans.Default.Get(PlanKeys.Free).SeatLimit!.Value;
+    private static int Pro => TestPlans.Default.Get(PlanKeys.Pro).SeatLimit!.Value;
 
     [Fact]
     public void DocsThatStateASeatCap_StateTheCatalogs()

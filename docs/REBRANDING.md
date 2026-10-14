@@ -25,7 +25,7 @@ mechanically, case-preserving, over `git ls-files` only, then run restore/build/
 1. Remove the template-only material first (§6): `git rm -r docs/tutorial _PLATFORM_PRIMER.md`.
 2. Rename the brand-named files: `git ls-files | grep -i perezosoft` → `git mv` each
    (`Perezosoft.slnx`, `src/*/Perezosoft.*.csproj`, `tests/*/Perezosoft.*.csproj`,
-   `src/Api/Perezosoft.Api.http`, `docs/postman/Perezosoft.*.json`).
+   `src/Host/Perezosoft.Host.http`, `docs/postman/Perezosoft.*.json`).
 3. Rewrite the text of every tracked, non-binary file **except this doc**. Special cases go first:
    `com.perezosoft.platform` → your `ApplicationId` (e.g. `com.<brand>.app`),
    `Perezosoft Platform` → `<Brand>`, `template-staging` → `<brand>-staging`, the tagline; then the
@@ -35,7 +35,7 @@ mechanically, case-preserving, over `git ls-files` only, then run restore/build/
 4. Detect binaries by content (a NUL byte in the first 8 KB), not only by extension. Lockfiles are
    text and **must** be rewritten — the project-reference names live in them — and locked-mode
    restore then passes without `--force-evaluate`.
-5. Rename the platform's palette constants while you are in `BrandedEmail.cs` (§4).
+5. Set the email brand in `AppComposition.ConfigurePlatform` (§4a): the mails are the package's, configured, never edited.
 6. **Regenerate the GENERATED binaries** — step 4 skips binaries, but two of them are built from
    files the rename just rewrote, and CI compares them against a fresh generation:
    - `docs/QA_TEST_GUIDE.pdf` + `docs/QA_RUN_LOG.pdf` are generated from `docs/QA_TEST_PLAN.md`.
@@ -69,16 +69,21 @@ for f in filter(None, subprocess.check_output(["git", "ls-files", "-z"]).decode(
 - `src/Web/wwwroot/index.html` — `<title>` + `og:title`
 - `src/Maui/wwwroot/index.html` — `<title>`
 - `src/Maui/Auth/LoopbackOAuthInitiator.cs` — the "you can close this tab" page title
-- **`src/Infrastructure/Email/BrandedEmail.cs`** — email footer wordmark + tagline (brand, not localized)
+- **The email wordmark + tagline** — `options.Brand.Name` / `options.Brand.Tagline` in
+  `AppComposition.ConfigurePlatform` (§4a; brand, not localized)
 - **Localization resources (every language!)** — the brand name + product copy live in
-  `src/Shared.Ui/Resources/AppStrings.*.resx` and `src/Infrastructure/Email/EmailStrings.*.resx`.
-  Update "Perezosoft" in each `.resx` you have (en, es, …). See `docs/LOCALIZATION.md`.
+  `src/Shared.Ui/Resources/AppStrings.*.resx`: update "Perezosoft" in each `.resx` you have (en, es, …). The
+  email copy (`EmailStrings`, in the package) mentions the platform's name in a few keys: override those keys in
+  your own resx and add it to `options.Brand.Strings` (§4a). See `docs/LOCALIZATION.md`.
 - **Email sender name** — `Email:Smtp:FromName`. The committed runtime default lives in
-  `src/Api/appsettings*.json` (currently "Perezosoft"); `Email__Smtp__FromName` in `.env` (dev) or
+  `src/Host/appsettings*.json` (currently "Perezosoft"); `Email__Smtp__FromName` in `.env` (dev) or
   env vars (prod) only *overrides* it. Update the appsettings default and any env override together.
-- **`src/Api/Services/MfaService.cs`** — the `Issuer` const ("Perezosoft"): what authenticator apps
-  display for enrolled accounts, and the letter-monogram they draw derives from it. Easy to miss —
-  users only ever see it inside Google Authenticator & co.
+- **The MFA issuer, the OpenAPI title and the telemetry service name** — all follow `options.Brand.Name` (§4a, Pkg 3.9b):
+  the issuer is what authenticator apps display for enrolled accounts (and the letter-monogram they draw), easy to miss
+  because users only ever see it inside Google Authenticator & co.; the OpenAPI document is titled "<Brand> API"; traces
+  are filed under `options.Brand.ServiceName` (the name without spaces + `.Api` unless you set it). Nothing to edit in
+  the package — set the name and all three follow. Changing the issuer does not touch already-enrolled authenticators:
+  they keep the old label until the user re-enrolls.
 - **`docs/postman/`** — the collection's `info.name` ("Perezosoft Platform API"), both environment
   `name`s, and the `Perezosoft.*.json` **file names**. If you rename the files, update the hardcoded
   collection path in `.github/workflows/postman-sync.yml` in the same commit; and since the sync
@@ -102,7 +107,7 @@ If your tenant *is* a household, there is nothing to do.
 
 ## 2. Tagline — "Lazy reputation. Efficient engineering." → yours
 - `src/Shared.Ui/wwwroot/brand/lockup_light.svg` — the wordmark-lockup text
-- **`src/Infrastructure/Email/BrandedEmail.cs`** — email footer tagline
+- **The email footer tagline** — `options.Brand.Tagline` (§4a)
 
 ## 3. Logos & images — replace the files (keep the filenames to avoid touching references)
 In-app UI (shared RCL — used by web + desktop + mobile):
@@ -112,7 +117,9 @@ In-app UI (shared RCL — used by web + desktop + mobile):
   editable source, render the PNGs from them, and point `Login.razor`/`Home.razor` at the PNGs.
 
 **Email logo (CID-embedded — shown in every transactional email):**
-- **`src/Infrastructure/Email/Assets/logo.png`** — keep it a **PNG** (email clients strip SVG and block data-URIs); a ~128px square is plenty.
+- **`options.Brand.Logo`** (§4a) — your logo's bytes; keep it a **PNG** (email clients strip SVG and block
+  data-URIs, and the host refuses anything else at startup); a ~128px square is plenty. Ship it as an embedded resource
+  of your host. `src/Infrastructure/Email/Assets/logo.png` is the platform's default, inside the package.
 
 Web host chrome:
 - `src/Web/wwwroot/{favicon.ico, favicon.svg, favicon.png, apple_touch_180.png, og_image_1200x630.png}`
@@ -137,9 +144,9 @@ The palette is semantic tokens, single-sourced for web **and** all native shells
   dominant mid tone, dark = its darkest shade (hover/active), accent(-light) = supporting tones,
   bg/border = a near-white and a soft border tinted toward the primary. Check WCAG contrast for
   white text on `--bs-primary`.
-- **`src/Infrastructure/Email/BrandedEmail.cs`** — the colour constants at the top (`Green`,
-  `GreenDark`, `Sage`, `SageLight`, `Surface`, `Border`, `Ink`, `Muted`) — rename them to match
-  your palette while you're there. They're hard-coded because email HTML can't use CSS variables.
+- **The email palette** — `options.Brand.Colors` (§4a): `Primary`, `PrimaryDark`, `Accent`, `AccentLight`,
+  `Surface`, `Border`, `Ink`, `Muted`, as `#rrggbb`. Email HTML can't use CSS variables, so the mails take the values
+  directly; anything but a hex colour stops the host at startup.
 - **The Android system bars** — `src/Maui/Platforms/Android/Resources/values/colors.xml` (the theme's
   `colorPrimary`/`colorAccent` = `--bs-primary`, `colorPrimaryDark` = `--brand-dark`) and
   `SystemBarColors` in `src/Maui/Platforms/Android/AndroidSystemBarTheme.cs`, whose `Light`/`Dark` must
@@ -150,12 +157,34 @@ The palette is semantic tokens, single-sourced for web **and** all native shells
   these disagree with app.css. Before 2026-09-16 the template hard-coded its sage in `MainActivity` in
   every theme and no rebrand step named it, so downstream Android apps (JiggerJot, y-el-vuelto) wore it.
 
+## 4a. The transactional emails — one block in `AppComposition.ConfigurePlatform`
+The sign-in code, magic link, invitation and notification mails are rendered by the platform package
+(`BrandedEmail`, Pkg 3.9); an app brands them through `PlatformOptions.Brand` and never edits the package's files.
+Everything the mails show of the brand is here, so a rebrand that skips this block still sends the platform's:
+
+```csharp
+// src/Host/AppComposition.cs
+public static void ConfigurePlatform(PlatformOptions options)
+{
+    options.Brand.Name = "<Brand>";                      // title, logo alt, header, footer
+    options.Brand.Tagline = "<your tagline>";
+    options.Brand.Colors.Primary = "#1f6f8b";            // and PrimaryDark, Accent, AccentLight, Surface, Border, Ink, Muted
+    options.Brand.Logo = EmbeddedPng("Email.logo.png");  // PNG bytes, ~128px square
+    options.Brand.Strings.Add(new ResourceManager("<Brand>.Host.Email.EmailStrings", typeof(AppComposition).Assembly));
+}
+```
+
+`Brand.Strings` takes your own resx holding only the keys you change (the platform's mention its name in the
+preheaders and the invitation body); they win over the platform's one culture at a time, so a key you override in
+English only still reaches a Spanish reader in the platform's Spanish. Override each key in every language you ship.
+The sender's display name is configuration, not brand: `Email:Smtp:FromName` (§1).
+
 ## 5. App identifier & OAuth callback scheme — "perezosoft" / app id
 These must all match each other **and** your OAuth provider registration:
 - `src/Maui/MauiProgram.cs` — `CallbackScheme`
 - `src/Maui/Platforms/Android/WebAuthenticatorCallbackActivity.cs` — `CallbackScheme` const + intent-filter `DataScheme`
 - `src/Maui/Platforms/iOS/Info.plist` + `src/Maui/Platforms/MacCatalyst/Info.plist` — `CFBundleURLSchemes` entry
-- `src/Api/appsettings.json` — `Auth:Native:CallbackScheme`
+- `src/Host/appsettings.json` — `Auth:Native:CallbackScheme`
 - `src/Maui/Perezosoft.Maui.csproj` — `ApplicationId` (`com.perezosoft.…`)
 - Provider consoles — register `{scheme}://auth` and your `signin-*` redirect URIs
 

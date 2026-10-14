@@ -48,7 +48,7 @@ internal static partial class AppAllowlists
     {
     };
 
-    /// <summary>Which slice may WRITE each entity (Arch A8, R162): entity → the folder under <c>src/Api/Features/</c> that owns it.
+    /// <summary>Which slice may WRITE each entity (Arch A8, R162): entity → the folder under <c>src/Host/Features/</c> that owns it.
     /// Other slices read it, or go through a Core contract the owner implements (<c>EveryEntity_HasOneWritingSlice</c>).</summary>
     public static readonly IReadOnlyDictionary<string, string> EntityWriters = new Dictionary<string, string>
     {

@@ -16,6 +16,8 @@
   <ItemGroup>
     <!-- Brand logo embedded for CID inline-embedding in branded emails (BrandedEmail). -->
     <EmbeddedResource Include="Email\Assets\logo.png" />
+    <!-- The platform's own schema, as the package ships it (Pkg 3.5): an app reads it to see what the platform owns. -->
+    <EmbeddedResource Include="Persistence\platform-schema.json" LogicalName="Perezosoft.Infrastructure.platform-schema.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,11 +26,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Declared, not left transitive (Pkg 3.2): this assembly compiles against the central EF line (10.0.13), while
+         Npgsql's own floor is lower. Without this the package would let a consumer resolve the lower Relational and fail to
+         load at runtime (MSB3277 in the pack proof). EF's Design package lives in the host now (Pkg 3.5): the migrations
+         are the app's, so the tooling is too. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Stripe.net" />
     <!-- Not used directly: lifts MimeKit's transitive Pkcs 10.0.0 to the patched 10.0.13 (#432; see Directory.Packages.props). -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
@@ -38,6 +41,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Published as a package (Pkg 3.1, ADR-034): persistence, email, files, billing and job infrastructure. -->
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Infrastructure</PackageId>
+    <Description>Perezosoft Platform infrastructure: EF Core persistence with tenant isolation, email, file storage, billing, jobs.</Description>
   </PropertyGroup>
 
 </Project>

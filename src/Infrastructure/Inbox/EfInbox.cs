@@ -10,10 +10,10 @@ namespace Perezosoft.Infrastructure.Inbox;
 /// the insert affects one row on the first delivery (claimed) and zero on a duplicate. This is
 /// race-free by construction — concurrent claims of the same key serialise on the unique index, so
 /// exactly one wins — without needing the outbox's <c>SKIP LOCKED</c> queue-claim (that pattern picks
-/// work off a queue; this is a dedup gate). Runs on the shared <see cref="AppDbContext"/>, so it
+/// work off a queue; this is a dedup gate). Runs on the shared <see cref="PlatformDbContext"/>, so it
 /// enlists in the caller's transaction and commits with the work it guards.
 /// </summary>
-public sealed class EfInbox(AppDbContext db, TimeProvider clock) : IInbox
+public sealed class EfInbox(PlatformDbContext db, TimeProvider clock) : IInbox
 {
     public async Task<bool> TryClaimAsync(string source, string idempotencyKey, CancellationToken cancellationToken = default)
     {

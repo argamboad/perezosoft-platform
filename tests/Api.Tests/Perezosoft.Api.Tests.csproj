@@ -47,6 +47,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Perezosoft.Core.csproj" />
     <ProjectReference Include="..\..\src\Api\Perezosoft.Api.csproj" />
+    <!-- The reference host (Pkg 3.2): Program (WebApplicationFactory<Program>) and the sample slice. -->
+    <ProjectReference Include="..\..\src\Host\Perezosoft.Host.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure\Perezosoft.Infrastructure.csproj" />
     <!-- Client-side auth logic (AuthService OAuth resume, NATIVE-12) — the RCL has no test
          project of its own; its plain-C# services are unit-tested here. -->

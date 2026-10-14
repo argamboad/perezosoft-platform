@@ -20,13 +20,21 @@ namespace Perezosoft.Api.Authentication;
 /// </list>
 /// Backed by the same <see cref="RolePermissions"/> matrix as the minimal-API <c>.RequirePermission(...)</c>
 /// filter — one authorization source of truth. The action still resolves its own membership for its work.
+/// <para>
+/// Takes the permission's NAME (Pkg 3.8): an attribute argument must be a constant, and a permission is an open set now —
+/// <c>nameof(Permission.ManageBilling)</c> for a platform one, the app's own constant for an app's. A name the host never
+/// registered grants nothing (403), and <c>PermissionRegistrationGateTests</c> fails on it before it ships.
+/// </para>
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
-public sealed class RequireTenantPermissionAttribute(Permission permission, string forbiddenMessage)
+public sealed class RequireTenantPermissionAttribute(string permission, string forbiddenMessage)
     : Attribute, IAsyncActionFilter
 {
-    private readonly Permission _permission = permission;
+    private readonly Permission _permission = new(permission);
     private readonly string _forbiddenMessage = forbiddenMessage;
+
+    /// <summary>The permission this action requires.</summary>
+    public Permission Permission => _permission;
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
@@ -45,7 +53,7 @@ public sealed class RequireTenantPermissionAttribute(Permission permission, stri
             return;
         }
 
-        if (!RolePermissions.Grants(membership.Role, _permission))
+        if (!http.RequestServices.GetRequiredService<RolePermissions>().Grants(membership.Role, _permission))
         {
             context.Result = Envelope(StatusCodes.Status403Forbidden,
                 new ErrorResponse("forbidden", _forbiddenMessage));

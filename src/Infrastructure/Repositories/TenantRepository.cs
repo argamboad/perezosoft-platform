@@ -6,7 +6,7 @@ using Perezosoft.Infrastructure.Persistence;
 namespace Perezosoft.Infrastructure.Repositories;
 
 /// <summary>EF Core implementation of <see cref="ITenantRepository"/>.</summary>
-public class TenantRepository(AppDbContext db) : ITenantRepository
+public class TenantRepository(PlatformDbContext db) : ITenantRepository
 {
     public async Task<Guid?> GetTenantIdForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {

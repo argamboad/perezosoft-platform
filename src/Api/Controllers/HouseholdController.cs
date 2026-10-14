@@ -47,7 +47,7 @@ public class HouseholdController(
 
     /// <summary>Renames the tenant (owner only).</summary>
     [HttpPut]
-    [RequireTenantPermission(Permission.RenameTenant, "Only the household owner can rename the household")]
+    [RequireTenantPermission(nameof(Permission.RenameTenant), "Only the household owner can rename the household")]
     public async Task<IActionResult> Rename([FromBody] RenameTenantRequest request, CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);
@@ -74,7 +74,7 @@ public class HouseholdController(
 
     /// <summary>Removes a member (owner only). Cannot remove self.</summary>
     [HttpDelete("members/{userId:guid}")]
-    [RequireTenantPermission(Permission.ManageMembers, "Only the household owner can remove members")]
+    [RequireTenantPermission(nameof(Permission.ManageMembers), "Only the household owner can remove members")]
     public async Task<IActionResult> RemoveMember(Guid userId, CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);
@@ -98,7 +98,7 @@ public class HouseholdController(
 
     /// <summary>Exports the tenant's data as a downloadable bundle (owner only — ExportData).</summary>
     [HttpPost("export")]
-    [RequireTenantPermission(Permission.ExportData, "Only the household owner can export the household's data")]
+    [RequireTenantPermission(nameof(Permission.ExportData), "Only the household owner can export the household's data")]
     public async Task<IActionResult> Export(CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);
@@ -111,7 +111,7 @@ public class HouseholdController(
 
     /// <summary>Changes a member's role between admin and member (owner only — ManageRoles).</summary>
     [HttpPut("members/{userId:guid}/role")]
-    [RequireTenantPermission(Permission.ManageRoles, "Only the household owner can change member roles")]
+    [RequireTenantPermission(nameof(Permission.ManageRoles), "Only the household owner can change member roles")]
     public async Task<IActionResult> ChangeMemberRole(Guid userId, [FromBody] ChangeMemberRoleRequest request, CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);
@@ -138,7 +138,7 @@ public class HouseholdController(
 
     /// <summary>Transfers ownership to an existing member (owner only).</summary>
     [HttpPost("transfer-ownership")]
-    [RequireTenantPermission(Permission.TransferOwnership, "Only the household owner can transfer ownership")]
+    [RequireTenantPermission(nameof(Permission.TransferOwnership), "Only the household owner can transfer ownership")]
     public async Task<IActionResult> TransferOwnership([FromBody] TransferOwnershipRequest request, CancellationToken cancellationToken)
     {
         var membership = await GetMembershipAsync(cancellationToken);

@@ -31,6 +31,7 @@ public class AuthController(
     IPasswordlessService passwordless,
     ILinkTokenService linkTokenService,
     IEmailSender emailSender,
+    BrandedEmail emails,
     IApplicationSettings appSettings,
     IPasswordlessSettings passwordlessSettings,
     IMfaLoginService mfaLogin,
@@ -316,7 +317,7 @@ public class AuthController(
         var link = $"{Request.Scheme}://{Request.Host}/api/auth/magic-link/verify" +
                    $"?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(email)}";
 
-        var emailBody = BrandedEmail.MagicLink(link, passwordlessSettings.MagicLinkLifespanMinutes,
+        var emailBody = emails.MagicLink(link, passwordlessSettings.MagicLinkLifespanMinutes,
             BrandedEmail.ResolveCulture(req.Culture));
         await emailSender.SendAsync(email, emailBody.Subject, emailBody.Html, emailBody.InlineImages, cancellationToken: cancellationToken);
 
@@ -367,7 +368,7 @@ public class AuthController(
         var email = req.Email.Trim();
         var code = await passwordless.IssueOtpAsync(email, cancellationToken);
 
-        var emailBody = BrandedEmail.Otp(code, passwordlessSettings.OtpLifespanMinutes,
+        var emailBody = emails.Otp(code, passwordlessSettings.OtpLifespanMinutes,
             BrandedEmail.ResolveCulture(req.Culture));
         await emailSender.SendAsync(email, emailBody.Subject, emailBody.Html, emailBody.InlineImages, cancellationToken: cancellationToken);
 

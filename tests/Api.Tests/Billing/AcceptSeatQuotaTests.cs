@@ -18,7 +18,7 @@ namespace Perezosoft.Api.Tests.Billing;
 [Collection(PostgresCollection.Name)]
 public class AcceptSeatQuotaTests(PostgresFixture fixture) : PostgresTestBase(fixture)
 {
-    private static readonly int FreeSeats = PlanCatalog.Get(PlanKeys.Free).SeatLimit!.Value;
+    private static readonly int FreeSeats = TestPlans.Default.Get(PlanKeys.Free).SeatLimit!.Value;
 
     [Fact]
     public async Task Accept_OverDowngradedCap_ReturnsSeatLimitReached_AndMovesNothing()

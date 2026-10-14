@@ -92,11 +92,11 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// created context is fresh — own connection, no ambient tenant — exactly like the scoped
     /// factory the production DI registers.
     /// </summary>
-    public IDbContextFactory<AppDbContext> CreateContextFactory() => new FixtureContextFactory(this);
+    public IDbContextFactory<PlatformDbContext> CreateContextFactory() => new FixtureContextFactory(this);
 
-    private sealed class FixtureContextFactory(PostgresFixture fixture) : IDbContextFactory<AppDbContext>
+    private sealed class FixtureContextFactory(PostgresFixture fixture) : IDbContextFactory<PlatformDbContext>
     {
-        public AppDbContext CreateDbContext() => fixture.CreateContext();
+        public PlatformDbContext CreateDbContext() => fixture.CreateContext();
     }
 
     /// <summary>
