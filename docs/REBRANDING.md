@@ -78,9 +78,12 @@ for f in filter(None, subprocess.check_output(["git", "ls-files", "-z"]).decode(
 - **Email sender name** — `Email:Smtp:FromName`. The committed runtime default lives in
   `src/Host/appsettings*.json` (currently "Perezosoft"); `Email__Smtp__FromName` in `.env` (dev) or
   env vars (prod) only *overrides* it. Update the appsettings default and any env override together.
-- **`src/Api/Services/MfaService.cs`** — the `Issuer` const ("Perezosoft"): what authenticator apps
-  display for enrolled accounts, and the letter-monogram they draw derives from it. Easy to miss —
-  users only ever see it inside Google Authenticator & co.
+- **The MFA issuer, the OpenAPI title and the telemetry service name** — all follow `options.Brand.Name` (§4a, Pkg 3.9b):
+  the issuer is what authenticator apps display for enrolled accounts (and the letter-monogram they draw), easy to miss
+  because users only ever see it inside Google Authenticator & co.; the OpenAPI document is titled "<Brand> API"; traces
+  are filed under `options.Brand.ServiceName` (the name without spaces + `.Api` unless you set it). Nothing to edit in
+  the package — set the name and all three follow. Changing the issuer does not touch already-enrolled authenticators:
+  they keep the old label until the user re-enrolls.
 - **`docs/postman/`** — the collection's `info.name` ("Perezosoft Platform API"), both environment
   `name`s, and the `Perezosoft.*.json` **file names**. If you rename the files, update the hardcoded
   collection path in `.github/workflows/postman-sync.yml` in the same commit; and since the sync

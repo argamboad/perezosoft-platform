@@ -26,14 +26,17 @@ namespace Perezosoft.Api.Observability;
 /// </summary>
 public static class TelemetryExtensions
 {
-    public static IServiceCollection AddAppTelemetry(this IServiceCollection services, IConfiguration configuration)
+    /// <param name="serviceName">The OpenTelemetry <c>service.name</c>: the host's <c>Brand.ServiceName</c> (Pkg 3.9b);
+    /// the default brand's when omitted.</param>
+    public static IServiceCollection AddAppTelemetry(this IServiceCollection services, IConfiguration configuration, string? serviceName = null)
     {
+        serviceName ??= new Perezosoft.Core.PlatformBrand().ServiceName;
         var otlpEndpoint = configuration["OpenTelemetry:Otlp:Endpoint"];
         var otlpProtocol = configuration["OTEL_EXPORTER_OTLP_PROTOCOL"];
         var useConsole = configuration.GetValue<bool>("OpenTelemetry:ConsoleExporter");
 
         services.AddOpenTelemetry()
-            .ConfigureResource(resource => resource.AddService("Perezosoft.Api"))
+            .ConfigureResource(resource => resource.AddService(serviceName))
             .WithTracing(tracing =>
             {
                 tracing

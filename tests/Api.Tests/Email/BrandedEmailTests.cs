@@ -36,6 +36,18 @@ public class BrandedEmailTests
         Assert.True(logo.Content.Length > 1000, "probe: the embedded platform logo");
     }
 
+    [Theory]
+    [InlineData("Perezosoft", null, "Perezosoft.Api")]          // the platform's own host: unchanged
+    [InlineData("Y el Vuelto", null, "YelVuelto.Api")]          // derived: the name without spaces
+    [InlineData("Y el Vuelto", "vuelto-api", "vuelto-api")]     // set explicitly
+    public void TheServiceName_DerivesFromTheBrand_UnlessSet(string name, string? serviceName, string expected) // Pkg 3.9b (#433)
+    {
+        var brand = new PlatformOptions().Brand;
+        brand.Name = name;
+        if (serviceName is not null) brand.ServiceName = serviceName;
+        Assert.Equal(expected, brand.ServiceName);
+    }
+
     [Fact]
     public void AnAppsBrand_RendersInTheMail()
     {

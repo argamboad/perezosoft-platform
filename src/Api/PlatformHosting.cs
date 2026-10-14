@@ -74,7 +74,7 @@ public static class PlatformHosting
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(o =>
         {
-            o.SwaggerDoc("v1", new OpenApiInfo { Title = "Perezosoft API", Version = "v1" });
+            o.SwaggerDoc("v1", new OpenApiInfo { Title = $"{platformOptions.Brand.Name} API", Version = "v1" });
             // A curated "public" document with ONLY the /api/public routes (PUBAPI-2) — the customer-facing
             // contract, served leak-free at /api/public/openapi.json when PUBAPI is enabled (see below).
             o.SwaggerDoc("public", new OpenApiInfo
@@ -115,7 +115,7 @@ public static class PlatformHosting
 
         // OpenTelemetry traces + metrics (OBS-2). Exporter is config-gated (OTLP when configured); see
         // TelemetryExtensions. Spans are tagged with tenant_id/user_id.
-        builder.Services.AddAppTelemetry(builder.Configuration);
+        builder.Services.AddAppTelemetry(builder.Configuration, platformOptions.Brand.ServiceName);
 
         // Health checks (OBS-3). /health = liveness (process up); /health/ready = readiness (DB reachable).
         builder.Services.AddHealthChecks()
@@ -328,7 +328,7 @@ public static class PlatformHosting
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Perezosoft API v1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{app.Services.GetRequiredService<PlatformOptions>().Brand.Name} API v1");
                 if (publicApiSettings.Enabled)
                     c.SwaggerEndpoint("/swagger/public/swagger.json", "Public API"); // PUBAPI-2
                 c.RoutePrefix = string.Empty; // serve the UI at the API root (/)

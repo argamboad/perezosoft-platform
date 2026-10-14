@@ -752,11 +752,12 @@
 - `tests/Core.Tests/Auth/ImpersonationIdentityTests.cs` — client identity swap raises AuthService.IdentityChanged so the header re-sources on impersonate
 - `tests/E2E.Tests/AnnouncementJourneyTests.cs` — ADMIN-3 announce -> NOTIFY fan-out
 
-## 8.1 — Single-origin hosting (7 files)
+## 8.1 — Single-origin hosting (8 files)
 
 - `src/Api/Configuration/ProxyForwardingExtensions.cs` — config-gated forwarded headers
 - `tests/Api.Tests/Hosting/AppPolicyTests.cs`
 - `tests/Api.Tests/Hosting/AppRoutePrefixTests.cs`
+- `tests/Api.Tests/Hosting/BrandStringsTests.cs`
 - `tests/Api.Tests/Hosting/ProxyForwardingTests.cs`
 - `tests/Api.Tests/Hosting/RouteTableGuardTests.cs`
 - `tests/Api.Tests/Infrastructure/TempWebRoot.cs`
@@ -1424,4 +1425,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1257 tracked files · 881 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1258 tracked files · 882 built in lessons · 376 bucketed · 0 unmapped

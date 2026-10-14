@@ -202,13 +202,32 @@ public class MfaServiceTests(PostgresFixture fixture) : PostgresTestBase(fixture
 
     // --- helpers ---
 
-    private static MfaService NewService(AppDbContext db) =>
+    [Fact]
+    public async Task TheAuthenticatorShowsTheHostsBrand() // Pkg 3.9b (#433)
+    {
+        // The issuer is what every user's authenticator app lists the account under. It came from a const in the package;
+        // it is the host's Brand.Name now — the platform's own host still says "Perezosoft".
+        await using var db = Fixture.CreateContext();
+        var userId = await SeedUserAsync(db);
+        var platform = await NewService(db).BeginEnrollmentAsync(userId);
+        Assert.Contains("otpauth://totp/Perezosoft%3A", platform!.ProvisioningUri, StringComparison.Ordinal);
+        Assert.EndsWith("&issuer=Perezosoft&digits=6&period=30", platform.ProvisioningUri, StringComparison.Ordinal);
+
+        var options = new Perezosoft.Core.PlatformOptions();
+        options.Brand.Name = "Y el Vuelto";
+        var app = await NewService(db, options).BeginEnrollmentAsync(userId);
+        Assert.StartsWith("otpauth://totp/Y%20el%20Vuelto%3A", app!.ProvisioningUri, StringComparison.Ordinal);
+        Assert.Contains("&issuer=Y%20el%20Vuelto&", app.ProvisioningUri, StringComparison.Ordinal);
+    }
+
+    private static MfaService NewService(AppDbContext db, Perezosoft.Core.PlatformOptions? options = null) =>
         new(new EfRepository<UserMfa>(db),
             new EfRepository<MfaRecoveryCode>(db),
             new UserRepository(db),
             new EphemeralDataProtectionProvider(),
             new RecoveryCodeHasher(new TestJwtSettings()),
             new TestMfaSettings(),
+            options ?? new Perezosoft.Core.PlatformOptions(),
             TimeProvider.System);
 
     private static string CurrentCode(string base32Secret) =>

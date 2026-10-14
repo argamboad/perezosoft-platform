@@ -17,6 +17,19 @@ public sealed class PlatformBrand
     /// <summary>The footer line under the name. HTML-encoded when rendered.</summary>
     public string Tagline { get; set; } = "Lazy reputation. Efficient engineering.";
 
+    private string? _serviceName;
+
+    /// <summary>
+    /// The name traces, metrics and logs are filed under (the OpenTelemetry <c>service.name</c>, Pkg 3.9b). Unless set, the
+    /// brand's name without whitespace plus <c>.Api</c> — <c>Perezosoft.Api</c> for the platform's own host, as before. The
+    /// name itself also titles the OpenAPI document and is the issuer authenticator apps show for MFA.
+    /// </summary>
+    public string ServiceName
+    {
+        get => _serviceName ?? string.Concat(Name.Where(c => !char.IsWhiteSpace(c))) + ".Api";
+        set => _serviceName = value;
+    }
+
     /// <summary>The palette, as <c>#rrggbb</c> (or <c>#rgb</c>) values.</summary>
     public BrandColors Colors { get; } = new();
 
