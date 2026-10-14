@@ -37,7 +37,7 @@
 
 ```bash
 docker compose up -d                                   # Postgres + Mailpit
-dotnet run --project src/Api --launch-profile https    # binds https:7160 (web/desktop) AND http:5238 (android)
+dotnet run --project src/Host --launch-profile https    # binds https:7160 (web/desktop) AND http:5238 (android)
 ```
 
 - API health/liveness check: `curl -k https://localhost:7160/health` → **200** (`Healthy`);
@@ -53,7 +53,7 @@ dotnet run --project src/Api --launch-profile https    # binds https:7160 (web/d
   > - commenting out the `Email__Smtp__*` lines in `.env` (unset → defaults to Mailpit `localhost:1025`), **or**
   > - leaving `.env` untouched and overriding on the command line (command-line config beats `.env`):
   >   ```bash
-  >   dotnet run --project src/Api --launch-profile https -- \
+  >   dotnet run --project src/Host --launch-profile https -- \
   >     --Email:Smtp:Host=localhost --Email:Smtp:Port=1025 --Email:Smtp:Username= --Email:Smtp:Password=
   >   ```
   > Verify by triggering one OTP (QA-SMK-01) and confirming it appears in Mailpit before running the suite.

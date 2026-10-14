@@ -12,21 +12,33 @@
 
 ## 1. Solution map
 
-Two disjoint dependency trees, joined only by HTTP. The server tree is `Api → {Core,
+Two disjoint dependency trees, joined only by HTTP. The server tree is `Host → Api → {Core,
 Infrastructure} → Core`; the client tree is `{Web, Maui} → Shared.Ui`. `Shared.Ui` references
 **nothing** — client and server share no compiled code, only the JSON contract (documented by the
 [Postman collection](postman/README.md), ADR-023). `Core` has zero package references; it is the
 enforced dependency floor.
 
+**The platform ships as packages; the app is the host** (ADR-034, Packaging M3). `Core`, `Infrastructure` and `Api` are
+libraries published as `Perezosoft.Platform.Core`, `.Infrastructure` and `.Api` (MinVer-versioned from `v*` tags; the
+`.pdb` rides inside each `.nupkg`). `src/Host` is the one web project: it runs the platform and carries everything that
+is the app's — `Program.cs` (two calls, `AddPlatform<AppDbContext>(AppComposition.ConfigurePlatform)` and
+`MapPlatformAsync()`, identical in every app), `AppComposition.cs` (the app's options, services and endpoints),
+`Features/**` (the slices), `Persistence/` (`AppDbContext : PlatformDbContext` and every migration), appsettings with only
+the brand overrides (the defaults are `platform-defaults.json`, embedded in the Api package), launchSettings and the
+`.http` file. An app changes platform behaviour through `PlatformOptions` — plans, permissions, the email brand,
+billing-gated controllers — and through DI, never by editing a package's code (ADR-034 §4; the seams are §2b below).
+
 Decisions drawn here: ADR-C3 (clean API boundary), ADR-C5 (RCL), ADR-004 (clean platform +
-vertical slices), ADR-018 (MAUI parity) — all in [`DECISIONS.md`](DECISIONS.md).
+vertical slices), ADR-018 (MAUI parity), ADR-034 (packages) — all in [`DECISIONS.md`](DECISIONS.md).
 
 ```mermaid
 flowchart LR
     subgraph server ["Server (src/)"]
-        Api["Api<br/>ASP.NET Core Web API<br/>controllers + Features/ slices"]
-        Infra["Infrastructure<br/>EF Core, Npgsql, MailKit,<br/>Stripe, S3, DataProtection"]
-        Core["Core<br/>entities + abstractions<br/>ZERO dependencies"]
+        Host["Host<br/>the app: Program.cs, AppComposition,<br/>Features/ slices, AppDbContext + migrations"]
+        Api["Api · package<br/>controllers, PlatformHosting,<br/>platform-defaults.json"]
+        Infra["Infrastructure · package<br/>PlatformDbContext, EF Core, Npgsql,<br/>MailKit, Stripe, S3, DataProtection"]
+        Core["Core · package<br/>entities + abstractions + PlatformOptions<br/>ZERO dependencies"]
+        Host --> Api
         Api --> Core
         Api --> Infra
         Infra --> Core
@@ -38,8 +50,8 @@ flowchart LR
         Web --> RCL
         Maui --> RCL
     end
-    clients -- "HTTP/JSON only<br/>(no shared compiled code)" --> Api
-    Api -. "serves the WASM bundle<br/>single-origin (ADR-017)" .-> Web
+    clients -- "HTTP/JSON only<br/>(no shared compiled code)" --> Host
+    Host -. "serves the WASM bundle<br/>single-origin (ADR-017)" .-> Web
 ```
 
 Tests mirror the trees: `Api.Tests` (server, Testcontainers Postgres/MinIO), `Core.Tests`,
@@ -48,8 +60,8 @@ Tests mirror the trees: `Api.Tests` (server, Testcontainers Postgres/MinIO), `Co
 ## 2. The server onion and its seams
 
 `Api` depends on `Core` abstractions; `Infrastructure` implements them. A feature slice under
-`src/Api/Features/` may only touch `Core` seams — rule R8 (as amended by R159, Arch A1) says only
-`src/Api/AppComposition.cs`, the app's half of composition, references `Features.*`; `Program.cs` calls it once and
+`src/Host/Features/` may only touch `Core` seams — rule R8 (as amended by R159, Arch A1) says only
+`src/Host/AppComposition.cs`, the app's half of composition, references `Features.*`; `Program.cs` calls it once and
 stays identical in every app. The arch tests ban `IgnoreQueryFilters()` there outright.
 
 The seams that matter (all in `src/Core/Abstractions/` unless noted):
@@ -88,6 +100,22 @@ flowchart TB
         UDC --- U1["Mfa"] & U2["Notification"] & U3["Outbox"]
     end
 ```
+
+### 2b. What an app configures (ADR-034 §4, Packaging M3)
+
+The packages are not edited; an app reaches into them through `PlatformOptions` (set in `AppComposition.ConfigurePlatform`,
+built once per host by `AddPlatformOptions`, a bad value stops the host at startup) and through a few registration hooks:
+
+| Seam | Where the app says it | What the platform builds from it |
+|---|---|---|
+| Plans and quotas | `options.Plans` (starts as Free + Pro; must keep Free) | `PlanCatalog`, injected into entitlements, quotas, billing, admin comp |
+| Permissions | `options.Permissions.Add(new Permission("X"), roles…)` (additive; owner holds all) | `RolePermissions`, asked by `[RequireTenantPermission]`, `.RequirePermission` and `IPermissionService`; `PermissionRegistrationGateTests` |
+| Email brand | `options.Brand` — name, tagline, palette, PNG logo, `Strings` (the app's resx first, per culture) | `BrandedEmail`, used by sign-in, invitation and notification mails |
+| Billing-gated controllers | `options.BillingGatedControllers` | `BillingGateConvention` drops them with billing off (404) |
+| Route prefixes | `MapTenantFeatureGroup("/api/x")` (an `AppRouteGroup` per call) | `RouteTableGuard` refuses a shared prefix or one on `PlatformPrefixes` |
+| Authorization policies | `services.AddAppPolicy(name, …)` in `AddAppServices` | refused on a platform name; `EnsurePlatformPoliciesIntact` at boot |
+| Database model | `AppDbContext : PlatformDbContext` + `AppDbContext.App.cs` + its own migrations | `ApplyPlatformStep(name)` for published SQL steps (RLS); `PlatformSchemaTests` vs the embedded `platform-schema.json` |
+| Configuration | `src/Host/appsettings*.json`, `.env`, environment | layered over the embedded `platform-defaults.json` (lowest source) |
 
 ## 3. Tenancy — two walls, both directions ([ADR-003](DECISIONS.md), [ADR-020](DECISIONS.md))
 
@@ -354,8 +382,11 @@ launcher uses a plain client for the same reason.
 
 ## 10. Startup & request pipeline
 
-`Program.cs` order is deliberate; see [`FLOWS.md` §1](FLOWS.md) for the boot sequence (env load →
-DI → migrate → RLS posture guard) and §2 for the per-request path. Middleware order:
+`Program.cs` order is deliberate and now two calls deep: `AddPlatform` (`src/Api/PlatformHosting.cs`) registers every
+platform service after the app's options and embedded defaults, the app's services follow, and `MapPlatformAsync` checks
+the platform's policies, migrates, runs the posture guard and maps the pipeline; the app's endpoints and the route-table
+guard close it. See [`FLOWS.md` §1](FLOWS.md) for the boot sequence (env load → DI → migrate → RLS posture guard) and §2
+for the per-request path. Middleware order:
 proxy forwarding → static WASM assets + security headers (config-gated) → HSTS/HTTPS (non-dev) →
 CORS → session → **authentication → authorization → request-log scope → rate limiter** →
 controllers; then health endpoints, `/api/version`, config-gated PUBAPI/HOOKS maps, and the

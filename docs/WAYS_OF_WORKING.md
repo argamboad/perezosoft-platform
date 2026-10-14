@@ -39,12 +39,12 @@ Two senses of "vertical" apply, and they're complementary:
   layers it needs and leaves the app working.
 - **Organization-vertical feature folders:** *where the code lives*. The reusable **platform** stays
   horizontal / clean-layered (Core, Infrastructure, and the auth/tenancy controllers), while each
-  **app feature** lives in one self-contained folder: `src/Api/Features/<Feature>/`.
+  **app feature** lives in one self-contained folder: `src/Host/Features/<Feature>/`.
 
 This hybrid is pinned in **ADR-004**. The platform is the durable chassis (JWT auth, membership
 tenancy, the global tenant query filter, email, persistence); features bolt on and *reuse* it.
 
-**A feature slice** (`src/Api/Features/<Feature>/`) typically contains:
+**A feature slice** (`src/Host/Features/<Feature>/`) typically contains:
 - `<Feature>Endpoints.cs` — a minimal-API group registered via
   **`app.MapTenantFeatureGroup("/api/<feature>")`** (NOT a raw
   `MapGroup(...).RequireAuthorization(...)` — the helper applies the shared `AuthPolicies.TenantApi`
@@ -70,7 +70,7 @@ tenancy, the global tenant query filter, email, persistence); features bolt on a
 
 **A feature must NOT** reach into another feature's folder, edit a central "has data / wipe data"
 method, author a bespoke per-entity repository (use `IRepository<T>`), use `IgnoreQueryFilters()`
-(banned in `src/Api/Features/**` — use `IRepository<T>.QueryAllTenants()`), or inline UI in the Web
+(banned in `src/Host/Features/**` — use `IRepository<T>.QueryAllTenants()`), or inline UI in the Web
 app (UI components go in the Shared.Ui RCL).
 
 **Add-a-slice mechanical checklist** — measured, not estimated: the v4 audit built a real slice by this
@@ -101,7 +101,7 @@ step here in the same PR.
    `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution` — every tenant-owned entity must be reachable
    by dissolve and export, and the canary is where you say which contributor does it.
 6. **DI wiring** → register the handler/services in `AppComposition.AddAppServices` and map the group
-   (`app.Map<Feature>()`) in `AppComposition.MapAppEndpoints` — both in `src/Api/AppComposition.cs`, the app's
+   (`app.Map<Feature>()`) in `AppComposition.MapAppEndpoints` — both in `src/Host/AppComposition.cs`, the app's
    half of composition — behind the slice's `Enabled` setting. Only `AppComposition.cs` may reference
    `Features.*` (R8 as amended by R159, `OnlyAppComposition_ReferencesFeatureNamespaces_FromOutsideFeatures`);
    `Program.cs` is the platform's, calls those two methods once, and is never edited for a slice.
@@ -128,7 +128,7 @@ There is no fixture step: `PostgresFixture.ResetAsync` derives its table list fr
 TR-3), so a new entity is reset automatically — the old "add the table to the truncate list" step was
 dead for two audits before the measurement caught it.
 
-**Reference:** `src/Api/Features/Notes` is a complete, working example (marked "🗑️ DELETE-ME").
+**Reference:** `src/Host/Features/Notes` is a complete, working example (marked "🗑️ DELETE-ME").
 Copy its shape; delete it when you ship your first real feature — by the recipe in `docs/NEW_APP_GUIDE.md`
 ("Removing the Notes sample"): an app migration drops the table, no platform migration is touched (Arch A6).
 

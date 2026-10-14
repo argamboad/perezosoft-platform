@@ -89,6 +89,24 @@ re-read of Part 5.
 
 ---
 
+## One project became two: the host and the packages
+
+You build the server as one web project, `src/Api` (lesson 1.1), and the lessons follow it that way
+to the end. The repository has moved one step further: the platform now ships as NuGet packages
+(`Perezosoft.Platform.Core`, `.Infrastructure`, `.Api`; ADR-034), so `src/Api` became a library and a
+small web project, `src/Host`, runs it and holds everything that belongs to the app. When a lesson's
+**Maps to** line or a quoted header points somewhere your build does not have, this is the map:
+
+| In your build (`src/Api`, one web project) | In the repository today |
+|---|---|
+| `Program.cs`, registrations and pipeline | `src/Host/Program.cs` (two calls) + `src/Api/PlatformHosting.cs` (`AddPlatform` / `MapPlatformAsync`) |
+| `AppComposition.cs`, `Features/**` | `src/Host/AppComposition.cs`, `src/Host/Features/**` |
+| `appsettings.json` | `src/Api/platform-defaults.json` (embedded defaults) + `src/Host/appsettings.json` (the brand's overrides) |
+| `AppDbContext` + `Migrations/` in Infrastructure | `PlatformDbContext` in Infrastructure; `src/Host/Persistence/AppDbContext.cs` + its `Migrations/` |
+| the plan catalog, permission enum, email brand edited in place | set in `AppComposition.ConfigurePlatform` through `PlatformOptions` |
+
+Nothing a lesson teaches changes with the split; only where the code lives. ARCHITECTURE §1 and §2b draw it.
+
 # The platform at a glance
 
 <!-- figure: arch-solution-map | The whole platform on one page — clients, the server onion, and the API boundary between them (ARCHITECTURE.md §1) -->

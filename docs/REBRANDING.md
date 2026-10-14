@@ -25,7 +25,7 @@ mechanically, case-preserving, over `git ls-files` only, then run restore/build/
 1. Remove the template-only material first (§6): `git rm -r docs/tutorial _PLATFORM_PRIMER.md`.
 2. Rename the brand-named files: `git ls-files | grep -i perezosoft` → `git mv` each
    (`Perezosoft.slnx`, `src/*/Perezosoft.*.csproj`, `tests/*/Perezosoft.*.csproj`,
-   `src/Api/Perezosoft.Api.http`, `docs/postman/Perezosoft.*.json`).
+   `src/Host/Perezosoft.Host.http`, `docs/postman/Perezosoft.*.json`).
 3. Rewrite the text of every tracked, non-binary file **except this doc**. Special cases go first:
    `com.perezosoft.platform` → your `ApplicationId` (e.g. `com.<brand>.app`),
    `Perezosoft Platform` → `<Brand>`, `template-staging` → `<brand>-staging`, the tagline; then the
@@ -76,7 +76,7 @@ for f in filter(None, subprocess.check_output(["git", "ls-files", "-z"]).decode(
   email copy (`EmailStrings`, in the package) mentions the platform's name in a few keys: override those keys in
   your own resx and add it to `options.Brand.Strings` (§4a). See `docs/LOCALIZATION.md`.
 - **Email sender name** — `Email:Smtp:FromName`. The committed runtime default lives in
-  `src/Api/appsettings*.json` (currently "Perezosoft"); `Email__Smtp__FromName` in `.env` (dev) or
+  `src/Host/appsettings*.json` (currently "Perezosoft"); `Email__Smtp__FromName` in `.env` (dev) or
   env vars (prod) only *overrides* it. Update the appsettings default and any env override together.
 - **`src/Api/Services/MfaService.cs`** — the `Issuer` const ("Perezosoft"): what authenticator apps
   display for enrolled accounts, and the letter-monogram they draw derives from it. Easy to miss —
@@ -181,7 +181,7 @@ These must all match each other **and** your OAuth provider registration:
 - `src/Maui/MauiProgram.cs` — `CallbackScheme`
 - `src/Maui/Platforms/Android/WebAuthenticatorCallbackActivity.cs` — `CallbackScheme` const + intent-filter `DataScheme`
 - `src/Maui/Platforms/iOS/Info.plist` + `src/Maui/Platforms/MacCatalyst/Info.plist` — `CFBundleURLSchemes` entry
-- `src/Api/appsettings.json` — `Auth:Native:CallbackScheme`
+- `src/Host/appsettings.json` — `Auth:Native:CallbackScheme`
 - `src/Maui/Perezosoft.Maui.csproj` — `ApplicationId` (`com.perezosoft.…`)
 - Provider consoles — register `{scheme}://auth` and your `signin-*` redirect URIs
 

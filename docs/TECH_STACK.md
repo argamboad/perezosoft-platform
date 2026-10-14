@@ -16,6 +16,7 @@
 | Auth | Custom JWT + rotating refresh tokens (no ASP.NET Core Identity) | Committed (ADR-002) |
 | Non-web clients (mobile + desktop) | .NET MAUI **Blazor Hybrid**, reusing the RCL | Committed (ADR-018); auth wired, full-parity build = epic `NATIVE` |
 | Hosting | **Render free** (one container: API serving the WASM bundle, single-origin) + **Neon** Postgres + **Brevo** SMTP — free-tier-first | Decided (ADR-017); build = epic `DEPLOY` |
+| Platform delivery | **NuGet packages** `Perezosoft.Platform.Core` / `.Infrastructure` / `.Api` on GitHub Packages (MinVer from `v*` tags, `.pdb` + SourceLink inside); each app is a `src/Host` web project that references them and configures them through `PlatformOptions` | Decided (ADR-034); backend packages built by Packaging M3 |
 
 ## Target versions
 

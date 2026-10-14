@@ -18,7 +18,7 @@ not asserted by a reviewer. **Do not run another discovery audit — keep these 
   `email_verified` takeover guard (MITI-3).
 - [x] **2. Tenant safety is structural in both directions.** Reads are scoped by the global query
   filter and writes by `TenantStampingInterceptor`; an architecture test fails the build if
-  `IgnoreQueryFilters` appears in `src/Api/Features/**` (use `IRepository<T>.QueryAllTenants()`), and
+  `IgnoreQueryFilters` appears in `src/Host/Features/**` (use `IRepository<T>.QueryAllTenants()`), and
   live two-tenant isolation tests prove the filter.
 - [x] **3. Passwordless auth is rate-limited and the takeover guard fails closed**, each with a test
   (`RateLimitingTests`, `PasswordlessServiceTests`, `ClaimsExtractorTests`).
@@ -57,7 +57,7 @@ v1.0 (R1–R35)** — read it before writing/modifying code. The new machine-enf
 | Warnings-as-errors | `Directory.Build.props` | nullable violations + every compiler/analyzer warning |
 | CI gate | `.github/workflows/ci.yml` | all of the above, on every PR to `main`/`develop` |
 
-When you add a feature, copy `src/Api/Features/Notes` (the DELETE-ME reference slice), comply with
+When you add a feature, copy `src/Host/Features/Notes` (the DELETE-ME reference slice), comply with
 `FOUNDATION_RULES.md`, and keep these guards green. That is the whole contract.
 
 ## v3 extension (2026-07) — the Definition of Solid is now FOUNDATION_RULES v2.0

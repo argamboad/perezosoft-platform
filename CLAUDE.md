@@ -35,7 +35,7 @@ _TODO_ — full context in `docs/PROJECT_BRIEF.md`.
 - Starting a build slice → read **`docs/WAYS_OF_WORKING.md`** (slices, story format, PR/commit
   conventions).
 - Adding an app feature → follow the **clean-platform + vertical-slice convention** in
-  `docs/WAYS_OF_WORKING.md` (and ADR-004); copy `src/Api/Features/Notes` as the reference, then
+  `docs/WAYS_OF_WORKING.md` (and ADR-004); copy `src/Host/Features/Notes` as the reference, then
   delete the Notes sample.
 - Wondering *why* something is the way it is → check **`docs/DECISIONS.md`** before changing it.
 - Changing a settled decision → add a new dated ADR in `docs/DECISIONS.md`; don't silently
@@ -52,7 +52,7 @@ _TODO_ — full context in `docs/PROJECT_BRIEF.md`.
    filter (see ADR-003); genuinely cross-tenant/pre-auth reads use the sanctioned escape hatch
    `IRepository<T>.QueryAllTenants()`, and signature-/system-authenticated tenant-scoped writes
    (the billing webhook, admin impersonation) enter their tenant via `ITenantContext.EnterTenant`.
-   `IgnoreQueryFilters()` is **banned in `src/Api/Features/**`** (fails CI). Only preferences are
+   `IgnoreQueryFilters()` is **banned in `src/Host/Features/**`** (fails CI). Only preferences are
    per-user. **A Postgres RLS backstop (ADR-020) re-enforces this at the DB**: a new `ITenantScoped`
    entity must ship its policy in the same migration (`RlsDdl.StatementsFor` — the
    `RlsMigrationGateTests` parity gate fails CI otherwise), and set-based cross-tenant *writes*
@@ -110,7 +110,7 @@ _TODO_
   endpoints (route, verb, path/query params, request/response shape, auth requirements, or error
   codes) must update **`docs/postman/Perezosoft.postman_collection.json`** (+ the environment
   files when config/env expectations change) in the same slice. Controllers in
-  `src/Api/Controllers/` and slices under `src/Api/Features/` are the source of truth; the
+  `src/Api/Controllers/` and slices under `src/Host/Features/` are the source of truth; the
   collection documents them.
 - Keep its conventions: numbered folders per area; `{{baseUrl}}`/`{{accessToken}}` variables with
   collection-level Bearer auth; chaining test scripts that capture shown-once secrets; request
