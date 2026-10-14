@@ -77,16 +77,19 @@
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 
-## 1.4 — Configuration & the options pattern (12 files)
+## 1.4 — Configuration & the options pattern (15 files)
 
+- `src/Api/Configuration/PlatformDefaults.cs` — adds the embedded defaults as the lowest configuration source (Pkg 3.4)
 - `src/Api/Configuration/ServiceRegistrationExtensions.cs` — grows as services appear
 - `src/Api/Configuration/SettingsProvider.cs`
 - `src/Api/Configuration/SettingsRegistration.cs` — the one blessed Bind+ValidateOnStart pattern (R22)
 - `src/Api/LocalDotEnv.cs` — the one .env loader; SKIP_DOTENV keeps test hosts off the developer's .env (#122)
-- `src/Host/appsettings.Development.json` — non-secret config; grows every config lesson
-- `src/Host/appsettings.json` — non-secret config; grows every config lesson
+- `src/Api/platform-defaults.json` — the platform's configuration defaults, embedded in Perezosoft.Platform.Api (Pkg 3.4)
+- `src/Host/appsettings.Development.json` — the host's overrides only (Pkg 3.4); the platform's defaults ship in the package
+- `src/Host/appsettings.json` — the host's overrides only (Pkg 3.4); the platform's defaults ship in the package
 - `src/Infrastructure/ServiceCollectionExtensions.cs` — grows as infra appears
 - `tests/Api.Tests/Configuration/ConfigPostureTests.cs` — every feature switch and presence gate CLOSED under empty and shipped config, reflectively; Signup the named exception (v3 S0-G3, v4 T7)
+- `tests/Api.Tests/Configuration/PlatformDefaultsTests.cs` — the defaults ship in the assembly, sit below every other source, and the host only overrides (Pkg 3.4)
 - `tests/Api.Tests/Configuration/SettingsCatalog.cs` — the settings classes by reflection, shared by the catalog and posture gates (v4 T6/T7)
 - `tests/Api.Tests/DocsAreTrueTests.cs` — every fact that compares a document with the code: DATA_MODEL, config keys, ARCHITECTURE/FLOWS, Postman descriptions, QA count, course gate (Pkg 1.2)
 - `tests/Api.Tests/EnforcementGateTests.cs` — SDK-pin agreement, host index.html parity, QA-count sync, CI-classifier and image-pin gates (v3 T60: R61/R68/R75)
@@ -1401,4 +1404,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1234 tracked files · 858 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1237 tracked files · 861 built in lessons · 376 bucketed · 0 unmapped

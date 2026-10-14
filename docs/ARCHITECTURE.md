@@ -425,6 +425,7 @@ result records sit beside their class and are not repeated.
 | `OtpErrors` | Services | Internal OTP status → client code (`invalid_code` for both "none" and "wrong": no oracle) |
 | `JwtClaims`, `AuthHeaders` | Services | Claim and header names, mirrored by the client's `AppClaims` |
 | `SignupGate`, `SignupNotAllowedException`, `UnverifiedEmailConflictException` | Services | Account-creation refusals (§4) |
+| `PlatformDefaults` | Configuration | The platform's configuration defaults, embedded in the Api package (`platform-defaults.json`) and added by `AddPlatform` as the lowest source — a host's `appsettings.json` keeps only its overrides (Pkg 3.4, ADR-034) |
 | `SettingsRegistration` | Configuration | Registers every typed settings object as a validated singleton (ADR-001) |
 | `JwtSettings`, `RefreshTokenSettings`, `ApplicationSettings`, `PasswordlessSettings`, `MfaSettings`, `InvitationSettings` | Configuration | Typed settings, read and validated once at startup |
 | `BillingSettings`, `PublicApiSettings`, `WebhooksSettings` | Configuration | The three default-off surface gates (GATES-1, PUBAPI, HOOKS) |

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Perezosoft.Api.Configuration;
 
 namespace Perezosoft.Api.Tests;
 
@@ -21,6 +22,7 @@ public class TelemetryLoggingTests
         var api = Path.Combine(RepoRoot(), "src", "Host"); // the host carries appsettings (Pkg 3.2)
         var config = new ConfigurationBuilder()
             .SetBasePath(api)
+            .AddPlatformDefaults() // the package's defaults, under the host's files (Pkg 3.4)
             .AddJsonFile("appsettings.json")
             .AddJsonFile($"appsettings.{environment}.json", optional: true)
             .Build();

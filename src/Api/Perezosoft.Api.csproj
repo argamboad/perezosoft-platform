@@ -60,4 +60,9 @@
     <InternalsVisibleTo Include="Perezosoft.Api.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The platform's configuration defaults, inside the package (Pkg 3.4): AddPlatform adds them as the lowest source. -->
+    <EmbeddedResource Include="platform-defaults.json" LogicalName="Perezosoft.Api.platform-defaults.json" />
+  </ItemGroup>
+
 </Project>

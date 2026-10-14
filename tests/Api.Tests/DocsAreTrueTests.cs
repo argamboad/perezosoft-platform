@@ -274,8 +274,10 @@ public class DocsAreTrueTests
     {
         var paths = new HashSet<string>(StringComparer.Ordinal);
 
-        // The API's appsettings, plus the Web client's (wwwroot) for the client's own reads (ApiBaseUrl).
-        foreach (var json in Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src", "Host"), "appsettings*.json")
+        // The platform's shipped defaults (Pkg 3.4) and the host's appsettings, plus the Web client's (wwwroot) for the
+        // client's own reads (ApiBaseUrl).
+        foreach (var json in new[] { Path.Combine(RepoRoot(), "src", "Api", "platform-defaults.json") }
+                     .Concat(Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src", "Host"), "appsettings*.json"))
                      .Concat(Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src", "Web", "wwwroot"), "appsettings*.json")))
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(json));

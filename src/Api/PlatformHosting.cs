@@ -27,6 +27,11 @@ public static class PlatformHosting
     /// <summary>Registers every platform service, in order. Call before the app's own registrations.</summary>
     public static WebApplicationBuilder AddPlatform(this WebApplicationBuilder builder)
     {
+        // The platform's configuration defaults (Pkg 3.4), shipped inside this package: the lowest source, so the host's
+        // appsettings*.json, user secrets, environment variables and the command line all override them. First, so every
+        // setting read below sees them.
+        builder.Configuration.AddPlatformDefaults();
+
         // Structured logging with per-request scopes (OBS-1, ADR-008): readable single-line console in dev,
         // JSON in prod so a log aggregator can index the tenant_id/user_id scope. AddAppTelemetry (below) adds the
         // OpenTelemetry log provider on top when an OTLP endpoint is configured, so the same records also reach the
