@@ -45,10 +45,10 @@ RUN dotnet publish src/Web/Perezosoft.Web.csproj -c Release --no-restore -o /pub
  && echo '{}' > /publish/api/wwwroot/appsettings.json
 
 # ---- runtime -------------------------------------------------------------------------------------
-# Pin the runtime to the exact patch of the ASP.NET Core package line the app compiles against (10.0.11,
+# Pin the runtime to the exact patch of the ASP.NET Core package line the app compiles against (10.0.13,
 # enforced by the R61 gate against Directory.Packages.props), not the
 # floating :10.0 tag — a reproducible runtime layer, same discipline as the build stage (v3 audit DEP-11).
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.11 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.13 AS runtime
 WORKDIR /app
 
 # curl for the container/compose health probe. The .NET image already ships a non-root `app` user; run as it.
