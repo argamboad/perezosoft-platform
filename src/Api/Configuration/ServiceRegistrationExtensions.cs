@@ -40,10 +40,10 @@ public static class ServiceRegistrationExtensions
     public static IServiceCollection AddTenantServices(this IServiceCollection services)
     {
         // Current-tenant accessor — reads the JWT tenant_id claim; drives the global tenant
-        // query filter in AppDbContext and is the slice-facing tenancy entry point.
+        // query filter in PlatformDbContext and is the slice-facing tenancy entry point.
         services.AddHttpContextAccessor();
         // One scoped HttpCurrentTenant backs both interfaces, so entering a tenant via ITenantContext is seen
-        // by ICurrentTenant (and thus the AppDbContext filter/stamping) within the same scope.
+        // by ICurrentTenant (and thus the PlatformDbContext filter/stamping) within the same scope.
         services.AddScoped<HttpCurrentTenant>();
         services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<HttpCurrentTenant>());
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<HttpCurrentTenant>());

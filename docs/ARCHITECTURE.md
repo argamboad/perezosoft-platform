@@ -110,8 +110,8 @@ flowchart TB
     QF -. "escape hatch: QueryAllTenants()<br/>= IgnoreQueryFilters + rls:cross-tenant tag<br/>arch-test-banned in Features/ and Endpoints/" .-> RLS
 ```
 
-Files: `src/Api/Services/HttpCurrentTenant.cs`, `src/Infrastructure/Persistence/AppDbContext.cs`
-(filter at 114–128, interceptors at 91–100), `TenantStampingInterceptor.cs`,
+Files: `src/Api/Services/HttpCurrentTenant.cs`, `src/Infrastructure/Persistence/PlatformDbContext.cs`
+(filter at 114–132, interceptors at 91–100), `TenantStampingInterceptor.cs`,
 `RlsSessionInterceptor.cs`, `RlsDdl.cs`, `RlsPostureGuard.cs` (boot refuses a
 superuser/BYPASSRLS runtime role). Known limit encoded as an arch test: query tags don't render
 into `ExecuteUpdate`, so set-based cross-tenant writes must `EnterTenant` instead.

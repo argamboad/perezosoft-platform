@@ -21,11 +21,11 @@ namespace Perezosoft.Infrastructure.Persistence;
 /// shared row and an owned row are different intents, so the writer sets <c>TenantId</c> — and any insert, update or
 /// delete of a shared row (null) or of another tenant's row throws. Shared rows are written by tenant-less contexts.
 /// <para>
-/// When there is no current tenant (<see cref="AppDbContext.CurrentTenantId"/> is
+/// When there is no current tenant (<see cref="PlatformDbContext.CurrentTenantId"/> is
 /// <see cref="Guid.Empty"/>) the context is a system/seed/cross-tenant one — the same trust
 /// level that may call <c>IgnoreQueryFilters()</c> — so no stamping or validation is applied.
 /// The interceptor is stateless; it reads the tenant from the context being saved, so a single
-/// instance is safe to share across every <see cref="AppDbContext"/>.
+/// instance is safe to share across every <see cref="PlatformDbContext"/>.
 /// </para>
 /// </summary>
 public sealed class TenantStampingInterceptor : SaveChangesInterceptor
@@ -35,7 +35,7 @@ public sealed class TenantStampingInterceptor : SaveChangesInterceptor
     public override InterceptionResult<int> SavingChanges(
         DbContextEventData eventData, InterceptionResult<int> result)
     {
-        Stamp(eventData.Context as AppDbContext);
+        Stamp(eventData.Context as PlatformDbContext);
         return base.SavingChanges(eventData, result);
     }
 
@@ -43,11 +43,11 @@ public sealed class TenantStampingInterceptor : SaveChangesInterceptor
         DbContextEventData eventData, InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        Stamp(eventData.Context as AppDbContext);
+        Stamp(eventData.Context as PlatformDbContext);
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
-    private static void Stamp(AppDbContext? db)
+    private static void Stamp(PlatformDbContext? db)
     {
         if (db is null) return;
 

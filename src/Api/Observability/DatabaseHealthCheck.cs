@@ -9,7 +9,7 @@ namespace Perezosoft.Api.Observability;
 /// orchestrator won't route traffic to an instance that can't serve. <b>Status-only</b> — no connection
 /// details are surfaced (the endpoint writes just the status string).
 /// </summary>
-public sealed class DatabaseHealthCheck(AppDbContext db) : IHealthCheck
+public sealed class DatabaseHealthCheck(PlatformDbContext db) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {

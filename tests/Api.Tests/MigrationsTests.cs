@@ -115,9 +115,9 @@ public sealed class MigrationsTests : IAsyncLifetime
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !dir.EnumerateFiles("*.slnx").Any()) dir = dir.Parent;
         // This repo's own id for it: an app regenerates the platform's migrations under its own timestamps.
-        var since = Path.GetFileName(Directory.EnumerateFiles(Path.Combine(dir!.FullName, "src", "Infrastructure", "Persistence", "Migrations"),
+        var since = Path.GetFileName(Directory.EnumerateFiles(Path.Combine(dir!.FullName, "src", "Host", "Persistence", "Migrations"),
             "*_AddRefreshTokenRotationLink.cs").Single())[..14];
-        var migrations = Directory.EnumerateFiles(Path.Combine(dir!.FullName, "src", "Infrastructure", "Persistence", "Migrations"), "*.cs")
+        var migrations = Directory.EnumerateFiles(Path.Combine(dir!.FullName, "src", "Host", "Persistence", "Migrations"), "*.cs")
             .Where(f => !f.EndsWith(".Designer.cs", StringComparison.Ordinal) && char.IsDigit(Path.GetFileName(f)[0]))
             .Where(f => string.CompareOrdinal(Path.GetFileName(f)[..14], since) >= 0)
             .ToList();

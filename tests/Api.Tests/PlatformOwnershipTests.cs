@@ -35,11 +35,13 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
         // The decisions of the Architecture milestone, pinned: the A1 seams are the app's, the composition files the platform's,
         // the UI the app's (#368), the rules file the platform's.
         Assert.Equal(Class.App, Classify("src/Host/AppComposition.cs", rules));
-        Assert.Equal(Class.App, Classify("src/Infrastructure/Persistence/AppDbContext.App.cs", rules));
+        Assert.Equal(Class.App, Classify("src/Host/Persistence/AppDbContext.App.cs", rules));
         Assert.Equal(Class.App, Classify("tests/Api.Tests/App/AppAllowlists.cs", rules));
         Assert.Equal(Class.App, Classify("src/Host/Features/Budget/BudgetHandler.cs", rules));
         Assert.Equal(Class.Platform, Classify("src/Host/Program.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Persistence/AppDbContext.cs", rules));
+        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Persistence/PlatformDbContext.cs", rules));
+        Assert.Equal(Class.Platform, Classify("src/Host/Persistence/AppDbContext.cs", rules));
+        Assert.Equal(Class.Adapts, Classify("src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs", rules));
         Assert.Equal(Class.Platform, Classify("tests/Api.Tests/ArchitectureTests.cs", rules));
         Assert.Equal(Class.Platform, Classify("docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md", rules));
         Assert.Equal(Class.Adapts, Classify("src/Shared.Ui/Pages/Household.razor", rules));

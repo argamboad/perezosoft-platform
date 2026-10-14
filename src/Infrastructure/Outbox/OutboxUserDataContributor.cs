@@ -18,7 +18,7 @@ namespace Perezosoft.Infrastructure.Outbox;
 /// and does not match. No JSON parsing in SQL, so a row that isn't JSON can't fail the erasure.
 /// </para>
 /// </summary>
-public sealed class OutboxUserDataContributor(AppDbContext db) : IUserDataContributor
+public sealed class OutboxUserDataContributor(PlatformDbContext db) : IUserDataContributor
 {
     public async Task WipeAsync(Guid userId, CancellationToken cancellationToken = default)
     {

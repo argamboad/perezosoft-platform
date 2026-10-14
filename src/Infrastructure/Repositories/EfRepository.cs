@@ -9,7 +9,7 @@ namespace Perezosoft.Infrastructure.Repositories;
 /// (<c>IRepository&lt;&gt; → EfRepository&lt;&gt;</c>) so any entity type resolves without
 /// per-entity wiring.
 /// </summary>
-public class EfRepository<TEntity>(AppDbContext db) : IRepository<TEntity> where TEntity : class
+public class EfRepository<TEntity>(PlatformDbContext db) : IRepository<TEntity> where TEntity : class
 {
     public IQueryable<TEntity> Query() => db.Set<TEntity>();
 

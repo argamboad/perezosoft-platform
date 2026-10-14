@@ -5,7 +5,7 @@ using Perezosoft.Infrastructure.Persistence;
 
 namespace Perezosoft.Infrastructure.Repositories;
 
-public class UserLoginRepository(AppDbContext db) : IUserLoginRepository
+public class UserLoginRepository(PlatformDbContext db) : IUserLoginRepository
 {
     public async Task<List<UserLogin>> GetForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {

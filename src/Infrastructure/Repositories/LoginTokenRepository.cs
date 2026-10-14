@@ -5,7 +5,7 @@ using Perezosoft.Infrastructure.Persistence;
 
 namespace Perezosoft.Infrastructure.Repositories;
 
-public class LoginTokenRepository(AppDbContext db, TimeProvider clock) : ILoginTokenRepository
+public class LoginTokenRepository(PlatformDbContext db, TimeProvider clock) : ILoginTokenRepository
 {
     public async Task AddAsync(LoginToken token, CancellationToken cancellationToken = default)
     {

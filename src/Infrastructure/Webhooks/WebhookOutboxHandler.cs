@@ -19,11 +19,11 @@ public sealed record WebhookOutboxPayload(Guid SubscriptionId, string EventType,
 /// dispatch just re-POSTs, which the receiver dedups by the <c>X-Webhook-Id</c> header.
 /// </summary>
 public sealed class WebhookOutboxHandler(
-    AppDbContext db,
+    PlatformDbContext db,
     IWebhookSender sender,
     IWebhookSecretProtector protector,
     TimeProvider clock,
-    IDbContextFactory<AppDbContext> dbFactory,
+    IDbContextFactory<PlatformDbContext> dbFactory,
     ILogger<WebhookOutboxHandler>? logger = null) : IOutboxHandler
 {
     public const string MessageType = "webhook";

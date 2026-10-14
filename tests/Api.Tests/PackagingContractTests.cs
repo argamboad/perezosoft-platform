@@ -94,7 +94,7 @@ public class PackagingContractTests
             .ToList();
         Assert.True(code.Count <= 10, $"Program.cs carries {code.Count} lines of code; the composition is ~8:\n{string.Join('\n', code)}");
         int At(string call) { var i = program.IndexOf(call, StringComparison.Ordinal); Assert.True(i >= 0, $"Program.cs does not call {call}"); return i; }
-        var order = new[] { "LocalDotEnv.Load()", "builder.AddPlatform()", "builder.Services.AddAppServices(builder.Configuration)",
+        var order = new[] { "LocalDotEnv.Load()", "builder.AddPlatform<AppDbContext>()", "builder.Services.AddAppServices(builder.Configuration)",
                             "builder.Build()", "await app.MapPlatformAsync()", "app.MapAppEndpoints()", "RouteTableGuard.EnsureUnique(", "app.Run()" };
         var positions = order.Select(At).ToList();
         Assert.True(positions.SequenceEqual(positions.Order()), "Program.cs composes out of order: " + string.Join(" → ", order));

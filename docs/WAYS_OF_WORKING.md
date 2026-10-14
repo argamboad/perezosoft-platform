@@ -77,8 +77,8 @@ step here in the same PR.
    entry of step 5). A slice **cannot declare
    its own `Permission`**: the enum and `RolePermissions` live in Core (ADR-009's coarse capabilities) —
    reuse one, or add it to Core in its own commit.
-2. **DbSet + config** → add the `DbSet<>` to `src/Infrastructure/Persistence/AppDbContext.App.cs` (the app's half of
-   the partial context — `AppDbContext.cs` is the platform's and is not edited; Arch A1) and any
+2. **DbSet + config** → add the `DbSet<>` to `src/Host/Persistence/AppDbContext.App.cs` (the app's half of
+   the partial context — `AppDbContext.cs` and the packaged `PlatformDbContext` are the platform's and are not edited; Arch A1) and any
    `IEntityTypeConfiguration` (discovered from the assembly, no registration).
 3. **Migration + RLS policy, one migration** (ADR-020, v3 audit TR-4): `dotnet ef migrations add
    Add<Entity>` scaffolds **no RLS DDL**, so append the new table's policy to the migration it just

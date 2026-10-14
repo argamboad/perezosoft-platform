@@ -60,11 +60,14 @@
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 
-## 1.3 — Database & the test container (14 files)
+## 1.3 — Database & the test container (18 files)
 
+- `src/Api/PlatformDesignTimeDbContextFactory.cs` — the design-time factory every host derives from in one line (Pkg 3.5)
 - `src/Host/AppDbContextFactory.cs` — design-time factory for dotnet ef
-- `src/Infrastructure/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
-- `src/Infrastructure/Persistence/AppDbContext.cs` — born here; filter added 2.6, interceptors 2.7/4.6, DbSets throughout
+- `src/Host/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
+- `src/Host/Persistence/AppDbContext.cs` — the app's context: derives from PlatformDbContext and owns the migrations (Pkg 3.5)
+- `src/Infrastructure/Persistence/PlatformDbContext.cs` — born here as AppDbContext; filter added 2.6, interceptors 2.7/4.6, DbSets throughout; the packaged base since Pkg 3.5
+- `src/Infrastructure/Persistence/PlatformDbContextFactory.cs` — IDbContextFactory<PlatformDbContext> over the app's own factory (Pkg 3.5)
 - `tests/Api.Tests/App/AppTestComposition.cs` — the app's half of the test chassis: its contributors and host pins (Arch A1)
 - `tests/Api.Tests/AppDbContextFactoryTests.cs`
 - `tests/Api.Tests/Infrastructure/CapturingLogger.cs` — the one log double the suite shares
@@ -76,6 +79,7 @@
 - `tests/Api.Tests/Infrastructure/ServiceHarness.cs`
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
+- `tests/Api.Tests/PlatformDbContextTests.cs` — the packaged base, the app's context and migrations in the host, DI hands platform code the app's context (Pkg 3.5)
 
 ## 1.4 — Configuration & the options pattern (15 files)
 
@@ -261,7 +265,7 @@
 - `src/Host/Features/Notes/NotesEndpoints.cs` — the reference slice — deleted in 9.1
 - `src/Host/Features/Notes/NotesHandler.cs` — the reference slice — deleted in 9.1
 - `src/Host/Features/Notes/NotesModels.cs` — the reference slice — deleted in 9.1
-- `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`
+- `src/Host/Persistence/Configurations/NoteConfiguration.cs`
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
@@ -946,9 +950,9 @@
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `platform-ownership.json` — which files are the platform's, which an app adapts, which are the app's (Arch A2)
-- `platform-schema.json` — the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
 - `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
 - `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
+- `src/Infrastructure/Persistence/platform-schema.json` — embedded in the Infrastructure package (Pkg 3.5): the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
 - `tests/Api.Tests/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
 - `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
@@ -1023,60 +1027,60 @@
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Core/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Host/Persistence/Migrations/20260617235537_InitialCreate.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260619174431_AddUserLocale.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260619174431_AddUserLocale.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260620015655_AddNotesSample.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260620015655_AddNotesSample.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625195324_AddOutbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625195324_AddOutbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625203525_AddInbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625203525_AddInbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625210819_AddSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260625210819_AddSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260626000352_AddAuditEvent.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260626000352_AddAuditEvent.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701125024_AddMfa.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701125024_AddMfa.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701143154_AddNotifications.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701143154_AddNotifications.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701144106_AddNotificationPreferences.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701144106_AddNotificationPreferences.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701191549_AddUsageCounter.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701191549_AddUsageCounter.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701200224_AddApiKey.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701200224_AddApiKey.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701201826_AddWebhookSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701201826_AddWebhookSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701204754_AddWebhookDelivery.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701204754_AddWebhookDelivery.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260706222645_RlsTenancyBackstop.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260706222645_RlsTenancyBackstop.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260710163540_AddUserTheme.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260710163540_AddUserTheme.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715230641_MfaLockout.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260715230641_MfaLockout.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.cs` — dotnet ef migrations add — in the lesson that adds each entity
+- `src/Host/Persistence/Migrations/AppDbContextModelSnapshot.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Host/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
-- `src/Infrastructure/Persistence/Migrations/20260617235537_InitialCreate.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260617235537_InitialCreate.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260619174431_AddUserLocale.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260619174431_AddUserLocale.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260620015655_AddNotesSample.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260620015655_AddNotesSample.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260622154447_AddUniqueTokenHashIndexes.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625195324_AddOutbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625195324_AddOutbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625203525_AddInbox.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625203525_AddInbox.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625210819_AddSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260625210819_AddSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260626000352_AddAuditEvent.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260626000352_AddAuditEvent.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701125024_AddMfa.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701125024_AddMfa.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701143154_AddNotifications.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701143154_AddNotifications.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701144106_AddNotificationPreferences.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701144106_AddNotificationPreferences.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701191549_AddUsageCounter.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701191549_AddUsageCounter.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701193314_AddSubscriptionLapseNotifiedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701200224_AddApiKey.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701200224_AddApiKey.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701201826_AddWebhookSubscription.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701201826_AddWebhookSubscription.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701204754_AddWebhookDelivery.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701204754_AddWebhookDelivery.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701225704_AddMfaLastVerifiedTimeStep.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260701230337_AddSubscriptionLastEventAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260706222645_RlsTenancyBackstop.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260706222645_RlsTenancyBackstop.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260710163540_AddUserTheme.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260710163540_AddUserTheme.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715224058_AuditEventImpersonatedBy.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715230641_MfaLockout.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260715230641_MfaLockout.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260919010912_AddRefreshTokenRotationLink.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928153915_AddRefreshTokenGraceUsedAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20260928163552_AddRefreshTokenSessionExpiresAt.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/20261007154226_NotesSampleRlsPolicy.cs` — dotnet ef migrations add — in the lesson that adds each entity
-- `src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1404,4 +1408,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1237 tracked files · 861 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1241 tracked files · 865 built in lessons · 376 bucketed · 0 unmapped

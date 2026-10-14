@@ -5,6 +5,7 @@ using Perezosoft.Api.Tests.Infrastructure;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Infrastructure;
 using Perezosoft.Infrastructure.Billing;
+using Perezosoft.Infrastructure.Persistence;
 
 namespace Perezosoft.Api.Tests.Billing;
 
@@ -111,7 +112,7 @@ public class BillingProviderRegistrationTests
         // The switch is bound the way Program binds it and passed in, as the host does (v4 T6).
         var billing = new Perezosoft.Api.Configuration.BillingSettings();
         configuration.GetSection(Perezosoft.Api.Configuration.BillingSettings.SectionName).Bind(billing);
-        services.AddInfrastructure(configuration, new FakeHostEnvironment(environmentName), billing.Enabled);
+        services.AddInfrastructure<AppDbContext>(configuration, new FakeHostEnvironment(environmentName), billing.Enabled);
 
         return services.LastOrDefault(d => d.ServiceType == typeof(IBillingProvider))?.ImplementationType;
     }

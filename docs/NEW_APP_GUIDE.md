@@ -148,12 +148,12 @@ The sample is a removable unit (Arch A6): its code, and its two migrations (`Add
 and `NotesSampleRlsPolicy`, its RLS policy). No platform migration names it, so removing it is an ordinary app change:
 
 1. Delete the code: `src/Api/Features/Notes/`, `src/Core/Entities/Note.cs`,
-   `src/Infrastructure/Persistence/Configurations/NoteConfiguration.cs`, `tests/Api.Tests/NotesSliceTests.cs`; the
+   `src/Host/Persistence/Configurations/NoteConfiguration.cs`, `tests/Api.Tests/NotesSliceTests.cs`; the
    `Notes` lines in `src/Api/AppComposition.cs`, the `DbSet<Note>` in `AppDbContext.App.cs`, the `nameof(Note)` entry
    in `tests/Api.Tests/App/AppAllowlists.cs`, the `Notes_*` strings in both resx files, the Notes folder of the Postman
    collection and its `noteId` variable, and the `/notes` page and nav entry in `Shared.Ui`.
-2. Drop the table with an **app migration**: `dotnet ef migrations add RemoveNotesSample --project src/Infrastructure
-   --startup-project src/Api` scaffolds the `DropTable("Notes")` from the model change and regenerates the snapshot.
+2. Drop the table with an **app migration**: `dotnet ef migrations add RemoveNotesSample --project src/Host
+   --startup-project src/Host` scaffolds the `DropTable("Notes")` from the model change and regenerates the snapshot.
    Say "Data loss on Down: the sample's rows" in its summary (the migrations gate asks for it).
 3. Leave `AddNotesSample` and `NotesSampleRlsPolicy` in place as history. **Never delete or edit a platform
    migration**: a repo that deleted `AddNotesSample` had to edit `RlsTenancyBackstop` too, and its platform

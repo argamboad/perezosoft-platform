@@ -14,7 +14,7 @@ namespace Perezosoft.Infrastructure.Outbox;
 /// neither cleared nor deleted.
 /// </summary>
 public sealed class OutboxRetentionJob(
-    AppDbContext db,
+    PlatformDbContext db,
     IEnumerable<IOutboxHandler> handlers,
     OutboxOptions options,
     TimeProvider clock) : IScheduledJob

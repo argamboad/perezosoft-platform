@@ -8,7 +8,7 @@ namespace Perezosoft.Infrastructure.Persistence;
 /// <summary>
 /// Carries the ambient tenant to the database for the row-level-security backstop (ADR-020) by
 /// setting the tenant/bypass GUCs (<see cref="RlsDdl"/>) on the connection before commands execute.
-/// Registered in <see cref="AppDbContext.OnConfiguring"/> — like the write-stamping interceptor —
+/// Registered in <see cref="PlatformDbContext.OnConfiguring"/> — like the write-stamping interceptor —
 /// so every context, including ones constructed directly in tests, participates.
 /// <para>
 /// Mechanics that matter:
@@ -162,7 +162,7 @@ public sealed class RlsSessionInterceptor : DbCommandInterceptor, IDbConnectionI
     {
         // Only contexts that know their tenant participate; anything else (no context, non-app
         // context, e.g. design-time tooling) is left untouched.
-        if (eventData.Context is not AppDbContext db)
+        if (eventData.Context is not PlatformDbContext db)
             return null;
 
         var tenantId = db.RlsTenantId;

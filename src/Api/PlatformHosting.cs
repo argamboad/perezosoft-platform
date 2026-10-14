@@ -25,7 +25,9 @@ namespace Perezosoft.Api;
 public static class PlatformHosting
 {
     /// <summary>Registers every platform service, in order. Call before the app's own registrations.</summary>
-    public static WebApplicationBuilder AddPlatform(this WebApplicationBuilder builder)
+    /// <typeparam name="TContext">The app's database context (Pkg 3.5): derives from <see cref="PlatformDbContext"/> and lives,
+    /// with its migrations, in the app's own assembly.</typeparam>
+    public static WebApplicationBuilder AddPlatform<TContext>(this WebApplicationBuilder builder) where TContext : PlatformDbContext
     {
         // The platform's configuration defaults (Pkg 3.4), shipped inside this package: the lowest source, so the host's
         // appsettings*.json, user secrets, environment variables and the command line all override them. First, so every
@@ -103,7 +105,7 @@ public static class PlatformHosting
 
         // Infrastructure: DbContext, Data Protection, email, repositories, and the
         // External cookie + OAuth provider schemes.
-        builder.Services.AddInfrastructure(builder.Configuration, builder.Environment, billingSettings.Enabled);
+        builder.Services.AddInfrastructure<TContext>(builder.Configuration, builder.Environment, billingSettings.Enabled);
 
         // OpenTelemetry traces + metrics (OBS-2). Exporter is config-gated (OTLP when configured); see
         // TelemetryExtensions. Spans are tagged with tenant_id/user_id.
@@ -231,11 +233,11 @@ public static class PlatformHosting
         // `docker compose down -v && up`) gets its schema with no manual `dotnet ef database update`.
         // QA_TEST_PLAN documents "re-apply migrations by starting the API" — this is what does it.
         // Migrate() is idempotent (a no-op when already current); the relational guard keeps
-        // non-relational test providers unaffected. AppDbContext needs ICurrentTenant, which resolves
+        // non-relational test providers unaffected. PlatformDbContext needs ICurrentTenant, which resolves
         // to a null tenant outside a request — fine, migrating doesn't use the tenant filter.
         using (var scope = app.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
             if (db.Database.IsRelational())
             {
                 // Two-role topology (ADR-020): when the app runs as the RLS-subject runtime role, DDL —
@@ -265,7 +267,7 @@ public static class PlatformHosting
         if (app.Configuration.GetValue<bool>(RlsPostureGuard.EnforceConfigKey))
         {
             using var scope = app.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
             if (db.Database.IsRelational())
                 await RlsPostureGuard.EnsureRuntimeRoleIsNotPrivilegedAsync(db);
         }

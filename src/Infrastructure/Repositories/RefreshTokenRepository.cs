@@ -9,7 +9,7 @@ namespace Perezosoft.Infrastructure.Repositories;
 /// EF Core implementation of <see cref="IRefreshTokenRepository"/>.
 /// Encapsulates all refresh token persistence logic.
 /// </summary>
-public class RefreshTokenRepository(AppDbContext db, TimeProvider clock) : IRefreshTokenRepository
+public class RefreshTokenRepository(PlatformDbContext db, TimeProvider clock) : IRefreshTokenRepository
 {
     public async Task<RefreshToken> CreateAsync(RefreshToken token, CancellationToken cancellationToken = default)
     {

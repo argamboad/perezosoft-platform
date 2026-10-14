@@ -1,5 +1,6 @@
 using Perezosoft.Api;
 using Perezosoft.Api.Endpoints;
+using Perezosoft.Infrastructure.Persistence;
 
 // The host's whole composition (Pkg 3.3, ADR-034): the platform (Perezosoft.Api's PlatformHosting), then the app's half
 // (AppComposition.cs — after, so an app can replace a platform service), then the guard. This file is the same in the
@@ -11,7 +12,7 @@ using Perezosoft.Api.Endpoints;
 LocalDotEnv.Load();
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddPlatform();
+builder.AddPlatform<AppDbContext>();
 builder.Services.AddAppServices(builder.Configuration);
 
 var app = builder.Build();

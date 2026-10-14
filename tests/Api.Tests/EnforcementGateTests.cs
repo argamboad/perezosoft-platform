@@ -685,7 +685,7 @@ public class EnforcementGateTests
         var platformPaths = File.Exists(manifestPath)
             ? Architecture.PlatformOwnership.ParseManifest(File.ReadAllText(manifestPath)).Entries.Select(e => e.Path).ToHashSet(StringComparer.Ordinal)
             : null;
-        var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Infrastructure", "Persistence", "Migrations"), "*.cs")
+        var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Host", "Persistence", "Migrations"), "*.cs")
             .Where(f => !f.EndsWith("ModelSnapshot.cs", StringComparison.Ordinal) && !f.EndsWith(".Designer.cs", StringComparison.Ordinal))
             .Select(f => (Rel: Path.GetRelativePath(root, f).Replace('\\', '/'),
                           Text: string.Join('\n', File.ReadLines(f).Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)))))
@@ -712,7 +712,7 @@ public class EnforcementGateTests
         var root = RepoRoot();
         string[] composition =
         [
-            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
+            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Host/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
             "tests/Api.Tests/Infrastructure/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
             "tests/Ui.Tests/Infrastructure/TestHttpHandler.cs",

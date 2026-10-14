@@ -193,4 +193,4 @@ deferred items without an explicit decision.
 | `docs/postman/` | **Postman collection for the whole API** (collection + per-env environments: local, staging/Render + README) — chained OTP sign-in w/ Mailpit auto-fetch, token rotation, all surfaces incl. config-gated PUBAPI/HOOKS and the admin writes. **CI-mirrored to the Postman workspace** (`postman-sync` on develop; one-way, repo canonical); rename on rebrand (incl. the workflow's file path) |
 | `.env.example` | **Config catalog** — every configurable key + its default (CONFIGURATION REFERENCE block) + the compiled-in "not configurable" limits; CI-enforced source of truth (`ConfigKeys_ReadInCode_AreDocumented`) |
 | `.github/pull_request_template.md` | PR checklist (auto-loaded by GitHub) |
-| `src/Infrastructure/Persistence/Migrations/` | Concrete schema — EF Core migrations generated from DATA_MODEL.md |
+| `src/Host/Persistence/Migrations/` | Concrete schema — EF Core migrations generated from DATA_MODEL.md; the app's, beside its `AppDbContext` (Pkg 3.5) |

@@ -14,14 +14,17 @@ namespace Perezosoft.Api.Tests;
 /// migration id in each repo), so until this gate nothing proved that an app's platform tables equalled the platform's;
 /// equivalence rested on regenerating correctly each time. The file is extracted from the database the real migrations
 /// build (the integration harness), never from the model, so both sides read the same catalog queries.
-/// <para>On the platform, regenerate after a schema migration: <c>PLATFORM_SCHEMA_WRITE=1 dotnet test --filter
-/// PlatformSchemaTests</c>. Downstream the file is a platform-class file the port brings; the gate then compares the
-/// app's migrated database with it.</para>
+/// <para>The file ships INSIDE the Infrastructure package (Pkg 3.5, ADR-034 §5): the gate reads the embedded copy, so an app
+/// that bumps the package without migrating fails here. On the platform, regenerate after a schema migration:
+/// <c>PLATFORM_SCHEMA_WRITE=1 dotnet test --filter PlatformSchemaTests</c> writes the source,
+/// <c>src/Infrastructure/Persistence/platform-schema.json</c>, and the next build embeds it.</para>
 /// </summary>
 [Collection(IntegrationCollection.Name)]
 public sealed class PlatformSchemaTests(IntegrationTestFactory factory, ITestOutputHelper output)
 {
     private const string SchemaFile = "platform-schema.json";
+    private const string SchemaSource = "src/Infrastructure/Persistence/platform-schema.json";
+    private const string SchemaResource = "Perezosoft.Infrastructure.platform-schema.json";
     private const string WriteSwitch = "PLATFORM_SCHEMA_WRITE";
 
     /// <summary>Tables of the platform's schema that are not the platform's: the sample slice, and EF's own history.</summary>
@@ -31,7 +34,6 @@ public sealed class PlatformSchemaTests(IntegrationTestFactory factory, ITestOut
     public async Task MigratedDatabase_MatchesThePlatformSchema()
     {
         var root = RepoRoot();
-        var path = Path.Combine(root, SchemaFile);
         var (stampCommit, _) = PlatformOwnership.ParseStamp(File.ReadAllText(Path.Combine(root, "platform-stamp.json")));
         var isPlatform = stampCommit is null;
 
@@ -43,13 +45,12 @@ public sealed class PlatformSchemaTests(IntegrationTestFactory factory, ITestOut
             // Regeneration: every public table but the sample's and EF's, as the platform's migrations built them.
             var all = (await TableNamesAsync(conn)).Where(t => !NotPlatformTables.Contains(t)).ToList();
             var schema = await ExtractAsync(conn, all);
-            await File.WriteAllTextAsync(path, Render(schema), new System.Text.UTF8Encoding(false));
-            output.WriteLine($"wrote {SchemaFile}: {all.Count} tables");
+            await File.WriteAllTextAsync(Path.Combine(root, SchemaSource), Render(schema), new System.Text.UTF8Encoding(false));
+            output.WriteLine($"wrote {SchemaSource}: {all.Count} tables (rebuild to embed it)");
             return;
         }
 
-        Assert.True(File.Exists(path), $"{SchemaFile} is missing — on the platform, regenerate it with {WriteSwitch}=1; downstream, port it from the platform");
-        var expected = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        var expected = JsonNode.Parse(EmbeddedSchema())!.AsObject();
         var expectedTables = expected["tables"]!.AsObject().Select(p => p.Key).ToList();
         var actual = await ExtractAsync(conn, expectedTables);
 
@@ -177,10 +178,19 @@ public sealed class PlatformSchemaTests(IntegrationTestFactory factory, ITestOut
         return doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }) + "\n";
     }
 
+    /// <summary>The schema as the Infrastructure package carries it — what an app compares against, not a file of its own.</summary>
+    private static string EmbeddedSchema()
+    {
+        using var stream = typeof(Perezosoft.Infrastructure.Persistence.PlatformDbContext).Assembly.GetManifestResourceStream(SchemaResource)
+            ?? throw new InvalidOperationException($"{SchemaResource} is not embedded in Perezosoft.Infrastructure — the package must ship the platform's schema (Pkg 3.5)");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !dir.EnumerateFiles("*.slnx").Any()) dir = dir.Parent;
+        while (dir is not null && !dir.EnumerateFiles("CLAUDE.md").Any()) dir = dir.Parent;
         return dir?.FullName ?? throw new InvalidOperationException("repo root not found");
     }
 }

@@ -28,7 +28,7 @@ namespace Perezosoft.Infrastructure.Outbox;
 /// </para>
 /// </summary>
 public sealed class OutboxProcessor(
-    AppDbContext db,
+    PlatformDbContext db,
     IEnumerable<IOutboxHandler> handlers,
     TimeProvider clock,
     OutboxOptions options,
