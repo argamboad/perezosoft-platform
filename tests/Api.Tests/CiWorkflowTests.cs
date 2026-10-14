@@ -232,6 +232,29 @@ public class CiWorkflowTests
         Assert.Contains("concurrency:\n  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-run-{0}', github.run_id) }}\n  cancel-in-progress: true", header, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void EveryProcessCiStopsByName_IsAProjectThatExists() // Pkg 3.2 slip, caught on PR #435
+    {
+        // A step that stops a running app by name (`pkill -f '<name>'`, `Get-Process <name>`) silently stops nothing when
+        // the project behind the name stops being the one that runs: after the host split, `pkill -f 'Perezosoft.Api'` still
+        // named a project — a library now — so it matched no process, left the billing-on API on its port, and the gates-off
+        // lane read the wrong server. Every such name must be a project that RUNS: a web app (Sdk.Web), an Exe, or MAUI.
+        var root = RepoRoot();
+        var projects = Directory.EnumerateFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
+            .Where(p => File.ReadAllText(p) is var x && (x.Contains("Microsoft.NET.Sdk.Web", StringComparison.Ordinal)
+                || x.Contains("<OutputType>Exe</OutputType>", StringComparison.Ordinal) || x.Contains("<UseMaui>true</UseMaui>", StringComparison.Ordinal)))
+            .Select(Path.GetFileNameWithoutExtension).ToHashSet(StringComparer.Ordinal);
+        Assert.Contains("Perezosoft.Host", projects);              // probe: the host runs
+        Assert.DoesNotContain("Perezosoft.Api", projects);         // and the Api package does not
+        var names = Regex.Matches(Read(Ci), @"pkill -f '([^']+)'|Get-Process ([A-Za-z][\w.]*)")
+            .Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)
+            .ToList();
+
+        Assert.True(names.Count >= 2, $"probe: only {names.Count} process names found in ci.yml");
+        var stale = names.Where(n => !projects.Contains(n)).Distinct().ToList();
+        Assert.True(stale.Count == 0, "ci.yml stops processes by names no project has (renamed or moved?): " + string.Join(", ", stale));
+    }
+
     private static string Read(string relative) =>
         File.ReadAllText(Path.Combine(RepoRoot(), relative)).ReplaceLineEndings("\n");
 

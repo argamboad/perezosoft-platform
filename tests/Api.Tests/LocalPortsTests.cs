@@ -163,6 +163,27 @@ public class LocalPortsTests
     }
 
     [Fact]
+    public void TheToolsScripts_NameProjectsThatExist() // Pkg 3.2 slip, found running tools/e2e.ps1 for PR #435
+    {
+        // The local scripts run outside CI, so a moved project breaks them silently: after the host split e2e.ps1 still read
+        // the API's launch profile from src/Api (a library now, no launchSettings) and failed before starting anything.
+        // Every src/<project> a tools script names exists, and every launch profile it reads (Get-HttpsUrl '<project>') is there.
+        var root = RepoRoot();
+        var failures = new List<string>();
+        foreach (var script in Directory.EnumerateFiles(System.IO.Path.Combine(root, "tools"), "*.ps1"))
+        {
+            var text = File.ReadAllText(script);
+            var name = System.IO.Path.GetFileName(script);
+            foreach (var project in Regex.Matches(text, @"src/([A-Za-z][A-Za-z.]*)").Select(m => m.Groups[1].Value).Distinct())
+                if (!Directory.Exists(System.IO.Path.Combine(root, "src", project))) failures.Add($"{name}: src/{project} does not exist");
+            foreach (var project in Regex.Matches(text, @"Get-HttpsUrl '([^']+)'").Select(m => m.Groups[1].Value).Distinct())
+                if (!File.Exists(System.IO.Path.Combine(root, "src", project, "Properties", "launchSettings.json")))
+                    failures.Add($"{name}: Get-HttpsUrl '{project}' — src/{project} has no Properties/launchSettings.json");
+        }
+        Assert.True(failures.Count == 0, "tools scripts name projects that moved:\n  " + string.Join("\n  ", failures));
+    }
+
+    [Fact]
     public void TheGeneratedConstants_AreTheProps()
     {
         // The compile-time half of the one source: this project opts into GenerateLocalPorts, so LocalPorts.* is what

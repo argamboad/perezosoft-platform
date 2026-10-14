@@ -1250,11 +1250,15 @@ jobs:
         run: |
           set -e
           # Stop the billing-on API of the step above and wait for its port; the Web app and the containers stay.
-          pkill -f 'Perezosoft.Api' || true
+          # The pattern is the HOST's name (Pkg 3.2 moved the runnable project to src/Host): a stale name kills nothing,
+          # the old API keeps the port, and every check below reads the wrong server (PR #435's first run).
+          pkill -f 'Perezosoft.Host' || true
+          freed=false
           for i in $(seq 1 30); do
-            curl -s -o /dev/null http://localhost:5238/health/ready && { sleep 2; continue; }
-            break
+            curl -s -o /dev/null http://localhost:5238/health/ready || { freed=true; break; }
+            sleep 2
           done
+          [ "$freed" = true ] || { echo "::error::the billing-on API still answers on 5238 — pkill matched nothing"; exit 1; }
           dotnet run --project src/Host/Perezosoft.Host.csproj -c Debug --no-build --urls http://localhost:5238 > api-gates.log 2>&1 &
           echo "Waiting for the gates-off API…"
           for i in $(seq 1 60); do
