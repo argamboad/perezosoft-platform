@@ -27,12 +27,14 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <!-- Declared, not left transitive (Pkg 3.2): this assembly compiles against the central EF line (10.0.11), while
+    <!-- Declared, not left transitive (Pkg 3.2): this assembly compiles against the central EF line (10.0.13), while
          Npgsql's own floor is lower. Without this the package would let a consumer resolve the lower Relational and fail to
          load at runtime (MSB3277 in the pack proof). EF's Design package lives in the host now (Pkg 3.5): the migrations
          are the app's, so the tooling is too. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Stripe.net" />
+    <!-- Not used directly: lifts MimeKit's transitive Pkcs 10.0.0 to the patched 10.0.13 (#432; see Directory.Packages.props). -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>
 
   <PropertyGroup>
