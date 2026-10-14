@@ -922,15 +922,17 @@
 - `tests/ci-logic/targets` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tools/release/dry-run/DryRun.cs` — the release pipeline's probe package (Pkg 2.3): published at a -dry. version, restored back
 
-## 8.4 — The RLS tenancy backstop (16 files)
+## 8.4 — The RLS tenancy backstop (18 files)
 
 - `docker/db/provision-rls-runtime-role.sql` — non-BYPASSRLS runtime role — mirrors prod (Neon) provisioning
+- `src/Infrastructure/Persistence/PlatformSteps.cs` — published platform steps a migration applies by name (ApplyPlatformStep); the backstop is the first (Pkg 3.6)
 - `src/Infrastructure/Persistence/RlsDdl.cs` — policy DDL — source of the RlsMigrationGateTests parity gate
 - `src/Infrastructure/Persistence/RlsPostureGuard.cs` — gates prod activation (ADR-020)
 - `src/Infrastructure/Persistence/RlsSessionInterceptor.cs` — sets the tenant GUC per connection
 - `src/Infrastructure/Persistence/RlsTags.cs`
 - `tests/Api.Tests/Architecture/CrossTenantWriteGuard.cs` — EnterTenant required on set-based cross-tenant writes — tags don't render for ExecuteUpdate (v3/T7)
 - `tests/Api.Tests/Architecture/CrossTenantWriteGuardTests.cs`
+- `tests/Api.Tests/PlatformStepTests.cs` — every published step is applied by a migration; a published step never changes (Pkg 3.6)
 - `tests/Api.Tests/Rls/CrossTenantTagSiteTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/DissolveUnderForeignTenantTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsBackstopTests.cs` — backstop + migration-parity + posture-guard tests
@@ -1408,4 +1410,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1241 tracked files · 865 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1243 tracked files · 867 built in lessons · 376 bucketed · 0 unmapped

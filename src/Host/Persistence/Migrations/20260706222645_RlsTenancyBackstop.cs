@@ -8,8 +8,13 @@ namespace Perezosoft.Infrastructure.Persistence.Migrations
     /// ADR-020: row-level security as the DB-level second tenancy wall. Enables + FORCEs RLS and
     /// creates the fail-closed tenant-isolation policy on every ITenantScoped table that exists at
     /// this point (frozen list — a future ITenantScoped entity ships its own policy migration; the
-    /// RlsMigrationGateTests parity gate fails CI if one is forgotten). The SQL is the frozen output
-    /// of RlsDdl for these tables.
+    /// RlsMigrationGateTests parity gate fails CI if one is forgotten).
+    /// <para>
+    /// The SQL is the published platform step <see cref="PlatformSteps.RlsTenancyBackstop"/> (Pkg 3.6): the frozen table
+    /// list and the frozen output of RlsDdl for it live in the package, which never changes a published step
+    /// (PlatformStepTests holds its fingerprint). Before the step, this file carried the same statements inline. The
+    /// sample's "Notes" is not in the list (Arch A6): its policy is the sample's own NotesSampleRlsPolicy migration.
+    /// </para>
     /// <para>
     /// Enforcement is role-dependent by design: superusers and BYPASSRLS roles (local dev, CI
     /// containers) bypass RLS entirely; a non-superuser connection — including a table OWNER, which
@@ -21,49 +26,16 @@ namespace Perezosoft.Infrastructure.Persistence.Migrations
     /// </summary>
     public partial class RlsTenancyBackstop : Migration
     {
-        // Frozen output of RlsDdl.StatementsFor for the ITenantScoped tables as of 2026-07-06 — minus the DELETE-ME sample's
-        // table (Arch A6, 2026-10-07): "Notes" left this list so that no platform migration names the sample; its policy
-        // comes from the sample's own NotesSampleRlsPolicy migration. A database that ran this migration with "Notes" in
-        // the list is unchanged (the sample migration re-creates the policy idempotently); a fresh database gets it there.
-        private static readonly string[] Tables =
-        [
-            "ApiKeys",
-            "AuditEvents",
-            "Subscriptions",
-            "TenantInvitations",
-            "UsageCounters",
-            "WebhookSubscriptions",
-        ];
-
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            foreach (var table in Tables)
-            {
-                migrationBuilder.Sql($"""ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY;""");
-                migrationBuilder.Sql($"""ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY;""");
-                migrationBuilder.Sql($"""DROP POLICY IF EXISTS rls_tenant_isolation ON "{table}";""");
-                migrationBuilder.Sql(
-                    $"""
-                     CREATE POLICY rls_tenant_isolation ON "{table}"
-                         AS PERMISSIVE FOR ALL
-                         USING ("TenantId" = NULLIF(current_setting('app.tenant_id', true), '')::uuid
-                                OR current_setting('app.rls_bypass', true) = 'on')
-                         WITH CHECK ("TenantId" = NULLIF(current_setting('app.tenant_id', true), '')::uuid
-                                OR current_setting('app.rls_bypass', true) = 'on');
-                     """);
-            }
+            migrationBuilder.ApplyPlatformStep(PlatformSteps.RlsTenancyBackstop);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            foreach (var table in Tables)
-            {
-                migrationBuilder.Sql($"""DROP POLICY IF EXISTS rls_tenant_isolation ON "{table}";""");
-                migrationBuilder.Sql($"""ALTER TABLE "{table}" NO FORCE ROW LEVEL SECURITY;""");
-                migrationBuilder.Sql($"""ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY;""");
-            }
+            migrationBuilder.RevertPlatformStep(PlatformSteps.RlsTenancyBackstop);
         }
     }
 }

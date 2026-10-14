@@ -636,6 +636,8 @@ RULES: list[tuple[str, str, str]] = [
 
     # ---- drift absorbed 2026-07-07 (RLS tenancy backstop, ADR-020 / PR #124) ----
     ("src/Infrastructure/Persistence/RlsDdl.cs", "8.4", "policy DDL — source of the RlsMigrationGateTests parity gate"),
+    ("src/Infrastructure/Persistence/PlatformSteps.cs", "8.4", "published platform steps a migration applies by name (ApplyPlatformStep); the backstop is the first (Pkg 3.6)"),
+    ("tests/Api.Tests/PlatformStepTests.cs", "8.4", "every published step is applied by a migration; a published step never changes (Pkg 3.6)"),
     ("src/Infrastructure/Persistence/RlsSessionInterceptor.cs", "8.4", "sets the tenant GUC per connection"),
     ("src/Infrastructure/Persistence/RlsPostureGuard.cs", "8.4", "gates prod activation (ADR-020)"),
     ("src/Infrastructure/Persistence/RlsTags.cs", "8.4", ""),
