@@ -12,13 +12,13 @@ namespace Perezosoft.Api.Services;
 /// current tenant's row. Plan resolution **fails closed to Free**: no subscription, a non-active/
 /// -trialing status, or a lapsed period all collapse to Free (ADR-006).
 /// </summary>
-public sealed class EntitlementService(IRepository<Subscription> subscriptions, TimeProvider clock) : IEntitlementService
+public sealed class EntitlementService(IRepository<Subscription> subscriptions, PlanCatalog plans, TimeProvider clock) : IEntitlementService
 {
     public async Task<bool> HasAsync(string entitlementKey, CancellationToken cancellationToken = default)
     {
         var subscription = await subscriptions.Query().FirstOrDefaultAsync(cancellationToken);
         var planKey = ResolvePlanKey(subscription, clock.GetUtcNow());
-        return PlanCatalog.Get(planKey).Includes(entitlementKey);
+        return plans.Get(planKey).Includes(entitlementKey);
     }
 
     /// <summary>The active plan, or Free if the subscription is absent/inactive/lapsed (fail-closed).</summary>

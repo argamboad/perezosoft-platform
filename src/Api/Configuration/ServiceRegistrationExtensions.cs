@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Perezosoft.Api.Services;
+using Perezosoft.Core;
 using Perezosoft.Core.Abstractions;
+using Perezosoft.Core.Billing;
 
 namespace Perezosoft.Api.Configuration;
 
@@ -12,6 +14,20 @@ namespace Perezosoft.Api.Configuration;
 /// </summary>
 public static class ServiceRegistrationExtensions
 {
+    /// <summary>
+    /// The host's options (Pkg 3.7, ADR-034 §4): <see cref="PlatformOptions"/> is built from the platform's defaults, handed to
+    /// the host's <paramref name="configure"/> once, and registered as a singleton; the objects the platform derives from it
+    /// are built here too, so a bad option (a plan list without Free) stops the host at startup, not at the first request.
+    /// </summary>
+    public static IServiceCollection AddPlatformOptions(this IServiceCollection services, Action<PlatformOptions>? configure = null)
+    {
+        var options = new PlatformOptions();
+        configure?.Invoke(options);
+        services.AddSingleton(options);
+        services.AddSingleton(new PlanCatalog(options.Plans));
+        return services;
+    }
+
     /// <summary>Auth services.</summary>
     public static IServiceCollection AddAuthServices(this IServiceCollection services)
     {

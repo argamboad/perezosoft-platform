@@ -8,6 +8,7 @@ using Perezosoft.Api.Configuration;
 using Perezosoft.Api.Endpoints;
 using Perezosoft.Api.Observability;
 using Perezosoft.Api.Services;
+using Perezosoft.Core;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Infrastructure;
 using Perezosoft.Infrastructure.Persistence;
@@ -27,8 +28,13 @@ public static class PlatformHosting
     /// <summary>Registers every platform service, in order. Call before the app's own registrations.</summary>
     /// <typeparam name="TContext">The app's database context (Pkg 3.5): derives from <see cref="PlatformDbContext"/> and lives,
     /// with its migrations, in the app's own assembly.</typeparam>
-    public static WebApplicationBuilder AddPlatform<TContext>(this WebApplicationBuilder builder) where TContext : PlatformDbContext
+    /// <param name="configure">The host's options (Pkg 3.7): plans today, more seams to come. Omitted, the platform's defaults.</param>
+    public static WebApplicationBuilder AddPlatform<TContext>(this WebApplicationBuilder builder, Action<PlatformOptions>? configure = null)
+        where TContext : PlatformDbContext
     {
+        // The host's options first (Pkg 3.7): everything below that is shaped by them reads the registered instance.
+        builder.Services.AddPlatformOptions(configure);
+
         // The platform's configuration defaults (Pkg 3.4), shipped inside this package: the lowest source, so the host's
         // appsettings*.json, user secrets, environment variables and the command line all override them. First, so every
         // setting read below sees them.

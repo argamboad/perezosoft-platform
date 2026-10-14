@@ -242,7 +242,8 @@ _TODO_
   applies an incoming event only if strictly newer, so a redelivered/out-of-order older event can't
   clobber newer state — v2 audit LOGIC-B1). A **projection** of Stripe state (Stripe is the source of
   truth for money); absent ⇒ Free tier (fail-closed), as is any non-active/lapsed status. Plan catalog
-  is code (`src/Core/Billing/PlanCatalog.cs`), not a table. Participates in dissolve via
+  is code/config (`src/Core/Billing/PlanCatalog.cs`, built from `PlatformOptions.Plans`; an app replaces the plans in
+  `AddPlatform(o => ...)`), not a table. Participates in dissolve via
   `BillingDataContributor` (cancels the provider sub + wipes the projection).
 - **`UsageCounter`** *(ADR-006 / `docs/stories/billing.md`)* — ✅ **BUILT (BILLING-5)**:
   `src/Core/Entities/UsageCounter.cs`. `ITenantScoped`. A per-tenant, per-period metered-usage counter:

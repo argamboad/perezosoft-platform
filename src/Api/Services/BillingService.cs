@@ -33,7 +33,8 @@ public interface IBillingService
 public sealed class BillingService(
     IBillingProvider billing,
     IApplicationSettings app,
-    IRepository<Subscription> subscriptions) : IBillingService
+    IRepository<Subscription> subscriptions,
+    PlanCatalog plans) : IBillingService
 {
     public async Task<CheckoutResult> CreateCheckoutAsync(Guid tenantId, string? planKey, CancellationToken cancellationToken = default)
     {
@@ -62,6 +63,6 @@ public sealed class BillingService(
     }
 
     /// <summary>A non-Free plan that actually exists in the catalog (unknown keys resolve to Free).</summary>
-    private static bool IsPurchasablePlan(string? planKey) =>
-        !string.IsNullOrWhiteSpace(planKey) && planKey != PlanKeys.Free && PlanCatalog.Get(planKey).Key == planKey;
+    private bool IsPurchasablePlan(string? planKey) =>
+        !string.IsNullOrWhiteSpace(planKey) && planKey != PlanKeys.Free && plans.Get(planKey).Key == planKey;
 }

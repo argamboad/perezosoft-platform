@@ -381,7 +381,7 @@ public class BillingWebhookHandlerTests(PostgresFixture fixture) : PostgresTestB
     private async Task<bool> EntitledAsync(Guid tenant)
     {
         await using var db = Fixture.CreateContext(tenant);
-        return await new EntitlementService(new EfRepository<Subscription>(db), TimeProvider.System)
+        return await new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, TimeProvider.System)
             .HasAsync(Entitlements.ProFeature);
     }
 

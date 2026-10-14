@@ -29,7 +29,7 @@ public class SubscriptionTenantIsolationTests(PostgresFixture fixture) : Postgre
         // Direct read is filtered away…
         Assert.Empty(await db.Set<Subscription>().ToListAsync());
         // …and the entitlement resolver therefore fails closed to Free for A.
-        var entitlements = new EntitlementService(new EfRepository<Subscription>(db), TimeProvider.System);
+        var entitlements = new EntitlementService(new EfRepository<Subscription>(db), TestPlans.Default, TimeProvider.System);
         Assert.False(await entitlements.HasAsync(Entitlements.ProFeature));
     }
 

@@ -402,7 +402,9 @@ RULES: list[tuple[str, str, str]] = [
 
     # ---- Part 5 ----
     ("src/Core/Abstractions/IBillingProvider.cs", "5.1", ""),
-    ("src/Core/Billing/PlanCatalog.cs", "5.1", ""),
+    ("src/Core/Billing/PlanCatalog.cs", "5.1", "built per host from PlatformOptions.Plans (Pkg 3.7)"),
+    ("src/Core/PlatformOptions.cs", "5.1", "what a host tells the platform: plans today, more seams to come (Pkg 3.7, ADR-034 §4)"),
+    ("tests/Api.Tests/Infrastructure/TestPlans.cs", "5.1", "the catalog tests build from the platform's default options (Pkg 3.7)"),
     ("src/Core/Entities/Subscription.cs", "5.1", "projection, not source of truth"),
     ("src/Infrastructure/Persistence/Configurations/SubscriptionConfiguration.cs", "5.1", ""),
     ("src/Core/Abstractions/IEntitlementService.cs", "5.1", ""),

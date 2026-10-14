@@ -131,7 +131,7 @@ public class BillingControllerTests(PostgresFixture fixture) : PostgresTestBase(
         Assert.Equal("none", summary.Status);
         Assert.False(summary.HasSubscription);
         Assert.Equal(1, summary.Seats.Used);           // just the owner
-        Assert.Equal(PlanCatalog.Get(PlanKeys.Free).SeatLimit, summary.Seats.Limit); // the catalog's Free quota, not a copy of it
+        Assert.Equal(TestPlans.Default.Get(PlanKeys.Free).SeatLimit, summary.Seats.Limit); // the catalog's Free quota, not a copy of it
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class BillingControllerTests(PostgresFixture fixture) : PostgresTestBase(
         var ok = Assert.IsType<OkObjectResult>(await controller.Summary(default));
         var summary = Assert.IsType<BillingSummaryResponse>(ok.Value);
         Assert.Equal(PlanKeys.Free, summary.PlanKey);  // lapsed → fail-closed
-        Assert.Equal(PlanCatalog.Get(PlanKeys.Free).SeatLimit, summary.Seats.Limit);
+        Assert.Equal(TestPlans.Default.Get(PlanKeys.Free).SeatLimit, summary.Seats.Limit);
         Assert.True(summary.HasSubscription);          // portal still reachable to fix payment
     }
 
@@ -191,11 +191,11 @@ public class BillingControllerTests(PostgresFixture fixture) : PostgresTestBase(
     {
         var controller = new BillingController(
             new TenantRepository(db),
-            new BillingService(billing, new TestAppSettings(), new EfRepository<Subscription>(db)),
+            new BillingService(billing, new TestAppSettings(), new EfRepository<Subscription>(db), TestPlans.Default),
             new EfRepository<Subscription>(db),
             new QuotaService(new EfRepository<Subscription>(db), new TenantRepository(db),
                 new TenantInvitationRepository(db), new EfRepository<UsageCounter>(db),
-                new TestCurrentTenant { TenantId = tenantId }, TimeProvider.System),
+                new TestCurrentTenant { TenantId = tenantId }, TestPlans.Default, TimeProvider.System),
             TimeProvider.System);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(

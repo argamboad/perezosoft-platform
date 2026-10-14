@@ -755,7 +755,7 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
             new RefreshTokenService(new RefreshTokenRepository(db, TimeProvider.System), new TokenGenerator(),
                 new TokenHasher(), new TestRefreshSettings(), TimeProvider.System),
             new EfOutbox(db, TimeProvider.System), new EfUnitOfWork(db),
-            new BillingSettings { Enabled = billingEnabled },
+            new BillingSettings { Enabled = billingEnabled }, TestPlans.Default,
             NullLogger<AdminController>.Instance, TimeProvider.System);
 
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, callerId.ToString()) };

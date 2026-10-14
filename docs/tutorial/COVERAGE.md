@@ -525,7 +525,7 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (28 files)
+## 5.1 — Billing abstraction & entitlements (30 files)
 
 - `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
 - `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
@@ -538,8 +538,9 @@
 - `src/Api/Services/EntitlementService.cs`
 - `src/Core/Abstractions/IBillingProvider.cs`
 - `src/Core/Abstractions/IEntitlementService.cs`
-- `src/Core/Billing/PlanCatalog.cs`
+- `src/Core/Billing/PlanCatalog.cs` — built per host from PlatformOptions.Plans (Pkg 3.7)
 - `src/Core/Entities/Subscription.cs` — projection, not source of truth
+- `src/Core/PlatformOptions.cs` — what a host tells the platform: plans today, more seams to come (Pkg 3.7, ADR-034 §4)
 - `src/Infrastructure/Billing/FakeBillingProvider.cs` — throws outside Development (R1)
 - `src/Infrastructure/Persistence/Configurations/SubscriptionConfiguration.cs`
 - `src/Shared.Ui/Pages/Billing.razor` — BILLING-8 billing summary page
@@ -552,6 +553,7 @@
 - `tests/Api.Tests/Billing/PlanCatalogTests.cs` — GATES-1 pins the catalog's fail-closed Free fallback
 - `tests/Api.Tests/Billing/RequireEntitlementFilterTests.cs`
 - `tests/Api.Tests/Billing/SubscriptionTenantIsolationTests.cs`
+- `tests/Api.Tests/Infrastructure/TestPlans.cs` — the catalog tests build from the platform's default options (Pkg 3.7)
 - `tests/Api.Tests/Integration/FeaturesEndpointTests.cs` — GATES-1
 - `tests/E2E.Tests/BillingJourneyTests.cs` — fake-provider upgrade loop
 - `tests/E2E.Tests/GateJourneyTests.cs` — GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48
@@ -1410,4 +1412,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1243 tracked files · 867 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1245 tracked files · 869 built in lessons · 376 bucketed · 0 unmapped

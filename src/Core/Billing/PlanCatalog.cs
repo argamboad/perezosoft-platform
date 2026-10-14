@@ -46,26 +46,45 @@ public static class UsageKeys
 }
 
 /// <summary>
-/// The plan catalog: plan key → <see cref="Plan"/>. Edit/extend this (or move it to configuration) to
-/// define the app's tiers. <see cref="Get"/> fails closed — an unknown plan key resolves to Free.
+/// The plan catalog: plan key → <see cref="Plan"/>, built once per host from <c>PlatformOptions.Plans</c> (Pkg 3.7).
+/// <see cref="Get"/> fails closed — an unknown plan key resolves to Free — which is why the constructor refuses a set of
+/// plans without one, and why two plans with one key are refused rather than letting the later quietly win.
 /// </summary>
-public static class PlanCatalog
+public sealed class PlanCatalog
 {
-    private static readonly IReadOnlyDictionary<string, Plan> Plans = new Dictionary<string, Plan>
+    private readonly IReadOnlyDictionary<string, Plan> _plans;
+
+    public PlanCatalog(IEnumerable<Plan> plans)
     {
+        var byKey = new Dictionary<string, Plan>(StringComparer.Ordinal);
+        foreach (var plan in plans)
+            if (!byKey.TryAdd(plan.Key, plan))
+                throw new InvalidOperationException($"Two plans share the key '{plan.Key}' — a plan key names exactly one plan.");
+        if (!byKey.ContainsKey(PlanKeys.Free))
+            throw new InvalidOperationException(
+                $"The plan catalog has no '{PlanKeys.Free}' plan. Free is where every unknown plan key and every tenant without a grant fails closed to — keep it in PlatformOptions.Plans.");
+        _plans = byKey;
+    }
+
+    /// <summary>Resolves a plan by key; unknown keys fall back to <see cref="PlanKeys.Free"/> (fail-closed).</summary>
+    public Plan Get(string planKey) => _plans.TryGetValue(planKey, out var plan) ? plan : _plans[PlanKeys.Free];
+
+    /// <summary>
+    /// The platform's own plans, a fresh list each call (so one host's edits never reach the next): the starting value of
+    /// <c>PlatformOptions.Plans</c>.
+    /// </summary>
+    public static List<Plan> DefaultPlans() =>
+    [
         // EXAMPLE quotas (BILLING-5): tune these per app, or set null/omit for unlimited. Seats = tenant
         // members + pending invites; usage keys are monthly, enforced where you call TryConsumeAsync.
         // Free's seat limit is 5, raised from 3 by GATES-1 (ADR-027): three was exactly one household
         // with zero headroom, and a merely PENDING invitation already consumes a seat — so a private
         // test could not add a fourth person at all.
-        [PlanKeys.Free] = new(PlanKeys.Free, new HashSet<string>(),
+        new(PlanKeys.Free, new HashSet<string>(),
             SeatLimit: 5,
             UsageLimits: new Dictionary<string, int> { [UsageKeys.Export] = 3 }),
-        [PlanKeys.Pro] = new(PlanKeys.Pro, new HashSet<string> { Entitlements.ProFeature },
+        new(PlanKeys.Pro, new HashSet<string> { Entitlements.ProFeature },
             SeatLimit: 10,
             UsageLimits: new Dictionary<string, int> { [UsageKeys.Export] = 100 }),
-    };
-
-    /// <summary>Resolves a plan by key; unknown keys fall back to <see cref="PlanKeys.Free"/> (fail-closed).</summary>
-    public static Plan Get(string planKey) => Plans.TryGetValue(planKey, out var plan) ? plan : Plans[PlanKeys.Free];
+    ];
 }

@@ -70,7 +70,7 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
         new(RefreshTokenService(), JwtTokenService(), Tenants, new TestJwtSettings());
 
     public QuotaService QuotaService() =>
-        new(Subscriptions, Tenants, Invitations, UsageCounters, CurrentTenant, Clock);
+        new(Subscriptions, Tenants, Invitations, UsageCounters, CurrentTenant, TestPlans.Default, Clock);
 
     /// <param name="contributors">The tenant-data contributors the accept consults (would the old tenant be
     /// abandoned?) and dissolves through. Defaults to none; <see cref="PlatformContributors"/> is the shipped set.</param>

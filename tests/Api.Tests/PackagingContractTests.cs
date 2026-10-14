@@ -101,6 +101,17 @@ public class PackagingContractTests
     }
 
     [Fact]
+    public void AddPlatform_TakesTheHostsOptions_AsAnOptionalCallback() // Pkg 3.7
+    {
+        // The extension point every seam hangs off (ADR-034 §4): builder.AddPlatform<TContext>(o => ...). Optional, so the
+        // starter's Program.cs line stays the same until an app has something to set; a required parameter would break every app.
+        var method = typeof(PlatformHosting).GetMethod(nameof(PlatformHosting.AddPlatform))!;
+        var configure = method.GetParameters().Single(p => p.Name == "configure");
+        Assert.Equal(typeof(Action<Perezosoft.Core.PlatformOptions>), configure.ParameterType);
+        Assert.True(configure.IsOptional);
+    }
+
+    [Fact]
     public void PackagingSettings_LiveOnceInDirectoryBuildProps()
     {
         var props = File.ReadAllText(Path.Combine(RepoRoot(), "Directory.Build.props"));
