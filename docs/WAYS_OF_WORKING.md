@@ -74,9 +74,11 @@ step here in the same PR.
 1. **Entity** → `src/Core/Entities/<Entity>.cs`, implementing `ITenantScoped` — or `ISharedOrTenantScoped` when
    its rows are either shared (`TenantId` null) or one tenant's (Arch A4; then step 3 uses
    `RlsDdl.SharedOrTenantStatementsFor`, and the four `<Entity>_SharedOrTenant_*` facet tests replace the canary
-   entry of step 5). A slice **cannot declare
-   its own `Permission`**: the enum and `RolePermissions` live in Core (ADR-009's coarse capabilities) —
-   reuse one, or add it to Core in its own commit.
+   entry of step 5). A slice that needs **its own `Permission`** registers it in the host's options
+   (Pkg 3.8): `builder.AddPlatform<AppDbContext>(o => o.Permissions.Add(new Permission("ManageProjects"), TenantRoles.Admin))`
+   — the owner holds it automatically, the roles named hold it too (ADR-009's coarse capabilities, never an ACL); gate
+   with `.RequirePermission(...)` or `[RequireTenantPermission("ManageProjects", ...)]`. `PermissionRegistrationGateTests`
+   fails if an endpoint requires a name the host never registered. Or reuse a platform one.
 2. **DbSet + config** → add the `DbSet<>` to `src/Host/Persistence/AppDbContext.App.cs` (the app's half of
    the partial context — `AppDbContext.cs` and the packaged `PlatformDbContext` are the platform's and are not edited; Arch A1) and any
    `IEntityTypeConfiguration` (discovered from the assembly, no registration).

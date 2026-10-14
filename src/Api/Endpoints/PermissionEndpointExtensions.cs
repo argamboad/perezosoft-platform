@@ -17,7 +17,7 @@ public static class PermissionEndpointExtensions
 {
     public static TBuilder RequirePermission<TBuilder>(this TBuilder builder, Permission permission)
         where TBuilder : IEndpointConventionBuilder
-        => builder.AddEndpointFilter(async (context, next) =>
+        => builder.WithMetadata(new RequiredTenantPermission(permission)).AddEndpointFilter(async (context, next) =>
         {
             var permissions = context.HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             if (await permissions.HasAsync(permission, context.HttpContext.RequestAborted))
@@ -29,6 +29,12 @@ public static class PermissionEndpointExtensions
                 $"This action requires the '{permission}' permission."), statusCode: StatusCodes.Status403Forbidden);
         });
 }
+
+/// <summary>
+/// Endpoint metadata naming the permission <c>.RequirePermission(...)</c> gates on (Pkg 3.8): what lets a test read every
+/// permission a host's endpoints require — the MVC attribute is metadata already — and check each one is registered.
+/// </summary>
+public sealed record RequiredTenantPermission(Permission Permission);
 
 /// <summary>The 403 body: the shared <c>error</c>/<c>message</c> envelope plus which permission was
 /// required. A NAMED record (v3 audit TR-5/R76) so the wire contract is reviewable — byte-identical to

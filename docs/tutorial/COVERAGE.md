@@ -586,7 +586,7 @@
 - `tests/Api.Tests/Billing/SubscriptionLapseSweepJobTests.cs`
 - `tests/E2E.Tests/SeatQuotaJourneyTests.cs` — seat-quota 402 UX
 
-## 6.1 — RBAC: roles & the permission seam (16 files)
+## 6.1 — RBAC: roles & the permission seam (20 files)
 
 - `src/Api/Authentication/RequireTenantPermissionAttribute.cs`
 - `src/Api/Controllers/TenantApiControllerBase.cs` — controllers inherit the gate (R4)
@@ -594,13 +594,17 @@
 - `src/Api/Services/PermissionService.cs`
 - `src/Core/Abstractions/IPermissionService.cs`
 - `src/Core/Authorization/Permission.cs`
-- `src/Core/Authorization/RolePermissions.cs` — matrix: coarse capabilities, not ACLs
+- `src/Core/Authorization/PermissionRegistry.cs` — the host's permissions and their rows: the platform's, plus what an app adds (Pkg 3.8)
+- `src/Core/Authorization/RolePermissions.cs` — matrix: coarse capabilities, not ACLs; built per host from its registry (Pkg 3.8)
 - `src/Shared.Ui/Pages/Household.razor` — admin-aware roster UI
 - `tests/Api.Tests/Infrastructure/TenantPermissionGate.cs` — test double for the permission seam
+- `tests/Api.Tests/Infrastructure/TestPermissions.cs` — the matrix a default host builds (Pkg 3.8)
 - `tests/Api.Tests/Integration/RbacForbiddenIntegrationTests.cs`
+- `tests/Api.Tests/Rbac/AppPermissionTests.cs`
 - `tests/Api.Tests/Rbac/MemberRoleManagementTests.cs`
 - `tests/Api.Tests/Rbac/PermissionServiceTests.cs`
 - `tests/Api.Tests/Rbac/RequirePermissionFilterTests.cs`
+- `tests/Core.Tests/PermissionRegistryTests.cs` — an open set: app permissions, additive only (Pkg 3.8)
 - `tests/Core.Tests/RolePermissionsTests.cs`
 - `tests/E2E.Tests/MembershipLifecycleTests.cs` — transfer/leave/dissolve/delete-account journeys
 - `tests/E2E.Tests/RosterJourneyTests.cs`
@@ -1412,4 +1416,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1245 tracked files · 869 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1249 tracked files · 873 built in lessons · 376 bucketed · 0 unmapped

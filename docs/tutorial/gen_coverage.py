@@ -449,7 +449,9 @@ RULES: list[tuple[str, str, str]] = [
 
     # ---- Part 6 ----
     ("src/Core/Authorization/Permission.cs", "6.1", ""),
-    ("src/Core/Authorization/RolePermissions.cs", "6.1", "matrix: coarse capabilities, not ACLs"),
+    ("src/Core/Authorization/RolePermissions.cs", "6.1", "matrix: coarse capabilities, not ACLs; built per host from its registry (Pkg 3.8)"),
+    ("src/Core/Authorization/PermissionRegistry.cs", "6.1", "the host's permissions and their rows: the platform's, plus what an app adds (Pkg 3.8)"),
+    ("tests/Api.Tests/Infrastructure/TestPermissions.cs", "6.1", "the matrix a default host builds (Pkg 3.8)"),
     ("src/Core/Abstractions/IPermissionService.cs", "6.1", ""),
     ("src/Api/Services/PermissionService.cs", "6.1", ""),
     ("src/Api/Endpoints/PermissionEndpointExtensions.cs", "6.1", "RequirePermission -> 403"),
@@ -457,6 +459,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Controllers/TenantApiControllerBase.cs", "6.1", "controllers inherit the gate (R4)"),
     ("src/Shared.Ui/Pages/Household.razor", "6.1", "admin-aware roster UI"),
     ("tests/Core.Tests/RolePermissionsTests.cs", "6.1", ""),
+    ("tests/Core.Tests/PermissionRegistryTests.cs", "6.1", "an open set: app permissions, additive only (Pkg 3.8)"),
     ("tests/Api.Tests/Rbac/*", "6.1", ""),
     ("tests/Api.Tests/Integration/RbacForbiddenIntegrationTests.cs", "6.1", ""),
     ("src/Core/Abstractions/IFileStorage.cs", "6.2", ""),

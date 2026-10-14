@@ -665,7 +665,8 @@ public class ArchitectureTests
         var allow = new HashSet<string>(StringComparer.Ordinal) { "SettingsProvider", "WebhookService" };
         allow.UnionWith(AppAllowlists.TypeNameExceptions); // the app's (Arch A1)
         var typeDecl = new Regex(
-            @"\b(?:public|internal)\s+(?:sealed\s+|abstract\s+|static\s+|partial\s+|readonly\s+|ref\s+)*(?:class|record|interface|enum|struct)\s+([A-Za-z_][A-Za-z0-9_]*)",
+            // `record struct` / `record class` are one declaration: without the optional second word the name read is "struct".
+            @"\b(?:public|internal)\s+(?:sealed\s+|abstract\s+|static\s+|partial\s+|readonly\s+|ref\s+)*(?:class|record(?:\s+(?:struct|class))?|interface|enum|struct)\s+([A-Za-z_][A-Za-z0-9_]*)",
             RegexOptions.Compiled);
 
         var offenders = new List<string>();

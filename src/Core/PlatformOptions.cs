@@ -1,3 +1,4 @@
+using Perezosoft.Core.Authorization;
 using Perezosoft.Core.Billing;
 
 namespace Perezosoft.Core;
@@ -16,4 +17,11 @@ public sealed class PlatformOptions
     /// fail-closed landing place for any unknown key — the host refuses to start without one.
     /// </summary>
     public IList<Plan> Plans { get; } = PlanCatalog.DefaultPlans();
+
+    /// <summary>
+    /// The tenant permissions and which roles grant them (ADR-009, Pkg 3.8). Starts as the platform's matrix; an app adds its
+    /// own capabilities with <c>Permissions.Add(new Permission("ManageProjects"), TenantRoles.Admin)</c> — the owner holds every
+    /// permission. The platform's rows cannot be loosened here.
+    /// </summary>
+    public PermissionRegistry Permissions { get; } = new();
 }

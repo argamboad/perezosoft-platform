@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Perezosoft.Api.Services;
 using Perezosoft.Core;
 using Perezosoft.Core.Abstractions;
+using Perezosoft.Core.Authorization;
 using Perezosoft.Core.Billing;
 
 namespace Perezosoft.Api.Configuration;
@@ -25,6 +26,7 @@ public static class ServiceRegistrationExtensions
         configure?.Invoke(options);
         services.AddSingleton(options);
         services.AddSingleton(new PlanCatalog(options.Plans));
+        services.AddSingleton(new RolePermissions(options.Permissions));
         return services;
     }
 

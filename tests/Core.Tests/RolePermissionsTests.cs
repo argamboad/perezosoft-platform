@@ -6,45 +6,49 @@ namespace Perezosoft.Core.Tests;
 /// <summary>
 /// RBAC-1 (ADR-009): the <see cref="RolePermissions"/> matrix is the single source of truth mapping a
 /// tenant role to the capabilities it grants. owner > admin > member; billing and role/ownership
-/// changes are owner-only by design; unknown roles grant nothing (fail closed).
+/// changes are owner-only by design; unknown roles grant nothing (fail closed). Since Pkg 3.8 the matrix is
+/// built per host from its <see cref="PermissionRegistry"/>; these rows are the platform's default registry.
+/// The theories name permissions as strings because an attribute argument must be a constant.
 /// </summary>
 public class RolePermissionsTests
 {
-    [Theory]
-    [InlineData(Permission.ViewTenant)]
-    [InlineData(Permission.RenameTenant)]
-    [InlineData(Permission.ManageMembers)]
-    [InlineData(Permission.ManageRoles)]
-    [InlineData(Permission.ManageBilling)]
-    [InlineData(Permission.ExportData)]
-    [InlineData(Permission.TransferOwnership)]
-    [InlineData(Permission.DissolveTenant)]
-    public void Owner_HasEveryPermission(Permission permission) =>
-        Assert.True(RolePermissions.Grants(TenantRoles.Owner, permission));
+    private static readonly RolePermissions Matrix = new(new PermissionRegistry());
 
     [Theory]
-    [InlineData(Permission.ViewTenant, true)]
-    [InlineData(Permission.RenameTenant, true)]
-    [InlineData(Permission.ManageMembers, true)]
-    [InlineData(Permission.ManageRoles, false)]
-    [InlineData(Permission.ManageBilling, false)]
-    [InlineData(Permission.ExportData, false)]
-    [InlineData(Permission.TransferOwnership, false)]
-    [InlineData(Permission.DissolveTenant, false)]
-    public void Admin_HasManagementButNotOwnerOnlyPermissions(Permission permission, bool granted) =>
-        Assert.Equal(granted, RolePermissions.Grants(TenantRoles.Admin, permission));
+    [InlineData(nameof(Permission.ViewTenant))]
+    [InlineData(nameof(Permission.RenameTenant))]
+    [InlineData(nameof(Permission.ManageMembers))]
+    [InlineData(nameof(Permission.ManageRoles))]
+    [InlineData(nameof(Permission.ManageBilling))]
+    [InlineData(nameof(Permission.ExportData))]
+    [InlineData(nameof(Permission.TransferOwnership))]
+    [InlineData(nameof(Permission.DissolveTenant))]
+    public void Owner_HasEveryPermission(string permission) =>
+        Assert.True(Matrix.Grants(TenantRoles.Owner, new Permission(permission)));
 
     [Theory]
-    [InlineData(Permission.ViewTenant, true)]
-    [InlineData(Permission.RenameTenant, false)]
-    [InlineData(Permission.ManageMembers, false)]
-    [InlineData(Permission.ManageRoles, false)]
-    [InlineData(Permission.ManageBilling, false)]
-    [InlineData(Permission.ExportData, false)]
-    [InlineData(Permission.TransferOwnership, false)]
-    [InlineData(Permission.DissolveTenant, false)]
-    public void Member_HasOnlyViewTenant(Permission permission, bool granted) =>
-        Assert.Equal(granted, RolePermissions.Grants(TenantRoles.Member, permission));
+    [InlineData(nameof(Permission.ViewTenant), true)]
+    [InlineData(nameof(Permission.RenameTenant), true)]
+    [InlineData(nameof(Permission.ManageMembers), true)]
+    [InlineData(nameof(Permission.ManageRoles), false)]
+    [InlineData(nameof(Permission.ManageBilling), false)]
+    [InlineData(nameof(Permission.ExportData), false)]
+    [InlineData(nameof(Permission.TransferOwnership), false)]
+    [InlineData(nameof(Permission.DissolveTenant), false)]
+    public void Admin_HasManagementButNotOwnerOnlyPermissions(string permission, bool granted) =>
+        Assert.Equal(granted, Matrix.Grants(TenantRoles.Admin, new Permission(permission)));
+
+    [Theory]
+    [InlineData(nameof(Permission.ViewTenant), true)]
+    [InlineData(nameof(Permission.RenameTenant), false)]
+    [InlineData(nameof(Permission.ManageMembers), false)]
+    [InlineData(nameof(Permission.ManageRoles), false)]
+    [InlineData(nameof(Permission.ManageBilling), false)]
+    [InlineData(nameof(Permission.ExportData), false)]
+    [InlineData(nameof(Permission.TransferOwnership), false)]
+    [InlineData(nameof(Permission.DissolveTenant), false)]
+    public void Member_HasOnlyViewTenant(string permission, bool granted) =>
+        Assert.Equal(granted, Matrix.Grants(TenantRoles.Member, new Permission(permission)));
 
     [Theory]
     [InlineData(null)]
@@ -52,8 +56,8 @@ public class RolePermissionsTests
     [InlineData("superadmin")]
     public void UnknownRole_GrantsNothing(string? role)
     {
-        foreach (var permission in Enum.GetValues<Permission>())
-            Assert.False(RolePermissions.Grants(role, permission));
+        foreach (var permission in Matrix.All)
+            Assert.False(Matrix.Grants(role, permission));
     }
 
     [Theory]
@@ -61,16 +65,25 @@ public class RolePermissionsTests
     [InlineData("Admin")]
     [InlineData("Member")]
     public void RoleMatching_IsCaseInsensitive(string role) =>
-        Assert.True(RolePermissions.Grants(role, Permission.ViewTenant));
+        Assert.True(Matrix.Grants(role, Permission.ViewTenant));
 
     [Fact]
     public void Ordering_OwnerSupersetOfAdmin_SupersetOfMember()
     {
-        var owner = RolePermissions.PermissionsFor(TenantRoles.Owner);
-        var admin = RolePermissions.PermissionsFor(TenantRoles.Admin);
-        var member = RolePermissions.PermissionsFor(TenantRoles.Member);
+        var owner = Matrix.PermissionsFor(TenantRoles.Owner);
+        var admin = Matrix.PermissionsFor(TenantRoles.Admin);
+        var member = Matrix.PermissionsFor(TenantRoles.Member);
 
         Assert.True(admin.IsProperSubsetOf(owner));
         Assert.True(member.IsProperSubsetOf(admin));
+    }
+
+    [Fact]
+    public void APermissionNobodyRegistered_GrantsNothing_EvenToTheOwner()
+    {
+        var unregistered = new Permission("NobodyRegisteredThis");
+        Assert.False(Matrix.IsRegistered(unregistered));
+        Assert.False(Matrix.Grants(TenantRoles.Owner, unregistered));
+        Assert.False(Matrix.Grants(TenantRoles.Owner, default)); // default(Permission) names nothing
     }
 }

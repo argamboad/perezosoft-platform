@@ -12,7 +12,7 @@ namespace Perezosoft.Api.Services;
 /// <b>Fails closed</b>: no HTTP context, no authenticated user, or no membership all yield
 /// <c>false</c>. Registered request-scoped (mirrors <see cref="EntitlementService"/>).
 /// </summary>
-public sealed class PermissionService(IHttpContextAccessor accessor, ITenantRepository tenants) : IPermissionService
+public sealed class PermissionService(IHttpContextAccessor accessor, ITenantRepository tenants, RolePermissions roles) : IPermissionService
 {
     public async Task<bool> HasAsync(Permission permission, CancellationToken cancellationToken = default)
     {
@@ -23,6 +23,6 @@ public sealed class PermissionService(IHttpContextAccessor accessor, ITenantRepo
             return false;
 
         var membership = await tenants.GetMembershipAsync(userId, tenantId, cancellationToken);
-        return membership is not null && RolePermissions.Grants(membership.Role, permission);
+        return membership is not null && roles.Grants(membership.Role, permission);
     }
 }
