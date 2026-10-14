@@ -88,7 +88,7 @@ Open Claude Code in the repo and use **the expected first prompt from `README.md
 
 - Runs **`docs/REBRANDING.md` end to end** — name/wordmark, tagline, logo assets and derived
   icons/favicon/OG image, the **colour palette derived from your logo** (the semantic tokens in
-  `src/Shared.Ui/wwwroot/css/app.css` + the email colours in `BrandedEmail.cs` — the email
+  `src/Shared.Ui/wwwroot/css/app.css` + the email brand in `AppComposition.ConfigurePlatform` — the email
   templates are the classically missed spot), the OAuth callback scheme + `ApplicationId`, and
   the brand strings in every localization `.resx`.
 - Fills the `CLAUDE.md` TODOs (app-specific golden rules, conventions) from your Phase-1 docs.

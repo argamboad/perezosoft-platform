@@ -79,7 +79,7 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
     {
         var tenantContext = CurrentTenant as ITenantContext ?? new TestCurrentTenant();
         contributors ??= [];
-        return new(Invitations, Tenants, TokenGen, Hasher, UnitOfWork, new NoopEmailSender(),
+        return new(Invitations, Tenants, TokenGen, Hasher, UnitOfWork, new NoopEmailSender(), TestEmails.Default,
             UserService(), new TestAppSettings(), invitation ?? new TestInvitationSettings(),
             contributors, new TenantDissolutionService(contributors, Tenants, tenantContext),
             QuotaService(), tenantContext, Clock, NullLogger<TenantInvitationService>.Instance);

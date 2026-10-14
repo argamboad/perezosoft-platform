@@ -256,7 +256,8 @@ The email pipeline is a decorator chain: app code calls `IEmailSender` → resol
 `OutboxEmailSender` (enqueues `"email"` + flushes) → dispatcher → `EmailOutboxHandler` →
 keyed `IEmailSender("smtp")` = `SmtpEmailSender` (MailKit). The keyed registration is what stops
 the handler from resolving its own decorator. Templates: `BrandedEmail` (localized via explicit
-`CultureInfo`, logo embedded by CID). File attachments (`EmailAttachment`, JOBS-4) travel base64
+`CultureInfo`, logo embedded by CID; one per host, built from `PlatformOptions.Brand` — name, palette, logo, and the
+app's string tables ahead of the platform's, one culture at a time, Pkg 3.9). File attachments (`EmailAttachment`, JOBS-4) travel base64
 inside the `"email"` payload; `EmailAttachment.Validate` (7 MiB raw total incl. inline images — 10 MiB on the wire — ≤ 20 parts, safe base name, strict type/subtype)
 runs before the enqueue and again in `SmtpEmailSender`, which adds them as MIME attachment parts.
 

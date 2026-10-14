@@ -39,9 +39,6 @@
     { "glob": "platform-ownership.App.json", "class": "app" },
 
     { "glob": "src/Host/Persistence/Migrations/**", "class": "adapts" },
-    { "glob": "src/Infrastructure/Email/BrandedEmail.cs", "class": "adapts" },
-    { "glob": "src/Infrastructure/Email/Assets/**", "class": "adapts" },
-    { "glob": "src/Infrastructure/Email/EmailStrings*.resx", "class": "adapts" },
     { "glob": "src/Host/appsettings*.json", "class": "adapts" },
     { "glob": "src/Host/Properties/launchSettings.json", "class": "adapts" },
     { "glob": "src/Api/*.csproj", "class": "adapts" },

@@ -41,9 +41,9 @@ _TODO_ — full context in `docs/PROJECT_BRIEF.md`.
 - Changing a settled decision → add a new dated ADR in `docs/DECISIONS.md`; don't silently
   reverse it.
 - Rebranding (name, logo, colours, tagline) → follow **`docs/REBRANDING.md`** and complete every
-  item. It explicitly covers the **transactional email templates** (`src/Infrastructure/Email/` —
-  `BrandedEmail.cs` + `Assets/logo.png`), which are inline and easy to miss; a rebrand that skips
-  them is incomplete.
+  item. It explicitly covers the **transactional email templates** — packaged since Pkg 3.9 and branded
+  through `PlatformOptions.Brand` in `AppComposition.ConfigurePlatform` (name, tagline, colours, logo, copy
+  overrides; REBRANDING §4a), which are easy to miss; a rebrand that skips them is incomplete.
 
 ## Golden rules — constant (do not violate)
 1. **Tenant-scoped, not user-scoped.** App data belongs to the tenant; never leak across tenants.

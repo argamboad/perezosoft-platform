@@ -60,6 +60,7 @@ public class TenantInvitationService(
     ITokenHasher tokenHasher,
     IUnitOfWork unitOfWork,
     IEmailSender emailSender,
+    BrandedEmail emails,
     IUserService userService,
     IApplicationSettings appSettings,
     IInvitationSettings invitationSettings,
@@ -277,7 +278,7 @@ public class TenantInvitationService(
         {
             // Invites go out in the inviter's saved language (the recipient may have no account).
             var inviter = await userService.GetUserByIdAsync(inviterUserId, cancellationToken);
-            var emailBody = BrandedEmail.Invitation(joinUrl, rawToken, BrandedEmail.ResolveCulture(inviter?.Locale));
+            var emailBody = emails.Invitation(joinUrl, rawToken, BrandedEmail.ResolveCulture(inviter?.Locale));
             await emailSender.SendAsync(email, emailBody.Subject, emailBody.Html, emailBody.InlineImages, cancellationToken: cancellationToken);
         }
         catch (Exception ex)

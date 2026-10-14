@@ -132,7 +132,7 @@ public class NotificationFanOutTests(PostgresFixture fixture) : PostgresTestBase
 
     private static NotificationService NewService(AppDbContext db, IEmailSender? email = null) =>
         new(new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-            new UserRepository(db), email ?? new CapturingEmailSender(), TimeProvider.System);
+            new UserRepository(db), email ?? new CapturingEmailSender(), TestEmails.Default, TimeProvider.System);
 
     private async Task<Guid> SeedUserAsync(AppDbContext db)
     {

@@ -24,4 +24,10 @@ public sealed class PlatformOptions
     /// permission. The platform's rows cannot be loosened here.
     /// </summary>
     public PermissionRegistry Permissions { get; } = new();
+
+    /// <summary>
+    /// The app's brand in what the platform sends (Pkg 3.9): name, tagline, palette, logo and the email copy overrides.
+    /// Starts as the platform's brand.
+    /// </summary>
+    public PlatformBrand Brand { get; } = new();
 }

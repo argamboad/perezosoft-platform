@@ -5,6 +5,7 @@ using Perezosoft.Core;
 using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Authorization;
 using Perezosoft.Core.Billing;
+using Perezosoft.Infrastructure.Email;
 
 namespace Perezosoft.Api.Configuration;
 
@@ -27,6 +28,7 @@ public static class ServiceRegistrationExtensions
         services.AddSingleton(options);
         services.AddSingleton(new PlanCatalog(options.Plans));
         services.AddSingleton(new RolePermissions(options.Permissions));
+        services.AddSingleton(new BrandedEmail(options.Brand));
         return services;
     }
 

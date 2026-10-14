@@ -397,7 +397,7 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
         await using var db = Fixture.CreateContext();
         var notifications = new NotificationService(
             new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-            new UserRepository(db), new CapturingEmailSender(), TimeProvider.System);
+            new UserRepository(db), new CapturingEmailSender(), TestEmails.Default, TimeProvider.System);
         var handler = new AdminBroadcastOutboxHandler(new UserRepository(db), notifications);
 
         await handler.HandleAsync(new OutboxMessage
@@ -441,7 +441,7 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
             await using var db = Fixture.CreateContext();
             var handler = new AdminBroadcastOutboxHandler(new UserRepository(db), new NotificationService(
                 new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-                new UserRepository(db), _email, TimeProvider.System));
+                new UserRepository(db), _email, TestEmails.Default, TimeProvider.System));
             return await new Perezosoft.Infrastructure.Outbox.OutboxProcessor(
                 db, [handler], TimeProvider.System, new Perezosoft.Infrastructure.Outbox.OutboxOptions(),
                 NullLogger<Perezosoft.Infrastructure.Outbox.OutboxProcessor>.Instance).ProcessDueAsync();
@@ -741,7 +741,7 @@ public class AdminControllerTests(PostgresFixture fixture) : PostgresTestBase(fi
         var staff = new PlatformStaffService(new UserRepository(db), Options.Create(new PlatformAdminSettings { StaffEmails = [StaffEmail] }));
         var notifications = new NotificationService(
             new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-            new UserRepository(db), _email, TimeProvider.System);
+            new UserRepository(db), _email, TestEmails.Default, TimeProvider.System);
         var mfaService = new MfaService(
             new EfRepository<UserMfa>(db), new EfRepository<MfaRecoveryCode>(db), new UserRepository(db),
             new EphemeralDataProtectionProvider(), new RecoveryCodeHasher(new TestJwtSettings()), new TestMfaSettings(), TimeProvider.System);

@@ -148,15 +148,20 @@
 - `tests/Api.Tests/CookieServiceTests.cs`
 - `tests/Api.Tests/SessionServiceTests.cs`
 
-## 2.3 — Email I — the IEmailSender seam (9 files)
+## 2.3 — Email I — the IEmailSender seam (14 files)
 
 - `src/Core/Abstractions/IEmailSender.cs` — the ONLY way to send email
+- `src/Core/PlatformBrand.cs` — the mails' brand as a host option: name, tagline, palette, logo, string overrides (Pkg 3.9)
 - `src/Infrastructure/Email/Assets/logo.png`
-- `src/Infrastructure/Email/BrandedEmail.cs` — inline-branded templates — the rebrand trap
+- `src/Infrastructure/Email/BrandedEmail.cs` — inline-branded templates — the rebrand trap; branded from PlatformOptions.Brand since Pkg 3.9
 - `src/Infrastructure/Email/EmailStrings.resx` — localized in 3.5
 - `src/Infrastructure/Email/SmtpEmailSender.cs` — MailKit quarantined here
 - `src/Infrastructure/Email/SmtpSettings.cs`
+- `tests/Api.Tests/Email/BrandedEmailTests.cs` — default brand = the platform's; an app brand renders; the app's strings win one culture at a time (Pkg 3.9)
+- `tests/Api.Tests/Email/ScratchAppEmailStrings.es.resx` — a scratch app's partial string overrides, for BrandedEmailTests (Pkg 3.9)
+- `tests/Api.Tests/Email/ScratchAppEmailStrings.resx` — a scratch app's partial string overrides, for BrandedEmailTests (Pkg 3.9)
 - `tests/Api.Tests/Email/SmtpMessageBuilderTests.cs` — MIME shape: CID images + attachment parts (JOBS-4)
+- `tests/Api.Tests/Infrastructure/TestEmails.cs` — the mails a default host builds (Pkg 3.9)
 - `tests/Api.Tests/SmtpSettingsTests.cs` — incl. the SMTP-revocation knob (PR #125)
 - `tests/Core.Tests/EmailAttachmentTests.cs` — attachment guard: 7 MiB raw total incl. inline images (10 MiB on the wire), ≤ 20 parts, strict type/subtype, safe base name (JOBS-4, v4 T40)
 
@@ -1416,4 +1421,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1249 tracked files · 873 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1254 tracked files · 878 built in lessons · 376 bucketed · 0 unmapped

@@ -96,5 +96,5 @@ public class BillingWebhookControllerTests(PostgresFixture fixture) : PostgresTe
             new TenantRepository(db),
             new NotificationService(
                 new EfRepository<Notification>(db), new EfRepository<NotificationPreference>(db),
-                new UserRepository(db), new NoopEmailSender(), TimeProvider.System));
+                new UserRepository(db), new NoopEmailSender(), TestEmails.Default, TimeProvider.System));
 }

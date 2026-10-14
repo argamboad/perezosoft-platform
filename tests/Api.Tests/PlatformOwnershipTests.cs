@@ -41,6 +41,10 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
         Assert.Equal(Class.Platform, Classify("src/Host/Program.cs", rules));
         Assert.Equal(Class.Platform, Classify("src/Infrastructure/Persistence/PlatformDbContext.cs", rules));
         Assert.Equal(Class.Platform, Classify("src/Host/Persistence/AppDbContext.cs", rules));
+        // Pkg 3.9: the mails are the package's, branded through PlatformOptions.Brand — no longer a file an app edits.
+        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/BrandedEmail.cs", rules));
+        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/Assets/logo.png", rules));
+        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/EmailStrings.es.resx", rules));
         Assert.Equal(Class.Adapts, Classify("src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs", rules));
         Assert.Equal(Class.Platform, Classify("tests/Api.Tests/ArchitectureTests.cs", rules));
         Assert.Equal(Class.Platform, Classify("docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md", rules));
