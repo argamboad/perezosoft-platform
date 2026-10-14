@@ -20,12 +20,29 @@ public static class RouteTableGuard
 {
     private const string AnyMethod = "*";
 
+    /// <summary>
+    /// The platform's route surfaces (Pkg 3.10): no app prefix may equal one, sit inside one or cover one. Declared rather
+    /// than read from the route table because a gate leaves some unmapped (billing, the public API, webhooks) — an app that
+    /// claimed one while its gate was off would break the day the gate opened. <c>PlatformPrefixCoverageTests</c> holds this
+    /// list to the platform's real route table with every gate on.
+    /// </summary>
+    public static IReadOnlyList<string> PlatformPrefixes { get; } =
+    [
+        "/api/admin", "/api/apikeys", "/api/auth", "/api/billing", "/api/features", "/api/files", "/api/household",
+        "/api/notifications", "/api/public", "/api/version", "/api/webhooks", "/health",
+    ];
+
+    /// <summary>A route prefix as routing compares it: a leading slash, no trailing one, lower case.</summary>
+    public static string NormalizePrefix(string prefix) => "/" + prefix.Trim().Trim('/').ToLowerInvariant();
+
     public static void EnsureUnique(IEnumerable<Endpoint> endpoints)
     {
         var claimed = new Dictionary<(string Pattern, int Order, string Method), RouteEndpoint>();
         var collisions = new List<string>();
+        var routeEndpoints = endpoints.OfType<RouteEndpoint>().ToList();
+        collisions.AddRange(PrefixProblems(routeEndpoints));
 
-        foreach (var endpoint in endpoints.OfType<RouteEndpoint>())
+        foreach (var endpoint in routeEndpoints)
         {
             var pattern = Shape(endpoint.RoutePattern);
             var methods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods is { Count: > 0 } m
@@ -51,9 +68,25 @@ public static class RouteTableGuard
 
         if (collisions.Count > 0)
             throw new InvalidOperationException(
-                "Duplicate routes: every request to these would fail with AmbiguousMatchException. " +
-                string.Join("; ", collisions.Distinct()));
+                "Duplicate routes: every request to these would fail with AmbiguousMatchException, or a prefix is claimed " +
+                "twice or on a platform surface. " + string.Join("; ", collisions.Distinct()));
     }
+
+    // The app's prefixes, as its feature groups registered them (AppRouteGroup metadata, one instance per group): two groups
+    // on one prefix, or a prefix on a platform surface, own each other's routes even before two of them collide exactly.
+    private static IEnumerable<string> PrefixProblems(List<RouteEndpoint> endpoints)
+    {
+        var groups = endpoints.Select(e => e.Metadata.GetMetadata<AppRouteGroup>()).OfType<AppRouteGroup>().Distinct().ToList();
+        foreach (var shared in groups.GroupBy(g => g.Prefix).Where(g => g.Count() > 1))
+            yield return $"{shared.Key}: two feature groups claim this prefix (two slices would own each other's routes)";
+
+        foreach (var prefix in groups.Select(g => g.Prefix).Distinct())
+            foreach (var surface in PlatformPrefixes.Where(p => Overlaps(prefix, p)))
+                yield return $"{prefix}: an app prefix on the platform surface {surface} — choose a prefix of the app's own";
+    }
+
+    private static bool Overlaps(string a, string b) =>
+        a == b || a.StartsWith(b + "/", StringComparison.Ordinal) || b.StartsWith(a + "/", StringComparison.Ordinal);
 
     // The pattern as routing sees it: literals case-insensitive, parameters by kind and constraints, not by name.
     private static string Shape(RoutePattern pattern)

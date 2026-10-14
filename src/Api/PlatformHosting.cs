@@ -33,7 +33,7 @@ public static class PlatformHosting
         where TContext : PlatformDbContext
     {
         // The host's options first (Pkg 3.7): everything below that is shaped by them reads the registered instance.
-        builder.Services.AddPlatformOptions(configure);
+        var platformOptions = builder.Services.AddPlatformOptions(configure);
 
         // The platform's configuration defaults (Pkg 3.4), shipped inside this package: the lowest source, so the host's
         // appsettings*.json, user secrets, environment variables and the command line all override them. First, so every
@@ -60,7 +60,7 @@ public static class PlatformHosting
 
         // The platform's controllers live in Perezosoft.Api, a library (Pkg 3.2): added as an application part by name, not left
         // to MVC's discovery of referenced assemblies, so a host that references the package gets exactly them.
-        builder.Services.AddControllers(o => o.Conventions.Add(new BillingGateConvention(billingSettings)))
+        builder.Services.AddControllers(o => o.Conventions.Add(new BillingGateConvention(billingSettings, platformOptions.BillingGatedControllers)))
             .AddApplicationPart(typeof(BillingGateConvention).Assembly);
 
         // GATES-2 (ADR-027): the signup green list. Empty ⇒ open, which is the right default for a template but
@@ -218,6 +218,10 @@ public static class PlatformHosting
     /// </summary>
     public static async Task<WebApplication> MapPlatformAsync(this WebApplication app)
     {
+        // Every registration has run by now, the app's included (Pkg 3.10): refuse to start if one replaced a platform
+        // authorization policy — that would loosen every platform route at once, silently.
+        AuthPolicies.EnsurePlatformPoliciesIntact(app.Services);
+
         var billingSettings = app.Services.GetRequiredService<BillingSettings>();
         var signupSettings = app.Services.GetRequiredService<SignupSettings>();
         var publicApiSettings = app.Services.GetRequiredService<PublicApiSettings>();

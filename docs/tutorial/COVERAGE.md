@@ -530,7 +530,7 @@
 - `src/Infrastructure/Persistence/Configurations/AuditEventConfiguration.cs`
 - `tests/Api.Tests/AuditLogTests.cs`
 
-## 5.1 — Billing abstraction & entitlements (30 files)
+## 5.1 — Billing abstraction & entitlements (31 files)
 
 - `src/Api/Configuration/BillingGateConvention.cs` — GATES-1: drops the billing controllers from the application model so gated-off routes 404
 - `src/Api/Configuration/BillingSettings.cs` — GATES-1 config gate, default OFF
@@ -549,6 +549,7 @@
 - `src/Infrastructure/Billing/FakeBillingProvider.cs` — throws outside Development (R1)
 - `src/Infrastructure/Persistence/Configurations/SubscriptionConfiguration.cs`
 - `src/Shared.Ui/Pages/Billing.razor` — BILLING-8 billing summary page
+- `tests/Api.Tests/Billing/AppBillingGateTests.cs` — an app's own billing-only controller follows the gate (Pkg 3.10)
 - `tests/Api.Tests/Billing/BillingControllerTests.cs`
 - `tests/Api.Tests/Billing/BillingGateTests.cs` — GATES-1
 - `tests/Api.Tests/Billing/BillingPostureCheckTests.cs` — the posture warning: counts live Stripe-managed rows, silent with the gate on (v4 T46)
@@ -751,9 +752,11 @@
 - `tests/Core.Tests/Auth/ImpersonationIdentityTests.cs` — client identity swap raises AuthService.IdentityChanged so the header re-sources on impersonate
 - `tests/E2E.Tests/AnnouncementJourneyTests.cs` — ADMIN-3 announce -> NOTIFY fan-out
 
-## 8.1 — Single-origin hosting (5 files)
+## 8.1 — Single-origin hosting (7 files)
 
 - `src/Api/Configuration/ProxyForwardingExtensions.cs` — config-gated forwarded headers
+- `tests/Api.Tests/Hosting/AppPolicyTests.cs`
+- `tests/Api.Tests/Hosting/AppRoutePrefixTests.cs`
 - `tests/Api.Tests/Hosting/ProxyForwardingTests.cs`
 - `tests/Api.Tests/Hosting/RouteTableGuardTests.cs`
 - `tests/Api.Tests/Infrastructure/TempWebRoot.cs`
@@ -1421,4 +1424,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1254 tracked files · 878 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1257 tracked files · 881 built in lessons · 376 bucketed · 0 unmapped

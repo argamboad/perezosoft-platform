@@ -51,7 +51,13 @@ tenancy, the global tenant query filter, email, persistence); features bolt on a
   policy so a slice can't forget auth), called from `app.Map<Feature>()` in `AppComposition.MapAppEndpoints`. Gate
   individual endpoints with the **`.RequirePermission(Permission.X)`** (→ 403; ADR-009) and
   **`.RequireEntitlement(...)`** (→ 402; ADR-006) endpoint filters as needed. Features are minimal-API
-  groups; the platform stays controllers.
+  groups; the platform stays controllers. The group call is also the slice's **prefix registration** (Pkg 3.10): at
+  boot `RouteTableGuard` refuses two groups on one prefix, or a prefix on a platform surface (`/api/household`,
+  `/api/billing`… — `RouteTableGuard.PlatformPrefixes`, gated surfaces included). An app's own authorization policy is
+  `services.AddAppPolicy("ProjectsEditor", p => ...)` in `AddAppServices` (a platform policy's name is refused, and
+  the host refuses to boot if one was replaced), then `.RequireAuthorization("ProjectsEditor")` on the group. An app
+  controller that should exist only while billing is on goes in `options.BillingGatedControllers` in
+  `AppComposition.ConfigurePlatform`.
 - `<Feature>Handler.cs` — the orchestration/logic; injects `IRepository<T>` (whose `Query()` is
   already tenant-filtered), `ICurrentTenant`, `IUnitOfWork`, and platform services as needed.
 - `<Feature>Models.cs` — request/response DTOs + validation, co-located.

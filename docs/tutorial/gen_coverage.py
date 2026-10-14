@@ -421,6 +421,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/Configuration/BillingGateConvention.cs", "5.1", "GATES-1: drops the billing controllers from the application model so gated-off routes 404"),
     ("src/Api/Controllers/FeaturesController.cs", "5.1", "GATES-1: anonymous report of which gates are open, so the client can hide the billing link"),
     ("tests/Api.Tests/Billing/BillingGateTests.cs", "5.1", "GATES-1"),
+    ("tests/Api.Tests/Billing/AppBillingGateTests.cs", "5.1", "an app's own billing-only controller follows the gate (Pkg 3.10)"),
     ("tests/E2E.Tests/GateJourneyTests.cs", "5.1", "GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48"),
     ("tests/Api.Tests/Billing/PlanCatalogTests.cs", "5.1", "GATES-1 pins the catalog's fail-closed Free fallback"),
     ("tests/Api.Tests/Integration/FeaturesEndpointTests.cs", "5.1", "GATES-1"),

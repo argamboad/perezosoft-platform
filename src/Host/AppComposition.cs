@@ -26,6 +26,7 @@ public static class AppComposition
         //   options.Brand.Name = "Vuelto"; options.Brand.Colors.Primary = "#1f6f8b"; options.Brand.Logo = <PNG bytes>;
         //   options.Brand.Strings.Add(new ResourceManager("Vuelto.Host.Email.EmailStrings", typeof(AppComposition).Assembly));
         //   options.Permissions.Add(new Permission("ManageProjects"), TenantRoles.Admin);
+        //   options.BillingGatedControllers.Add(typeof(ProReportsController));   // exists only while Billing:Enabled
     }
 
     /// <summary>Registers every slice's services. Behind each slice's own <c>Enabled</c> setting where it has one.</summary>

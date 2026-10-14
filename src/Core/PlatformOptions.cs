@@ -30,4 +30,11 @@ public sealed class PlatformOptions
     /// Starts as the platform's brand.
     /// </summary>
     public PlatformBrand Brand { get; } = new();
+
+    /// <summary>
+    /// The app's controllers that exist only while billing is on (Pkg 3.10, GATES-1): with <c>Billing:Enabled</c> off they
+    /// drop out of the application model like the platform's billing surface, so their routes answer 404. Empty by
+    /// default; each must be an MVC controller (the host refuses anything else at startup).
+    /// </summary>
+    public ISet<Type> BillingGatedControllers { get; } = new HashSet<Type>();
 }

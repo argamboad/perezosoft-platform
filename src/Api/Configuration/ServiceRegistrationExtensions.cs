@@ -20,8 +20,10 @@ public static class ServiceRegistrationExtensions
     /// The host's options (Pkg 3.7, ADR-034 §4): <see cref="PlatformOptions"/> is built from the platform's defaults, handed to
     /// the host's <paramref name="configure"/> once, and registered as a singleton; the objects the platform derives from it
     /// are built here too, so a bad option (a plan list without Free) stops the host at startup, not at the first request.
+    /// Returns the options, for the registrations that read them while the host is still being built (the billing gate's
+    /// controller convention, Pkg 3.10).
     /// </summary>
-    public static IServiceCollection AddPlatformOptions(this IServiceCollection services, Action<PlatformOptions>? configure = null)
+    public static PlatformOptions AddPlatformOptions(this IServiceCollection services, Action<PlatformOptions>? configure = null)
     {
         var options = new PlatformOptions();
         configure?.Invoke(options);
@@ -29,7 +31,7 @@ public static class ServiceRegistrationExtensions
         services.AddSingleton(new PlanCatalog(options.Plans));
         services.AddSingleton(new RolePermissions(options.Permissions));
         services.AddSingleton(new BrandedEmail(options.Brand));
-        return services;
+        return options;
     }
 
     /// <summary>Auth services.</summary>
