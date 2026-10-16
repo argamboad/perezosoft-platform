@@ -48,7 +48,7 @@ The platform is **feature-complete and continuously verified**:
 1. **Prep:** `git pull` on develop. Open `docs/QA_TEST_GUIDE.pdf` (walkthroughs) and
    `docs/QA_RUN_LOG.pdf` (the sheet to mark Pass/Fail per case).
 2. **Stack:** `docker compose up -d db mail`, then
-   `dotnet run --project src/Api --launch-profile https`. Mailpit UI (OTP emails):
+   `dotnet run --project src/Host --launch-profile https`. Mailpit UI (OTP emails):
    <http://localhost:8025>.
 3. **Windows:** `dotnet build src/Maui -f net10.0-windows10.0.19041.0 -t:Run`.
    Minimum = the §13c checklist column (DSK-01, DSK-03, DSK-06 + one of DSK-08..12); ideal =
@@ -137,7 +137,7 @@ toolchain instead.
    to the CA-signed cert (Phase 4 step 2 explains why the dev cert can't work there); Kestrel is
    pointed at it via two `Kestrel__Certificates__Default__Path/KeyPath` lines in `.env`. For a
    Catalyst/web-only session, `dotnet dev-certs https --trust` (keychain password prompt) is enough.
-4. Start the API: `dotnet run --project src/Api --launch-profile https`. Verify
+4. Start the API: `dotnet run --project src/Host --launch-profile https`. Verify
    <https://localhost:7160/health> returns Healthy; Mailpit UI at <http://localhost:8025>.
 
 ### Phase 3 — Mac Catalyst first (it's the easy one)

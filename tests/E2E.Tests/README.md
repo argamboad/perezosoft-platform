@@ -32,7 +32,7 @@ the script does.
    it back for the test run** via command-line args (command-line config beats `.env`, and
    leaves `.env` untouched):
    ```sh
-   dotnet run --project src/Api --launch-profile https -- \
+   dotnet run --project src/Host --launch-profile https -- \
      --Email:Smtp:Host=localhost --Email:Smtp:Port=1025 --Email:Smtp:Username= --Email:Smtp:Password= \
      --Auth:RateLimit:PasswordlessPermitLimit=1000 \
      --Auth:RateLimit:RefreshPermitLimit=1000 \
