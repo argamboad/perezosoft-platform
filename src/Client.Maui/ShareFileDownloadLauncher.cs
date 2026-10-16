@@ -1,7 +1,6 @@
 using Perezosoft.Client;
-using Perezosoft.Shared.Ui;
 
-namespace Perezosoft.Maui;
+namespace Perezosoft.Client.Maui;
 
 /// <summary>
 /// Native implementation (NATIVE-3): a WebView can't perform a browser download, so fetch the signed URL and hand

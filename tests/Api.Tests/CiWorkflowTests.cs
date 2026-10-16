@@ -174,7 +174,7 @@ public class CiWorkflowTests
         var m = Regex.Match(Read(Ci), @"maui=\$\(match ""\$nativefiles"" '([^']+)'\)");
         Assert.True(m.Success, "no `maui=` classifier");
         var maui = new Regex(m.Groups[1].Value);
-        foreach (var path in new[] { "src/Maui/MauiProgram.cs", "src/Shared.Ui/Pages/Login.razor", "src/Client/Auth/AuthService.cs", "Directory.Build.props",
+        foreach (var path in new[] { "src/Maui/MauiProgram.cs", "src/Shared.Ui/Pages/Login.razor", "src/Client/Auth/AuthService.cs", "src/Client.Maui/PlatformMauiHosting.cs", "Directory.Build.props",
                                      "Directory.Packages.props", "global.json", ".github/workflows/ci.yml",
                                      ".config/dotnet-tools.json", ".github/forbidden-licenses.json" })
             Assert.True(maui.IsMatch(path), $"{path} can break the MAUI build, so it must count as maui");

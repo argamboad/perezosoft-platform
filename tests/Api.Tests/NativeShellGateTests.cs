@@ -68,7 +68,7 @@ public class NativeShellGateTests
             .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*", SearchOption.AllDirectories))
             .Where(f => Path.GetExtension(f) is ".md" or ".ps1" or ".sh" or ".yml" or ".yaml")
             .Where(f => !f.Replace('\\', '/').Contains("/docs/audits/")) // the audit quotes what it found
-            .Append(Path.Combine(root, "src", "Maui", "ReleaseGuards.targets"))
+            .Append(Path.Combine(root, "src", "Client.Maui", "buildTransitive", "ReleaseGuards.targets"))
             .ToList();
         Assert.True(files.Count > 20, "probe: the scan found too few files");
 

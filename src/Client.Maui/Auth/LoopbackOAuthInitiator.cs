@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using Perezosoft.Client.Auth;
 
-namespace Perezosoft.Maui.Auth;
+namespace Perezosoft.Client.Maui.Auth;
 
 /// <summary>
 /// Desktop OAuth via the loopback-redirect pattern for native apps (RFC 8252 §7.3):

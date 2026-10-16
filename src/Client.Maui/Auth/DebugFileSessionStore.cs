@@ -1,7 +1,7 @@
-#if MACCATALYST && DEBUG
+#if MACCATALYST
 using Perezosoft.Client.Auth;
 
-namespace Perezosoft.Maui.Auth;
+namespace Perezosoft.Client.Maui.Auth;
 
 /// <summary>
 /// Mac Catalyst Debug-only <see cref="ISessionStore"/>. Local Debug builds are ad-hoc

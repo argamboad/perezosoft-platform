@@ -1,6 +1,6 @@
 using Perezosoft.Client.Auth;
 
-namespace Perezosoft.Maui.Auth;
+namespace Perezosoft.Client.Maui.Auth;
 
 /// <summary>
 /// <see cref="IOAuthResumeStore"/> over MAUI <see cref="Preferences"/>, so the OAuth

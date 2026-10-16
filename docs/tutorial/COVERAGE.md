@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (28 files)
+## 1.1 — Solution, projects & supply chain (29 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -34,6 +34,7 @@
 - `nuget.config` — NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)
 - `platform-packages.props` — the platform's package map: package id -> the project that packs it, read by an app's source switch (Pkg 2.4)
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
+- `src/Client.Maui/Perezosoft.Client.Maui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Client.Web/Perezosoft.Client.Web.csproj` — created here; PackageReferences added as lessons need them
 - `src/Client/Perezosoft.Client.csproj` — created here; PackageReferences added as lessons need them
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
@@ -773,7 +774,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (173 files)
+## 8.3 — The deploy pipeline & CI gates (176 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -789,6 +790,9 @@
 - `tests/ci-logic/cases/changes-classifier/build-props/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/client-is-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/client-is-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/client-is-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/course-added-file/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/course-added-file/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/course-added-file/files/added.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -990,20 +994,23 @@
 
 ## A.1 — Appendix — MAUI shells & parity (43 files)
 
+- `src/Client.Maui/AndroidSystemBarTheme.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/PlatformApp.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/PlatformMauiHosting.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/PreferencesCulturePersistence.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/ShareFileDownloadLauncher.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/buildTransitive/Perezosoft.Platform.Maui.targets` — the release guards every app's MAUI build imports (Pkg 4.3)
+- `src/Client.Maui/buildTransitive/ReleaseGuards.targets` — the release guards every app's MAUI build imports (Pkg 4.3)
 - `src/Client/AppResumeNotifier.cs` — refresh-on-resume seam (NATIVE-4 G2)
 - `src/Client/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
-- `src/Maui/App.xaml`
-- `src/Maui/App.xaml.cs`
-- `src/Maui/MainPage.xaml`
-- `src/Maui/MainPage.xaml.cs`
 - `src/Maui/MauiProgram.cs`
 - `src/Maui/Platforms/Android/AndroidManifest.xml`
-- `src/Maui/Platforms/Android/AndroidSystemBarTheme.cs`
 - `src/Maui/Platforms/Android/MainActivity.cs`
 - `src/Maui/Platforms/Android/MainApplication.cs`
 - `src/Maui/Platforms/Android/Resources/values/colors.xml`
 - `src/Maui/Platforms/Android/Resources/xml/data_extraction_rules.xml`
 - `src/Maui/Platforms/Android/Resources/xml/network_security_config.xml`
+- `src/Maui/Platforms/Android/SystemBarColors.cs`
 - `src/Maui/Platforms/Android/WebAuthenticatorCallbackActivity.cs`
 - `src/Maui/Platforms/Android/network_security_config_release.xml`
 - `src/Maui/Platforms/MacCatalyst/AppDelegate.cs`
@@ -1019,10 +1026,7 @@
 - `src/Maui/Platforms/iOS/Info.plist`
 - `src/Maui/Platforms/iOS/Program.cs`
 - `src/Maui/Platforms/iOS/Resources/PrivacyInfo.xcprivacy`
-- `src/Maui/PreferencesCulturePersistence.cs`
 - `src/Maui/Properties/launchSettings.json`
-- `src/Maui/ReleaseGuards.targets`
-- `src/Maui/ShareFileDownloadLauncher.cs`
 - `src/Maui/wwwroot/index.html`
 - `src/Shared.Ui/Components/SystemBarThemeSync.razor` — renderless: relays theme.js's applied theme to ISystemBarTheme
 - `tests/Api.Tests/NativeChromeGateTests.cs` — Android bar colours = app.css tokens; top inset applied once
@@ -1040,13 +1044,13 @@
 - `src/Api/Services/NativeAuthCodeService.cs`
 - `src/Api/Services/NativeAuthUrls.cs` — state CSRF round-trip through login→callback (v3 NAT-9)
 - `src/Api/Services/NativeRedirectPolicy.cs`
+- `src/Client.Maui/Auth/DebugFileSessionStore.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/LoopbackOAuthInitiator.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/PreferencesOAuthResumeStore.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/SecureStorageSessionStore.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/WebAuthenticatorOAuthInitiator.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
 - `src/Client/Auth/IOAuthResumeStore.cs` — OAuth resume-across-process-death seam (NATIVE-12)
 - `src/Client/Auth/OAuthResumeResult.cs` — resume outcome handed to Login/Settings (NATIVE-12)
-- `src/Maui/Auth/DebugFileSessionStore.cs`
-- `src/Maui/Auth/LoopbackOAuthInitiator.cs`
-- `src/Maui/Auth/PreferencesOAuthResumeStore.cs`
-- `src/Maui/Auth/SecureStorageSessionStore.cs`
-- `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`
 - `tests/Api.Tests/NativeAuthCodeServiceTests.cs`
 - `tests/Api.Tests/NativeAuthUrlsTests.cs`
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
@@ -1439,4 +1443,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1272 tracked files · 894 built in lessons · 378 bucketed · 0 unmapped
+**Totals:** 1276 tracked files · 898 built in lessons · 378 bucketed · 0 unmapped

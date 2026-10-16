@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The MAUI host's platform half (Pkg 4.3, ADR-034): the device session store and OAuth initiators, the Preferences
+    culture store, the share-sheet download launcher, the Android system-bar painter, the shell (PlatformApp, the
+    BlazorWebView page) and UsePlatformMaui / UsePlatformShell; buildTransitive carries the release guards into every
+    app. Published as Perezosoft.Platform.Maui; the folder and assembly say Client.Maui because src/Maui is the app's
+    host. Targets as the host does: Android anywhere, Windows on Windows, iOS and Mac Catalyst on macOS.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- No lockfile, as for the host: the TFM list is host-OS-conditional, so one committed lockfile cannot satisfy
+         locked-mode on every OS; CPM pins the versions. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Maui</PackageId>
+    <Description>Perezosoft Platform MAUI host: UsePlatformMaui and UsePlatformShell wire a Blazor Hybrid app's session, OAuth, preferences and shell to the platform client; carries the release guards.</Description>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" />
+    <!-- Its types only (BlazorWebView, RootComponent): its build assets are the APP's — they add the WebView's own
+         static web assets, and taken here as well they collide in the app's output (blazor.modules.json twice). The
+         app's MAUI host references the package itself (a register file). -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" ExcludeAssets="build;buildTransitive" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+    <PackageReference Include="Microsoft.Extensions.Localization" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\Perezosoft.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="buildTransitive\**" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+
+</Project>

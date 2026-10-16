@@ -1,7 +1,6 @@
 using Perezosoft.Client;
-using Perezosoft.Shared.Ui;
 
-namespace Perezosoft.Maui;
+namespace Perezosoft.Client.Maui;
 
 /// <summary>
 /// Native implementation: OS <see cref="Preferences"/>, because that's the only store

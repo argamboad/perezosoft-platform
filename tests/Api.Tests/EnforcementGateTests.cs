@@ -371,7 +371,7 @@ public class EnforcementGateTests
         {
             var keystorePath = Path.Combine(dir.FullName, "debug.keystore");
             if (keystore) File.WriteAllText(keystorePath, "not-a-real-keystore");
-            var targets = Path.Combine(RepoRoot(), "src", "Maui", "ReleaseGuards.targets");
+            var targets = Path.Combine(RepoRoot(), "src", "Client.Maui", "buildTransitive", "ReleaseGuards.targets");
             File.WriteAllText(Path.Combine(dir.FullName, "probe.proj"), $"""
                 <Project>
                   <PropertyGroup><TargetFramework>{tfm}</TargetFramework></PropertyGroup>
@@ -410,13 +410,19 @@ public class EnforcementGateTests
     public void ReleaseGuards_LiveInOneFile_UnderOneCondition()
     {
         // The csproj keeps none of the Release logic: three checks under three conditions is how `-c Staging`
-        // got the HTTPS-only config but no ApiBaseUrl check.
+        // got the HTTPS-only config but no ApiBaseUrl check. Since Pkg 4.3 the guards ship in Perezosoft.Platform.Maui
+        // as buildTransitive (an app gets them from the package); this host, on the project, imports the same file.
         var csproj = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Maui", "Perezosoft.Maui.csproj"));
-        Assert.Contains("<Import Project=\"ReleaseGuards.targets\" />", csproj);
+        Assert.Contains(@"<Import Project=""..\Client.Maui\buildTransitive\Perezosoft.Platform.Maui.targets"" />", csproj);
         Assert.DoesNotContain("'$(Configuration)' == 'Release'", csproj);
         Assert.DoesNotContain("$(ApiBaseUrl)", csproj);
 
-        var targets = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Maui", "ReleaseGuards.targets"));
+        var package = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Maui", "buildTransitive", "Perezosoft.Platform.Maui.targets"));
+        Assert.Contains(@"<Import Project=""$(MSBuildThisFileDirectory)ReleaseGuards.targets"" />", package);
+        var packed = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Maui", "Perezosoft.Client.Maui.csproj"));
+        Assert.Contains(@"<None Include=""buildTransitive\**"" Pack=""true"" PackagePath=""buildTransitive\"" />", packed);
+
+        var targets = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Maui", "buildTransitive", "ReleaseGuards.targets"));
         Assert.DoesNotContain("== 'Release'", targets); // != 'Debug', once
         Assert.Single(Regex.Matches(targets, @"'\$\(Configuration\)' != 'Debug'"));
     }

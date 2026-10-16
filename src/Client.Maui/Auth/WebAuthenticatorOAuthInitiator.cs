@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Authentication;
 using Perezosoft.Client.Auth;
 
-namespace Perezosoft.Maui.Auth;
+namespace Perezosoft.Client.Maui.Auth;
 
 /// <summary>
 /// OAuth via a custom-scheme <see cref="WebAuthenticator"/> flow — Android, iOS, and macCatalyst.

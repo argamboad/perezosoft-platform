@@ -21,8 +21,8 @@ pipeline; seams designed web-first (why native stays cheap); native-only fixes C
 compile + smoke CI gate across four platforms.
 
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/MauiProgram.cs`, `src/Maui/wwwroot/index.html`,
-`docs/NATIVE_PARITY.md`, `docs/MOBILE_TESTING.md`, `src/Maui/PreferencesCulturePersistence.cs`,
-`src/Maui/ShareFileDownloadLauncher.cs`, `src/Maui/Platforms/Android/MainActivity.cs`,
+`docs/NATIVE_PARITY.md`, `docs/MOBILE_TESTING.md`, `src/Client.Maui/PreferencesCulturePersistence.cs`,
+`src/Client.Maui/ShareFileDownloadLauncher.cs`, `src/Maui/Platforms/Android/MainActivity.cs`,
 `AndroidSystemBarTheme.cs` (#231), `src/Shared.Ui/Components/SystemBarThemeSync.razor`; tests
 `tests/Ui.Tests/SystemBarThemeSyncTests.cs`, `tests/Api.Tests/NativeChromeGateTests.cs`.
 
@@ -143,16 +143,17 @@ inset. So the fix is *native*: `MainActivity` pads the content by the status-bar
 the header's `env()` is 0 on every WebView and the height is never added twice. The strip behind the
 clock is the OS's, too, so no stylesheet colours it: `SystemBarThemeSync` (RCL) relays each theme
 `theme.js` applies (its `watch` hook, 3.4 §5a) to an `ISystemBarTheme` that only the Android host
-registers, and `SystemBarColors` paints the header's colour, or the page's ground on the sign-in
-screens and the boot state, which have no header (#231):
+registers, and it paints the header's colour, or the page's ground on the sign-in screens and the
+boot state, which have no header (#231). The painter is the platform's (Perezosoft.Platform.Maui, Pkg
+4.3); the colours are the app's own `SystemBarColors`, handed to it as a palette:
 
 ```csharp
-// src/Maui/Platforms/Android/AndroidSystemBarTheme.cs — follows the page's theme (SystemBarThemeSync)
-public sealed class AndroidSystemBarTheme : ISystemBarTheme
+// src/Client.Maui/AndroidSystemBarTheme.cs — follows the page's theme (SystemBarThemeSync)
+public sealed class AndroidSystemBarTheme(SystemBarPalette palette) : ISystemBarTheme
 {
     public Task ApplyAsync(string resolvedTheme, bool ground) =>
         MainThread.InvokeOnMainThreadAsync(() =>
-            SystemBarColors.Paint(Platform.CurrentActivity, resolvedTheme == "dark", ground));
+            SystemBars.Paint(Platform.CurrentActivity, palette, resolvedTheme == "dark", ground));
 }
 ```
 
@@ -164,7 +165,7 @@ the page reports its theme, `OnCreate` paints from the phone's own night mode on
 the boot state has no header. The colours are `app.css` tokens by construction:
 `NativeChromeGateTests` (`SystemBarColors_AreAppCssTokens_InEachTheme`,
 `MainActivity_CarriesNoLiteralColour`, `ThemeJs_TellsAWatcherEveryThemeItApplies`,
-`Rebranding_NamesTheAndroidSystemBars`) fails while this file disagrees with the stylesheet, and
+`Rebranding_NamesTheAndroidSystemBars`) fails while the app's `SystemBarColors` disagrees with the stylesheet, and
 `SystemBarThemeSyncTests` (Ui.Tests, bUnit) proves the relay itself —
 `WithNativeSystemBars_ItWatchesTheTheme_AndPassesEachOneOn`, `AnythingButDark_ReadsAsLight`,
 `WithNoHeader_TheBarTakesThePageGround_AndFollowsWhenThatChanges`, `OnTheWeb_ItStaysOutOfTheWay`.

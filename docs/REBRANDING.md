@@ -68,7 +68,7 @@ for f in filter(None, subprocess.check_output(["git", "ls-files", "-z"]).decode(
 - `src/Shared.Ui/Pages/Login.razor`, `Home.razor` — logo alt text + headings
 - `src/Web/wwwroot/index.html` — `<title>` + `og:title`
 - `src/Maui/wwwroot/index.html` — `<title>`
-- `src/Maui/Auth/LoopbackOAuthInitiator.cs` — the "you can close this tab" page title
+- `src/Client.Maui/Auth/LoopbackOAuthInitiator.cs` — the "you can close this tab" page title
 - **The email wordmark + tagline** — `options.Brand.Name` / `options.Brand.Tagline` in
   `AppComposition.ConfigurePlatform` (§4a; brand, not localized)
 - **Localization resources (every language!)** — the brand name + product copy live in
@@ -149,7 +149,7 @@ The palette is semantic tokens, single-sourced for web **and** all native shells
   directly; anything but a hex colour stops the host at startup.
 - **The Android system bars** — `src/Maui/Platforms/Android/Resources/values/colors.xml` (the theme's
   `colorPrimary`/`colorAccent` = `--bs-primary`, `colorPrimaryDark` = `--brand-dark`) and
-  `SystemBarColors` in `src/Maui/Platforms/Android/AndroidSystemBarTheme.cs`, whose `Light`/`Dark` must
+  `SystemBarColors` in `src/Maui/Platforms/Android/SystemBarColors.cs`, whose `Light`/`Dark` must
   equal the header's background in each theme (here `--bs-primary` in both; if your header takes a
   different surface per theme, use those) and `LightGround`/`DarkGround` app.css's `--app-bg` in each
   theme. The status bar is drawn by the OS above the header (or above the bare page on the sign-in

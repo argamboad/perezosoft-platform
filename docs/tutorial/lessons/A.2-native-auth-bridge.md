@@ -19,8 +19,8 @@ cookie transport (one API, two transports, header-selected); the OAuth-initiator
 custom-scheme); the two-HttpClient pattern (auth vs Bearer); every-platform-registers-one
 (fail-fast DI); the auth choke point reused (MFA step-up for free).
 
-**Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/Auth/SecureStorageSessionStore.cs`,
-`src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`, `LoopbackOAuthInitiator.cs`,
+**Maps to:** ADR-018, NATIVE epic · repo: `src/Client.Maui/Auth/SecureStorageSessionStore.cs`,
+`src/Client.Maui/Auth/WebAuthenticatorOAuthInitiator.cs`, `LoopbackOAuthInitiator.cs`,
 `src/Client/Auth/BearerScopedHandler.cs`, `src/Maui/MauiProgram.cs` (the API base, #230),
 `src/Api/Controllers/NativeAuthController.cs` (the exchange; `signup_not_allowed`, GATES-2).
 
@@ -50,7 +50,7 @@ and how OAuth runs (§4).
 The refresh token moves from a cookie to the **OS secure store**:
 
 ```csharp
-// src/Maui/Auth/SecureStorageSessionStore.cs
+// src/Client.Maui/Auth/SecureStorageSessionStore.cs
 public sealed class SecureStorageSessionStore : ISessionStore
 {
     public bool UsesBodyTransport => true;   // ← the refresh call carries the token in the body (§3)

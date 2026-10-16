@@ -2,7 +2,7 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
-using Perezosoft.Maui.Auth;
+using Perezosoft.Client.Maui.Auth;
 using Perezosoft.Client.Auth;
 
 namespace Perezosoft.Maui.Platforms.Android;

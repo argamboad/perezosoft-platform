@@ -379,7 +379,7 @@ Scenario: Native smoke runs on every push
 ### NATIVE-8 — Android: signed AAB/APK in CI
 
 > **2026-09-28 — the Release guards, and a Release leg in CI (v4 audit T50 — NAT-13/14/18, LB-NAT-1/2;
-> R103/R141).** The three Release-only checks moved from the csproj into `src/Maui/ReleaseGuards.targets`
+> R103/R141).** The three Release-only checks moved from the csproj into `src/Client.Maui/buildTransitive/ReleaseGuards.targets`
 > under one condition (`!= 'Debug'`): `ApiBaseUrl` trimmed, `https://`, origin-only; the APK signed through
 > `apksigner` with the store key or a debug keystore found on any host (error when none — no more silent
 > v1-only route on a Mac); the HTTPS-only network config. A workload-free MSBuild probe

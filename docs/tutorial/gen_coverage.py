@@ -663,7 +663,9 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/NativeAuthCodeServiceTests.cs", "A.2", ""),
     ("tests/Api.Tests/NativeRedirectPolicyTests.cs", "A.2", ""),
     ("tests/Api.Tests/NativeAuthUrlsTests.cs", "A.2", ""),
-    ("src/Maui/Auth/*", "A.2", ""),
+    ("src/Client.Maui/Auth/*", "A.2", "the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)"),
+    ("src/Client.Maui/buildTransitive/*", "A.1", "the release guards every app's MAUI build imports (Pkg 4.3)"),
+    ("src/Client.Maui/*", "A.1", "UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)"),
     ("src/Maui/*", "A.1", ""),
     ("tests/Api.Tests/Infrastructure/TenantPermissionGate.cs", "6.1", "test double for the permission seam"),
 

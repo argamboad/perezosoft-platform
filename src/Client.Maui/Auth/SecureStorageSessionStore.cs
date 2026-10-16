@@ -1,7 +1,7 @@
 using Microsoft.Maui.Storage;
 using Perezosoft.Client.Auth;
 
-namespace Perezosoft.Maui.Auth;
+namespace Perezosoft.Client.Maui.Auth;
 
 /// <summary>
 /// Native <see cref="ISessionStore"/>: persists the refresh token in the OS secure
