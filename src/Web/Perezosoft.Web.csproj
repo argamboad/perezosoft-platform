@@ -31,6 +31,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shared.Ui\Perezosoft.Shared.Ui.csproj" />
+    <!-- The platform's web half (Pkg 4.2): AddPlatformWeb. Downstream, the Perezosoft.Platform.Web package. -->
+    <ProjectReference Include="..\Client.Web\Perezosoft.Client.Web.csproj" />
   </ItemGroup>
 
 </Project>

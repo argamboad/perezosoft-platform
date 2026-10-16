@@ -1,6 +1,6 @@
 using Perezosoft.Client.Auth;
 
-namespace Perezosoft.Web.Http;
+namespace Perezosoft.Client.Web.Http;
 
 /// <summary>
 /// Web <see cref="ISessionStore"/>: the refresh token is an HttpOnly cookie the browser

@@ -169,18 +169,18 @@ public class CiWorkflowTests
     [Fact]
     public void MauiClassifier_CoversWhatTheAppIsBuiltFrom_AndNothingElse() // Env L29
     {
-        // src/Maui references only src/Shared.Ui, which references nothing. Reported by the `changes` job for the
+        // src/Maui references only src/Shared.Ui, which references only src/Client (Pkg 4.1). Reported by the `changes` job for the
         // record (the device legs run on request since ADR-031), and kept exact so it can gate them again.
         var m = Regex.Match(Read(Ci), @"maui=\$\(match ""\$nativefiles"" '([^']+)'\)");
         Assert.True(m.Success, "no `maui=` classifier");
         var maui = new Regex(m.Groups[1].Value);
-        foreach (var path in new[] { "src/Maui/MauiProgram.cs", "src/Shared.Ui/Pages/Login.razor", "Directory.Build.props",
+        foreach (var path in new[] { "src/Maui/MauiProgram.cs", "src/Shared.Ui/Pages/Login.razor", "src/Client/Auth/AuthService.cs", "Directory.Build.props",
                                      "Directory.Packages.props", "global.json", ".github/workflows/ci.yml",
                                      ".config/dotnet-tools.json", ".github/forbidden-licenses.json" })
             Assert.True(maui.IsMatch(path), $"{path} can break the MAUI build, so it must count as maui");
         foreach (var path in new[] { "src/Host/Program.cs", "src/Core/Entities/Tenant.cs", "src/Infrastructure/Email/BrandedEmail.cs",
-                                     "src/Web/Program.cs", "tests/Api.Tests/AuthTests.cs", "tests/E2E.Tests/Journeys.cs", "docs/notes/not-a-real-doc.md" })
-            Assert.False(maui.IsMatch(path), $"{path} cannot affect the MAUI app (it references only Shared.Ui)");
+                                     "src/Web/Program.cs", "src/Client.Web/PlatformWebHosting.cs", "tests/Api.Tests/AuthTests.cs", "tests/E2E.Tests/Journeys.cs", "docs/notes/not-a-real-doc.md" })
+            Assert.False(maui.IsMatch(path), $"{path} cannot affect the MAUI app (it references only Shared.Ui and, through it, Client)");
     }
 
     [Fact]
