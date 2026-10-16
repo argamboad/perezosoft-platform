@@ -1,5 +1,6 @@
 exit 0
 +tag=v1.0.0-alpha.1
 +prerelease=true
-+pack=Perezosoft.slnx
++pack=packages
+-slnx
 +dry=false

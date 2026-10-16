@@ -1,0 +1,6 @@
+exit 0
++pack src/Core/Perezosoft.Core.csproj
++pack src/Infrastructure/Perezosoft.Infrastructure.csproj
++pack src/Api/Perezosoft.Api.csproj
+-dry-run
+-slnx

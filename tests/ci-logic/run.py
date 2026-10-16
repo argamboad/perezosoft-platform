@@ -100,6 +100,11 @@ def run_case(kind, name, source, case_dir):
         if os.path.exists(generator) and 'docs/tutorial/gen_coverage.py' not in listed(case_dir, 'without'):
             os.makedirs(os.path.join(work, 'docs', 'tutorial'), exist_ok=True)
             open(os.path.join(work, 'docs', 'tutorial', 'gen_coverage.py'), 'wb').write(open(generator, 'rb').read())
+        # The release's pack list reads the package map (Pkg 3.11): the real one, so the cases hold the real list. A
+        # case's files/ may overwrite it with a fixture (the empty-map case does).
+        packages = os.path.join(ROOT, 'platform-packages.props')
+        if os.path.exists(packages):
+            open(os.path.join(work, 'platform-packages.props'), 'wb').write(open(packages, 'rb').read())
         if os.path.isdir(os.path.join(case_dir, 'files')):
             copy_text_tree(os.path.join(case_dir, 'files'), work)
         stubs = os.path.join(work, '.stubs')

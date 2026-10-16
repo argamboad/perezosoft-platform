@@ -1,0 +1,3 @@
+exit 0
++pack tools/release/dry-run/Perezosoft.Platform.DryRun.csproj
+-src/Core
