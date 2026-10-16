@@ -1,0 +1,2 @@
+exit 1
++::error::platform-packages.props maps no package project to pack

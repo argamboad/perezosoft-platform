@@ -218,6 +218,17 @@ public class CiWorkflowTests
         var tag = At("push origin \"refs/tags/");
         Assert.True(plan < pack && pack < push && push < tag, "release.yml must plan, then pack, then push the packages, then push the tag");
 
+        // What is packed (Pkg 3.11): the projects platform-packages.props maps, one restore and one pack each, decided by
+        // the release-pack-list block (its cases in tests/ci-logic run against the real map). Never the solution: it holds
+        // src/Maui (net10.0-android), which the ubuntu runner cannot restore without the MAUI workload — the first real
+        // release would have died there, where the dry run (one sample project) never went.
+        var list = At("# ci-logic begin: release-pack-list");
+        Assert.True(plan < list && list < pack, "the pack list is decided after the plan and before anything is packed");
+        Assert.Contains("platform-packages.props", job, StringComparison.Ordinal);
+        Assert.Matches(@"(?m)^\s+dotnet restore ""\$p"" --locked-mode$", job);
+        Assert.Matches(@"(?m)^\s+dotnet pack ""\$p"" -c Release --no-restore -o artifacts$", job);
+        Assert.DoesNotMatch(@"(?m)^\s+(pack=|dotnet (restore|pack) )[^#\r\n]*\.sln[xf]?\b", job); // no step names a solution
+
         Assert.Contains(".github/release-note-template.md", job, StringComparison.Ordinal);
         foreach (var section in new[] { "Schema change", "Register change", "Breaking" }) // ADR-034 §7
             Assert.Contains(section, Read(".github/release-note-template.md"), StringComparison.Ordinal);

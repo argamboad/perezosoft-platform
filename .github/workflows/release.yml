@@ -6,6 +6,8 @@ name: Release
 #     at exactly that version. Prereleases (`1.0.0-alpha.1`) from develop or main; a stable version only from main.
 #   - Order: plan (the version is checked before anything is built) → tag locally → pack → push the packages to
 #     GitHub Packages → push the tag → publish the release note. A failed push leaves no tag behind.
+#   - What is packed (Pkg 3.11): the projects platform-packages.props maps, one by one, never the solution — the
+#     solution holds src/Maui (net10.0-android), which no ubuntu runner can even restore without the MAUI workload.
 #   - dry_run: packs only tools/release/dry-run (Perezosoft.Platform.DryRun) at a `-dry.` version, pushes it, restores
 #     it back the way an app would, and writes the note to the run's summary. No tag is pushed, no GitHub release.
 on:
@@ -77,7 +79,7 @@ jobs:
               develop) case "$VERSION" in *-*) ;; *) echo "::error::a stable release (no prerelease suffix) comes only from main"; exit 1 ;; esac ;;
               *) echo "::error::a release comes from develop or main, not $REF_NAME"; exit 1 ;;
             esac
-            pack=Perezosoft.slnx
+            pack=packages   # the projects of platform-packages.props, resolved by the pack step
           fi
           if git tag --list | grep -qxF "v$VERSION"; then
             echo "::error::tag v$VERSION already exists — a version is released once; pick the next one"; exit 1
@@ -108,8 +110,24 @@ jobs:
           PACK: ${{ steps.plan.outputs.pack }}
           TAG: ${{ steps.plan.outputs.tag }}
         run: |
-          dotnet restore "$PACK" --locked-mode
-          dotnet pack "$PACK" -c Release --no-restore -o artifacts
+          # ci-logic begin: release-pack-list
+          # The pack list: every project the package map names, except the dry-run sample — or the one project a dry
+          # run names. Projects, never a solution (Pkg 3.11): the solution holds src/Maui, which fails to restore here.
+          if [ "$PACK" = packages ]; then
+            projects=$(grep -o 'Source="[^"]*"' platform-packages.props | sed 's/^Source="//; s/"$//' | grep -v '^tools/release/dry-run/' || true)
+            [ -n "$projects" ] || { echo "::error::platform-packages.props maps no package project to pack"; exit 1; }
+          else
+            projects=$PACK
+          fi
+          for p in $projects; do
+            case "$p" in *.slnx|*.sln|*.slnf) echo "::error::the release packs projects, never a solution: $p"; exit 1 ;; esac
+            echo "pack $p"
+          done
+          # ci-logic end: release-pack-list
+          for p in $projects; do
+            dotnet restore "$p" --locked-mode
+            dotnet pack "$p" -c Release --no-restore -o artifacts
+          done
           ls artifacts/*.nupkg >/dev/null 2>&1 || { echo "::error::nothing was packed — no project is IsPackable yet"; exit 1; }
           # Every package carries exactly the tagged version (MinVer), or nothing is published.
           for p in artifacts/*.nupkg; do
