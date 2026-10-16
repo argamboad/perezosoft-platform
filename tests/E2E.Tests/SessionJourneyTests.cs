@@ -65,7 +65,20 @@ public class SessionJourneyTests : E2ETestBase
         // The page's clock is Playwright's: timers and Date both move when the test says so, and .NET's timers in
         // the browser are built on them. An hour passes in a moment; the server's clock is untouched, which is
         // exactly the keep-alive's job — renew BEFORE the token it holds runs out.
+        // So do the client's own deadlines (the refresh call's 20 s, HttpClient's 100 s): a jump made while an answer
+        // is still being read fires them and cancels it, and the journey would quietly test the retry path instead of
+        // the renewal (#436). Every jump below is made once the client is idle, and a cut call fails the journey.
         await Page.Clock.InstallAsync();
+        var cutShort = new List<string>();
+        Page.Console += (_, message) =>
+        {
+            if (message.Text.Contains("could not reach the server")) lock (cutShort) cutShort.Add(message.Text);
+        };
+        var inFlight = new HashSet<IRequest>();
+        Page.Request += (_, request) => { lock (inFlight) inFlight.Add(request); };
+        Page.RequestFinished += (_, request) => { lock (inFlight) inFlight.Remove(request); };
+        Page.RequestFailed += (_, request) => { lock (inFlight) inFlight.Remove(request); };
+
         await SignInToHouseholdAsync(Page, UniqueEmail("keepalive"));
         await Assertions.Expect(Page.GetByTestId("member-row")).ToHaveCountAsync(1, new() { Timeout = 30_000 });
 
@@ -77,8 +90,25 @@ public class SessionJourneyTests : E2ETestBase
 
         // The access token lasts 60 minutes and the client renews one minute before it expires.
         var renewed = Page.WaitForResponseAsync(r => r.Url.EndsWith("/api/auth/refresh") && r.Status == 200, new() { Timeout = 30_000 });
+        await NetworkIdleAsync(inFlight);
         await Page.Clock.FastForwardAsync("59:30");
-        await renewed;
+        var renewal = await renewed;
+
+        // An answer on the wire is not a renewal applied: the client may still be reading it. Come back to the household
+        // until its own load carries the renewed token (normally the first time) and has rendered.
+        var bearer = "Bearer " + (await renewal.JsonAsync())?.GetProperty("access_token").GetString();
+        for (var visit = 1; ; visit++)
+        {
+            var load = Page.WaitForRequestAsync(r => r.Method == "GET" && r.Url.EndsWith("/api/household"), new() { Timeout = 30_000 });
+            await Page.Locator("a.navbar-brand").ClickAsync();
+            await Page.GetByTestId("nav-household").ClickAsync();
+            var sent = await (await load).HeaderValueAsync("authorization");
+            await Assertions.Expect(Page.GetByTestId("member-row")).ToHaveCountAsync(1, new() { Timeout = 30_000 });
+            if (sent == bearer) break;
+            Assert.That(visit, Is.LessThan(5), "the household kept loading with the old token: the renewal arrived but was never applied");
+        }
+
+        await NetworkIdleAsync(inFlight);
         await Page.Clock.FastForwardAsync("02:00"); // past the old token's expiry
         await Page.Clock.ResumeAsync();             // let time flow again: rendering is timer-driven too
 
@@ -89,6 +119,18 @@ public class SessionJourneyTests : E2ETestBase
         await Page.GetByTestId("nav-household").ClickAsync();
         await Assertions.Expect(Page.GetByTestId("member-row")).ToHaveCountAsync(1, new() { Timeout = 30_000 });
         await Assertions.Expect(Page.GetByTestId("sign-out")).ToBeVisibleAsync();
+        lock (cutShort) Assert.That(cutShort, Is.Empty, "a call was cut short by a clock jump: the journey tested the retry path, not the renewal");
+    }
+
+    // Waits, in real time, until the page has no request on the wire: the next clock jump then cancels nothing.
+    private static async Task NetworkIdleAsync(HashSet<IRequest> inFlight)
+    {
+        for (var waited = 0; waited < 15_000; waited += 100)
+        {
+            lock (inFlight) if (inFlight.Count == 0) return;
+            await Task.Delay(100);
+        }
+        lock (inFlight) Assert.Fail("requests still in flight after 15 s: " + string.Join(", ", inFlight.Select(r => r.Url)));
     }
 
     [Test]
