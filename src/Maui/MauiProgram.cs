@@ -1,8 +1,9 @@
 ﻿using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Perezosoft.Maui.Auth;
+using Perezosoft.Client;
 using Perezosoft.Shared.Ui;
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 
 namespace Perezosoft.Maui;
 

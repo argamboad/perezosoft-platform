@@ -1,9 +1,10 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Time.Testing;
+using Perezosoft.Client;
 using Perezosoft.Shared.Ui;
 using Perezosoft.Shared.Ui.Resources;
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 
 namespace Perezosoft.Ui.Tests.Infrastructure;
 

@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 
 namespace Perezosoft.Maui.Auth;
 

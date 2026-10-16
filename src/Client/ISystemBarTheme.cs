@@ -1,4 +1,4 @@
-namespace Perezosoft.Shared.Ui;
+namespace Perezosoft.Client;
 
 /// <summary>
 /// A host whose system bars are drawn by the OS rather than the page — the Android app's status and

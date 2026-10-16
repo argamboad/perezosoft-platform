@@ -1,6 +1,6 @@
 using System.Net;
 using Xunit;
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 using Perezosoft.Ui.Tests.Infrastructure;
 
 namespace Perezosoft.Ui.Tests;

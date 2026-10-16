@@ -1,6 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 
 namespace Perezosoft.Ui.Tests.Infrastructure;
 

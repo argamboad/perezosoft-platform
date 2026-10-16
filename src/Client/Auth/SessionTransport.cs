@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>What one refresh call came back with — the wire's answer, before the session decides what it means.</summary>
 internal enum RefreshAnswerKind

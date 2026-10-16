@@ -1,4 +1,4 @@
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>What became of an OAuth flow resumed after process death (NATIVE-12).</summary>
 public enum OAuthResumeOutcome

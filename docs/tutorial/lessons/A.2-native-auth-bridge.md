@@ -21,7 +21,7 @@ custom-scheme); the two-HttpClient pattern (auth vs Bearer); every-platform-regi
 
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/Auth/SecureStorageSessionStore.cs`,
 `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`, `LoopbackOAuthInitiator.cs`,
-`src/Shared.Ui/Auth/BearerScopedHandler.cs`, `src/Maui/MauiProgram.cs` (the API base, #230),
+`src/Client/Auth/BearerScopedHandler.cs`, `src/Maui/MauiProgram.cs` (the API base, #230),
 `src/Api/Controllers/NativeAuthController.cs` (the exchange; `signup_not_allowed`, GATES-2).
 
 **Prerequisites:** 2.7 (JWT access + refresh-cookie rotation — the model being bridged), 2.5 (OAuth

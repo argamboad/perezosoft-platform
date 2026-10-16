@@ -1,4 +1,4 @@
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>
 /// The keep-alive timer of an open session (ADR-002 addendum, 2026-09-22), pulled out of

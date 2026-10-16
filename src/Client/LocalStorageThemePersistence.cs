@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 
-namespace Perezosoft.Shared.Ui;
+namespace Perezosoft.Client;
 
 /// <summary>Both hosts: the same <c>localStorage["app_theme"]</c> key the pre-paint bootstrap
 /// (<c>wwwroot/js/theme.js</c>) reads at page load.</summary>

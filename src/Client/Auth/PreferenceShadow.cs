@@ -1,4 +1,4 @@
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>
 /// A preference the user just saved to the account, which the access token in memory predates (v4 audit T57,

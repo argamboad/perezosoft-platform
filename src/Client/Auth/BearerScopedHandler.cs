@@ -1,4 +1,4 @@
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>
 /// The one bearer handler both hosts install on their default <see cref="HttpClient"/> (v4 T49, R102). It

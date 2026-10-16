@@ -1,5 +1,5 @@
 #if MACCATALYST && DEBUG
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 
 namespace Perezosoft.Maui.Auth;
 

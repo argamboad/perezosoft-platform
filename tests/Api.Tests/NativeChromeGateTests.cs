@@ -112,7 +112,7 @@ public class NativeChromeGateTests
     [Fact]
     public void ThemeJs_TellsAWatcherEveryThemeItApplies()
     {
-        var js = ReadRaw("src", "Shared.Ui", "wwwroot", "js", "theme.js");
+        var js = ReadRaw("src", "Client", "wwwroot", "js", "theme.js");
 
         Assert.Contains("watch:", js);
         Assert.Contains("unwatch:", js);

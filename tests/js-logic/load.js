@@ -1,4 +1,5 @@
-// Runs one of the RCL's wwwroot/js bootstrap files inside a stub browser (v4 audit T53, R142).
+// Runs one of the wwwroot/js bootstrap files inside a stub browser (v4 audit T53, R142): the client package's boot
+// scripts (src/Client, Pkg 4.1) or the seeded UI's page helpers (src/Shared.Ui), found by name.
 // These files are plain scripts with no module system, so each test builds the globals the file touches,
 // evaluates the real source in that sandbox, and asserts on what it did. No DOM library, no install step:
 // `node --test tests/js-logic` needs Node and nothing else.
@@ -6,13 +7,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const JS_DIR = path.join(__dirname, '..', '..', 'src', 'Shared.Ui', 'wwwroot', 'js');
+const JS_DIRS = ['Client', 'Shared.Ui'].map(project => path.join(__dirname, '..', '..', 'src', project, 'wwwroot', 'js'));
+const jsPath = file => {
+  const found = JS_DIRS.map(dir => path.join(dir, file)).filter(p => fs.existsSync(p));
+  if (found.length !== 1) throw new Error(`${file}: expected in exactly one of ${JS_DIRS.join(', ')}, found ${found.length}`);
+  return found[0];
+};
 
 /** Evaluates wwwroot/js/<file> with `globals` AS its global object (and as `window`), and returns it. */
 function load(file, globals) {
   globals.window = globals;
   vm.createContext(globals);
-  vm.runInContext(fs.readFileSync(path.join(JS_DIR, file), 'utf8'), globals, { filename: file });
+  vm.runInContext(fs.readFileSync(jsPath(file), 'utf8'), globals, { filename: file });
   return globals;
 }
 
@@ -40,4 +46,4 @@ function themeGlobals({ saved = null, storageThrows = false, media = mediaStub()
   };
 }
 
-module.exports = { load, mediaStub, themeGlobals, JS_DIR };
+module.exports = { load, mediaStub, themeGlobals, jsPath };

@@ -313,12 +313,21 @@
           "Microsoft.JSInterop": "10.0.13"
         }
       },
+      "Perezosoft.Platform.Client": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.AspNetCore.Components.Authorization": "[10.0.13, )",
+          "Microsoft.AspNetCore.Components.Web": "[10.0.13, )",
+          "System.IdentityModel.Tokens.Jwt": "[8.19.1, )"
+        }
+      },
       "perezosoft.shared.ui": {
         "type": "Project",
         "dependencies": {
           "Microsoft.AspNetCore.Components.Authorization": "[10.0.13, )",
           "Microsoft.AspNetCore.Components.Web": "[10.0.13, )",
           "Microsoft.Extensions.Localization": "[10.0.13, )",
+          "Perezosoft.Platform.Client": "[1.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.19.1, )"
         }
       },

@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>
 /// Client-side authentication with refresh-token support.

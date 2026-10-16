@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Perezosoft.Client;
 using Perezosoft.Shared.Ui;
 using Perezosoft.Shared.Ui.Components;
 using Perezosoft.Ui.Tests.Infrastructure;

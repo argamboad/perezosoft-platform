@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
+using Perezosoft.Client.Auth;
 using Perezosoft.Shared.Ui.Auth;
 
 namespace Perezosoft.Core.Tests.Auth;

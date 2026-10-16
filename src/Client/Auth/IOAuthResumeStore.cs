@@ -1,4 +1,4 @@
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>
 /// A persisted "OAuth browser round-trip in flight" marker (NATIVE-12). Written just

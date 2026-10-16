@@ -435,6 +435,12 @@
           "Swashbuckle.AspNetCore": "[7.2.0, )"
         }
       },
+      "Perezosoft.Platform.Client": {
+        "type": "Project",
+        "dependencies": {
+          "System.IdentityModel.Tokens.Jwt": "[8.19.1, )"
+        }
+      },
       "Perezosoft.Platform.Core": {
         "type": "Project"
       },
@@ -456,6 +462,7 @@
       "perezosoft.shared.ui": {
         "type": "Project",
         "dependencies": {
+          "Perezosoft.Platform.Client": "[1.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.19.1, )"
         }
       },

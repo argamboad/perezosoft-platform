@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>
 /// The three cheap questions the chrome asks the server before it draws itself (v4 audit T57, pulled out of

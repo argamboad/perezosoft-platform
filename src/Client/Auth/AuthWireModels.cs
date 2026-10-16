@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 // The JSON shapes the auth client reads off the wire (snake_case). Internal to the RCL: pages never see them.
 

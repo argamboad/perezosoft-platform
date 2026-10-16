@@ -1,4 +1,4 @@
-namespace Perezosoft.Shared.Ui.Auth;
+namespace Perezosoft.Client.Auth;
 
 /// <summary>Outcome of a native primary-auth attempt: signed in, failed, or owes an MFA step-up.</summary>
 public enum SignInStatus { Success, Failed, MfaRequired }

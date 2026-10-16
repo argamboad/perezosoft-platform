@@ -11,6 +11,11 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
+  <!-- The platform's client half (Pkg 4.1): the session, the persistences, the boot scripts. Downstream, a package. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Client\Perezosoft.Client.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />

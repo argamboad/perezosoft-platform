@@ -1,7 +1,7 @@
 #if ANDROID || IOS || MACCATALYST
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Authentication;
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 
 namespace Perezosoft.Maui.Auth;
 

@@ -15,7 +15,9 @@ public class JsLogicTests
     public void EveryJsBootstrap_HasANodeTest()
     {
         var root = RepoRoot();
-        var scripts = Directory.EnumerateFiles(Path.Combine(root, "src", "Shared.Ui", "wwwroot", "js"), "*.js")
+        // Two RCLs ship scripts (Pkg 4.1): the client package its boot scripts, the seeded UI its page helpers.
+        var scripts = new[] { "Client", "Shared.Ui" }
+            .SelectMany(project => Directory.EnumerateFiles(Path.Combine(root, "src", project, "wwwroot", "js"), "*.js"))
             .Select(Path.GetFileName).Where(f => !f!.EndsWith(".min.js", StringComparison.Ordinal)).ToList(); // vendored libraries are not ours to test
         Assert.True(scripts.Count >= 3, "probe: wwwroot/js moved");
 

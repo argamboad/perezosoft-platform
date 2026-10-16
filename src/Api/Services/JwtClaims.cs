@@ -3,7 +3,7 @@ namespace Perezosoft.Api.Services;
 /// <summary>
 /// Custom JWT claim names issued by <see cref="JwtTokenService"/> and read server-side
 /// (e.g. by <c>HttpCurrentTenant</c>). These mirror
-/// <c>Perezosoft.Shared.Ui.Auth.AppClaims</c> — the client reads the same names over the
+/// <c>Perezosoft.Client.Auth.AppClaims</c> — the client reads the same names over the
 /// wire, so keep the two in sync.
 /// </summary>
 public static class JwtClaims

@@ -2,8 +2,9 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
+using Perezosoft.Client;
 using Perezosoft.Shared.Ui;
-using Perezosoft.Shared.Ui.Auth;
+using Perezosoft.Client.Auth;
 using Perezosoft.Web.Http;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

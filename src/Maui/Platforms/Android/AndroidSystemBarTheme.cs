@@ -1,5 +1,6 @@
 using Android.App;
 using AndroidX.Core.View;
+using Perezosoft.Client;
 using Perezosoft.Shared.Ui;
 
 namespace Perezosoft.Maui;
