@@ -235,6 +235,10 @@ public class CiWorkflowTests
         // (`workload restore` would read only this host's TFMs) at ci.yml's workload set, before anything is packed.
         Assert.Matches(@"(?m)^    runs-on: windows-latest$", job);
         Assert.Matches(@"(?m)^    defaults:\s+run:\s+shell: bash$", job);
+        // The push expands the files in the shell, one package per push: Windows' dotnet does not expand a quoted
+        // "artifacts/*.nupkg" (the alpha.2 run failed there), and --skip-duplicate lets a rerun finish a partial push.
+        Assert.Matches(@"(?m)^\s+for p in artifacts/\*\.nupkg; do\s+dotnet nuget push ""\$p"" --source ""\$FEED"" --api-key ""\$TOKEN"" --skip-duplicate\s+done", job);
+        Assert.DoesNotContain("dotnet nuget push \"artifacts/*.nupkg\"", job, StringComparison.Ordinal);
         var workloads = At("dotnet workload install maui-android maui-ios maui-maccatalyst maui-windows --version ");
         Assert.True(workloads < pack, "the MAUI workloads are installed before anything is packed");
         var workloadSet = Regex.Match(Read(Ci), @"dotnet workload restore src/Maui/Perezosoft\.Maui\.csproj --version (\S+)").Groups[1].Value;
