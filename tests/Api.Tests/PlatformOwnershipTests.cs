@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Text;
-using Perezosoft.Api.Tests.Architecture;
+using Perezosoft.Testing.Suites;
 using Xunit.Abstractions;
 using static Perezosoft.Testing.Architecture.PlatformOwnership;
 
@@ -13,55 +13,10 @@ namespace Perezosoft.Api.Tests;
 /// stamped platform commit) and <c>platform-stamp.json</c>; this class holds the repo to them. On the platform the stamp's
 /// commit is null and only the map gate applies. The logic is <see cref="PlatformOwnership"/>, held on fixtures here,
 /// and the tool is run for real against two scratch git repos so the PowerShell hash and the C# hash are pinned equal.
+/// The repo checks are <see cref="PlatformOwnershipSuite"/> (Pkg 5.1b), which every app inherits; the self-tests stay here.
 /// </summary>
-public class PlatformOwnershipTests(ITestOutputHelper output)
+public class PlatformOwnershipTests(ITestOutputHelper output) : PlatformOwnershipSuite(output)
 {
-    [Fact]
-    public void OwnershipMap_ClassifiesEveryTrackedFile()
-    {
-        // A file nobody classified is a file nobody owns: its author decides at birth, or this fails the platform's own build.
-        var root = RepoRoot();
-        var rules = ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
-        Assert.True(rules.Count >= 40, $"probe: {rules.Count} rules parsed");
-        // An app's own top-level folders (jigger-jot's seed/) are classed in its half of the map, after the platform's rules.
-        var appMap = Path.Combine(root, "platform-ownership.App.json");
-        if (File.Exists(appMap)) rules = [.. rules, .. ParseRules(File.ReadAllText(appMap))];
-        var tracked = Git(root, "ls-files").Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).ToList();
-        Assert.True(tracked.Count > 500, $"probe: git ls-files returned {tracked.Count} paths");
-
-        var unclassified = tracked.Where(p => Classify(p, rules) is null).Order().ToList();
-        Assert.True(unclassified.Count == 0, "tracked files with no ownership class — add a rule to platform-ownership.json (an app: platform-ownership.App.json): " + string.Join(", ", unclassified));
-
-        // The decisions of the Architecture milestone, pinned: the A1 seams are the app's, the composition files the platform's,
-        // the UI the app's (#368), the rules file the platform's.
-        Assert.Equal(Class.App, Classify("src/Host/AppComposition.cs", rules));
-        Assert.Equal(Class.App, Classify("src/Host/Persistence/AppDbContext.App.cs", rules));
-        Assert.Equal(Class.App, Classify("tests/Api.Tests/App/AppAllowlists.cs", rules));
-        Assert.Equal(Class.App, Classify("src/Host/Features/Budget/BudgetHandler.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Host/Program.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Persistence/PlatformDbContext.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Host/Persistence/AppDbContext.cs", rules));
-        // Pkg 3.9: the mails are the package's, branded through PlatformOptions.Brand — no longer a file an app edits.
-        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/BrandedEmail.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/Assets/logo.png", rules));
-        Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/EmailStrings.es.resx", rules));
-        Assert.Equal(Class.Adapts, Classify("src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs", rules));
-        Assert.Equal(Class.Platform, Classify("tests/Api.Tests/ArchitectureTests.cs", rules));
-        Assert.Equal(Class.Platform, Classify("docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md", rules));
-        Assert.Equal(Class.Adapts, Classify("src/Shared.Ui/Pages/Household.razor", rules));
-        Assert.Equal(Class.Adapts, Classify("tests/E2E.Tests/SessionJourneyTests.cs", rules));
-        Assert.Equal(Class.Adapts, Classify(".github/workflows/ci.yml", rules));
-        Assert.Equal(Class.Sample, Classify("src/Host/Features/Notes/NotesHandler.cs", rules));
-        // Pkg 2.5: the release machinery is the publisher's alone — never ported, never demanded downstream.
-        foreach (var producer in new[] { ".github/workflows/release.yml", ".github/release-note-template.md", "tools/release/dry-run/DryRun.cs",
-                                         "tests/ci-logic/cases/release-plan/dry-run/env", "platform-packages.props" })
-            Assert.Equal(Class.Producer, Classify(producer, rules));
-        // ...and the brand map never renames the platform's package ids or its feed key (ADR-034).
-        var keep = ParseKeep(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
-        Assert.Contains("Perezosoft.Platform.", keep);
-        Assert.Contains("key=\"perezosoft\"", keep);
-    }
-
     [Fact]
     public void ProducerFiles_ExistInThePlatform_AndNowhereElseAreDemanded()
     {
@@ -83,43 +38,6 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
     {
         Assert.Equal("tools/Acme.Tool/Perezosoft.Platform.Core.csproj",
             LocalPath("tools/Perezosoft.Tool/Perezosoft.Platform.Core.csproj", Brand, ["Perezosoft.Platform."]));
-    }
-
-    [Fact]
-    public void PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted()
-    {
-        var root = RepoRoot();
-        var (stampCommit, brand) = ParseStamp(File.ReadAllText(Path.Combine(root, "platform-stamp.json")));
-        var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
-        if (stampCommit is null)
-        {
-            // This IS the platform: nothing to compare against, and a manifest here would be a stale artifact.
-            Assert.False(File.Exists(manifestPath), "the platform carries no platform-manifest.json; it is written downstream by the port");
-            output.WriteLine("platform-stamp.json: commit null — this is the platform; the downstream gate does not apply.");
-            return;
-        }
-        Assert.True(File.Exists(manifestPath), "platform-stamp.json names a platform commit but tests/Api.Tests/App/platform-manifest.json is missing — run tools/port-platform.ps1");
-        var (manifestCommit, entries) = ParseManifest(File.ReadAllText(manifestPath));
-        var divergences = ParseDivergences(File.ReadAllText(Path.Combine(root, "tests", "Api.Tests", "App", "PlatformDivergences.json")));
-
-        var keep = ParseKeep(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
-        var verdict = Evaluate(entries, manifestCommit, stampCommit, divergences, brand,
-            local => File.Exists(Path.Combine(root, local)) ? File.ReadAllBytes(Path.Combine(root, local)) : null, keep);
-
-        output.WriteLine($"platform {manifestCommit[..7]}: {verdict.PlatformFilesChecked} platform files checked, {divergences.Count} allowlisted divergence(s), {verdict.AdaptsDrift.Count} adapts file(s) differ:");
-        foreach (var d in verdict.AdaptsDrift) output.WriteLine("  adapts: " + d);
-        Assert.True(verdict.Failures.Count == 0, "platform files out of step with the stamped platform commit:\n  " + string.Join("\n  ", verdict.Failures));
-    }
-
-    [Fact]
-    public void PlatformStamp_MatchesTheManifest()
-    {
-        var root = RepoRoot();
-        var (stampCommit, _) = ParseStamp(File.ReadAllText(Path.Combine(root, "platform-stamp.json")));
-        var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
-        if (stampCommit is null) { Assert.False(File.Exists(manifestPath)); return; }
-        var (manifestCommit, _) = ParseManifest(File.ReadAllText(manifestPath));
-        Assert.Equal(stampCommit, manifestCommit);
     }
 
     // ── the logic, on fixtures ──
@@ -364,7 +282,7 @@ public class PlatformOwnershipTests(ITestOutputHelper output)
 
     private static string Read(string root, string rel) => File.ReadAllText(Path.Combine(root, rel)).Replace("\r\n", "\n");
 
-    private static string Git(string repo, params string[] args)
+    private static new string Git(string repo, params string[] args)
     {
         var start = new ProcessStartInfo("git") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
         start.ArgumentList.Add("-C"); start.ArgumentList.Add(repo);

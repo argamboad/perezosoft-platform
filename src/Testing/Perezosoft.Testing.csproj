@@ -27,6 +27,7 @@
     <!-- Testcontainers pulls a vulnerable SSH.NET transitively; the same pin the test projects carry. -->
     <PackageReference Include="SSH.NET" />
     <PackageReference Include="xunit.extensibility.core" />
+    <PackageReference Include="xunit.assert" />
   </ItemGroup>
 
   <ItemGroup>

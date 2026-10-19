@@ -381,11 +381,6 @@
         "resolved": "1.18.0",
         "contentHash": "OtFMHN8yqIcYP9wcVIgJrq01AfTxijjAqVDy/WeQVSyrDC1RzBWeQPztL49DN2syXRah8TYnfvk035s7L95EZQ=="
       },
-      "xunit.assert": {
-        "type": "Transitive",
-        "resolved": "2.9.3",
-        "contentHash": "/Kq28fCE7MjOV42YLVRAJzRF0WmEqsmflm0cfpMjGtzQ2lR5mYVj1/i0Y8uDAOLczkL3/jArrwehfMD0YogMAA=="
-      },
       "xunit.core": {
         "type": "Transitive",
         "resolved": "2.9.3",
@@ -462,6 +457,7 @@
           "Perezosoft.Platform.Api": "[1.0.0, )",
           "SSH.NET": "[2026.0.0, )",
           "Testcontainers.PostgreSql": "[4.12.0, )",
+          "xunit.assert": "[2.9.3, )",
           "xunit.extensibility.core": "[2.9.3, )"
         }
       },
@@ -649,6 +645,12 @@
         "requested": "[10.0.13, )",
         "resolved": "10.0.13",
         "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
+      },
+      "xunit.assert": {
+        "type": "CentralTransitive",
+        "requested": "[2.9.3, )",
+        "resolved": "2.9.3",
+        "contentHash": "/Kq28fCE7MjOV42YLVRAJzRF0WmEqsmflm0cfpMjGtzQ2lR5mYVj1/i0Y8uDAOLczkL3/jArrwehfMD0YogMAA=="
       },
       "xunit.extensibility.core": {
         "type": "CentralTransitive",

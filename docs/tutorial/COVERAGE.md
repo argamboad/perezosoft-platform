@@ -67,7 +67,7 @@
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 - `tests/Api.Tests/PlatformTestingUsings.cs` — the packaged harness's namespaces, globally (Pkg 5.1a)
 
-## 1.3 — Database & the test container (20 files)
+## 1.3 — Database & the test container (21 files)
 
 - `src/Api/PlatformDesignTimeDbContextFactory.cs` — the design-time factory every host derives from in one line (Pkg 3.5)
 - `src/Host/AppDbContextFactory.cs` — design-time factory for dotnet ef
@@ -79,6 +79,7 @@
 - `src/Testing/Harness/Concurrently.cs` — the shared concurrency runner (v4 T54, R7)
 - `src/Testing/Harness/DbFaultInjector.cs` — the database-fault + interleaving seam (v4 T54, R7)
 - `src/Testing/Harness/PlatformPostgresFixture.cs` — the database fixture, generic over the app's test context (Pkg 5.1a)
+- `src/Testing/Harness/PlatformPostgresTestBase.cs` — the reset-before-every-test base, generic over the app's test context (Pkg 5.1b)
 - `src/Testing/Harness/Recording.cs` — the recording double: forwards to the real implementation and writes down what was asked (v4 T25, R151)
 - `src/Testing/Harness/ServiceHarness.cs`
 - `src/Testing/Harness/TestWidget.cs` — the tenant-scoped fixture entities and their contributors (R9, Arch A4)
@@ -213,20 +214,19 @@
 - `src/Core/Entities/ITenantScoped.cs` — the marker the filter keys off
 - `src/Testing/Architecture/TenantHatchGuard.cs` — polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)
 - `src/Testing/Harness/TwoTenants.cs` — the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)
+- `src/Testing/Suites/PlatformTenancySuite.cs` — the leak-then-fix test, the stamping and the membership invariants — one inheritable suite (Pkg 5.1b)
 - `tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs` — an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)
 - `tests/Api.Tests/Architecture/TenantHatchGuardTests.cs`
 - `tests/Api.Tests/HttpCurrentTenantTests.cs`
 - `tests/Api.Tests/Rls/SharedOrTenantRlsTests.cs` — the four command-scoped policies as the runtime role sees them (Arch A4)
 - `tests/Api.Tests/Tenancy/SharedOrTenantTests.cs` — the shared-or-tenant shape at the EF level, on the TestSharedWidget fixture (Arch A4)
-- `tests/Api.Tests/TenantInvariantTests.cs` — every ITenantScoped entity filtered or allowlisted (R2)
-- `tests/Api.Tests/TenantScopeFilterTests.cs` — the leak-then-fix test
+- `tests/Api.Tests/TenancyTests.cs` — the platform's one-line tenancy suite (Pkg 5.1b)
 
-## 2.7 — Tenancy II — write-side stamping & EnterTenant (4 files)
+## 2.7 — Tenancy II — write-side stamping & EnterTenant (3 files)
 
 - `src/Core/Abstractions/ITenantContext.cs` — EnterTenant for system-auth writes
 - `src/Infrastructure/Persistence/TenantStampingInterceptor.cs` — write-side isolation
 - `tests/Api.Tests/EnterTenantScopingTests.cs`
-- `tests/Api.Tests/TenantStampingInterceptorTests.cs`
 
 ## 2.8 — Tenants & membership (9 files)
 
@@ -283,17 +283,21 @@
 - `tests/Api.Tests/FeatureAuthorizationTests.cs`
 - `tests/Api.Tests/NotesSliceTests.cs`
 
-## 3.3 — Injected clocks & the architecture tests (9 files)
+## 3.3 — Injected clocks & the architecture tests (13 files)
 
 - `src/Api/Endpoints/RouteTableGuard.cs` — boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)
 - `src/Testing/Architecture/RoutePrefixInspector.cs` — route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)
 - `src/Testing/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
 - `src/Testing/Architecture/SliceWriteInspector.cs` — which entities a slice writes: the matcher behind the one-writer gate (Arch A8)
+- `src/Testing/Suites/PlatformArchitectureSuite.cs` — the architecture rules as an inheritable suite: every app runs them on its own tree (Pkg 5.1b)
+- `src/Testing/Suites/PlatformCompositionSmoke.cs` — the app's real host boots, reports ready and serves a tenant call (Pkg 5.1b)
+- `src/Testing/Suites/RepoRoots.cs` — where the repo under test is, for every suite (Pkg 5.1b)
 - `tests/Api.Tests/App/AppAllowlists.cs` — the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
 - `tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs` — self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
+- `tests/Api.Tests/CompositionSmokeTests.cs` — the platform's one-line composition smoke (Pkg 5.1b)
 
 ## 3.4 — The web client & auth UI (134 files)
 
@@ -980,7 +984,7 @@
 - `tests/Api.Tests/Rls/RlsPostureGuardTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
 
-## 9.1 — Make it yours (rebrand & de-sample) (15 files)
+## 9.1 — Make it yours (rebrand & de-sample) (17 files)
 
 - `docs/brand/android_adaptive_foreground_432.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/app_store_icon_1024.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
@@ -993,6 +997,8 @@
 - `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
 - `src/Infrastructure/Persistence/platform-schema.json` — embedded in the Infrastructure package (Pkg 3.5): the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
 - `src/Testing/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
+- `src/Testing/Suites/PlatformOwnershipSuite.cs` — the map, stamp and manifest checks every app inherits (Pkg 5.1b)
+- `src/Testing/Suites/PlatformSchemaSuite.cs` — the schema parity gate as an inheritable suite (Pkg 5.1b)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
 - `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
 - `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
@@ -1450,4 +1456,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1283 tracked files · 904 built in lessons · 379 bucketed · 0 unmapped
+**Totals:** 1289 tracked files · 910 built in lessons · 379 bucketed · 0 unmapped

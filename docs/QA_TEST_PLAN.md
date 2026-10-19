@@ -1669,7 +1669,7 @@ showing the previous user's screen on a shared computer.*
 `tests/Api.Tests`, not by manual UI steps — record as **covered by automated tests** unless probing
 the API directly:
 - **Tenant write-stamping** — a new tenant-scoped row is stamped with the caller's tenant and a
-  foreign-tenant write is rejected (`TenantStampingInterceptorTests`), so reads *and* writes are
+  foreign-tenant write is rejected (`PlatformTenancySuite`, its stamping cases), so reads *and* writes are
   tenant-isolated.
 - **Refresh-token reuse detection** — replaying an already-rotated refresh token revokes all the
   user's sessions (`RefreshTokenServiceTests`, `RefreshReplayTests`) — unless it arrives within 60 s of

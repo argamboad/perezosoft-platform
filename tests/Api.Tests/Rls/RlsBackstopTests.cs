@@ -10,7 +10,7 @@ namespace Perezosoft.Api.Tests.Rls;
 /// connect as the non-privileged runtime role and prove that even queries which escaped the EF
 /// query filter (<c>IgnoreQueryFilters()</c>, raw SQL) cannot see or write another tenant's rows —
 /// and that the sanctioned escapes (the <see cref="RlsTags.CrossTenant"/> tag, the tenant-less
-/// system context) still work. The EF-level wall has its own suite (TenantScopeFilterTests etc.);
+/// system context) still work. The EF-level wall has its own suite (PlatformTenancySuite);
 /// nothing here relies on it.
 /// </summary>
 [Collection(PostgresCollection.Name)]
