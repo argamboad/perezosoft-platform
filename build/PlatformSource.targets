@@ -8,6 +8,15 @@
   <Import Project="$(_PlatformSourceDir)platform-packages.props" Condition="'$(PlatformSource)' != '' and Exists('$(_PlatformSourceDir)platform-packages.props')" />
 
   <!--
+    The MAUI release guards (Pkg 4.4). Perezosoft.Platform.Maui carries them as buildTransitive, which a project reference
+    does not carry: switched to source, an app's MAUI head would build Release without them. Import them from the checkout
+    instead — for a MAUI APPLICATION only (OutputType Exe): a -p:PlatformSource reaches the checkout's own projects too, and
+    the guards' Android resources are an app's files, not the library's.
+  -->
+  <Import Project="$(_PlatformSourceDir)src/Client.Maui/buildTransitive/Perezosoft.Platform.Maui.targets"
+          Condition="'$(PlatformSource)' != '' and '$(UseMaui)' == 'true' and '$(OutputType)' == 'Exe' and Exists('$(_PlatformSourceDir)src/Client.Maui/buildTransitive/Perezosoft.Platform.Maui.targets')" />
+
+  <!--
     Building against source changes the dependency graph, so the restore must neither fail on the committed lockfile
     nor rewrite it: switched restores lock into obj/, never in locked mode. Switch off, and the committed
     packages.lock.json is what restore checks again. Set here, not in the .props half: Directory.Build.props is

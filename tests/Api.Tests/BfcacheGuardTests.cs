@@ -10,7 +10,7 @@ namespace Perezosoft.Api.Tests;
 /// </summary>
 public class BfcacheGuardTests
 {
-    private const string ScriptRef = "_content/Perezosoft.Shared.Ui/js/bfcache-guard.js";
+    private const string ScriptRef = "_content/Perezosoft.Platform.Client/js/bfcache-guard.js";
 
     [Fact]
     public void BfcacheGuard_ScriptNamesItsThreeParts_PresenceOnly()
@@ -19,7 +19,7 @@ public class BfcacheGuardTests
         // behaviour is tested twice over — tests/js-logic/bfcache-guard.test.js runs the script against a
         // stub page, and SessionJourneyTests.SignOut_ThenBack_… presses Back in a real browser with the
         // back/forward cache on.
-        var js = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Shared.Ui", "wwwroot", "js", "bfcache-guard.js"));
+        var js = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client", "wwwroot", "js", "bfcache-guard.js"));
         Assert.Contains("pageshow", js);
         Assert.Contains(".persisted", js);
         Assert.Contains("location.reload", js);

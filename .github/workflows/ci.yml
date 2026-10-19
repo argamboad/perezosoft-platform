@@ -491,10 +491,11 @@ jobs:
           # native publish script (v4 NAT-16). Reported for the record; the device legs run on request (ADR-031).
           native=$(match "$nativefiles" '^(src/|tests/E2E\.Tests/|tests/native-smoke-android/|Directory\.Packages\.props|Directory\.Build\.props|global\.json|tools/publish-native\.ps1|\.github/workflows/ci\.yml)')
 
-          # Narrower still: what the MAUI app is built from (Env L29). src/Maui references only src/Shared.Ui, which
-          # references nothing, so the API, Core, Infrastructure, Web and the tests cannot break it; plus the solution
-          # build props, the SDK pin, ci.yml and the Android leg's license-scan inputs.
-          maui=$(match "$nativefiles" '^(src/(Maui|Shared\.Ui)/|Directory\.Packages\.props|Directory\.Build\.props|global\.json|\.github/workflows/ci\.yml|\.config/dotnet-tools\.json|\.github/forbidden-licenses\.json)')
+          # Narrower still: what the MAUI app is built from (Env L29). src/Maui references src/Shared.Ui and
+          # src/Client.Maui, which reference only src/Client (Pkg 4.1/4.3), so the API, Core, Infrastructure, Web,
+          # Client.Web and the tests cannot break it; plus the solution build props, the SDK pin, ci.yml and the
+          # Android leg's license-scan inputs.
+          maui=$(match "$nativefiles" '^(src/(Maui|Shared\.Ui|Client|Client\.Maui)/|Directory\.Packages\.props|Directory\.Build\.props|global\.json|\.github/workflows/ci\.yml|\.config/dotnet-tools\.json|\.github/forbidden-licenses\.json)')
 
           # The course check (Pkg 1.4): only when the course itself or a file one of its lessons quotes changed, or a
           # file was added or deleted (COVERAGE.md maps every tracked file) — a backend edit the course does not quote

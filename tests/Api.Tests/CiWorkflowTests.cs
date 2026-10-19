@@ -169,18 +169,18 @@ public class CiWorkflowTests
     [Fact]
     public void MauiClassifier_CoversWhatTheAppIsBuiltFrom_AndNothingElse() // Env L29
     {
-        // src/Maui references only src/Shared.Ui, which references nothing. Reported by the `changes` job for the
+        // src/Maui references only src/Shared.Ui, which references only src/Client (Pkg 4.1). Reported by the `changes` job for the
         // record (the device legs run on request since ADR-031), and kept exact so it can gate them again.
         var m = Regex.Match(Read(Ci), @"maui=\$\(match ""\$nativefiles"" '([^']+)'\)");
         Assert.True(m.Success, "no `maui=` classifier");
         var maui = new Regex(m.Groups[1].Value);
-        foreach (var path in new[] { "src/Maui/MauiProgram.cs", "src/Shared.Ui/Pages/Login.razor", "Directory.Build.props",
+        foreach (var path in new[] { "src/Maui/MauiProgram.cs", "src/Shared.Ui/Pages/Login.razor", "src/Client/Auth/AuthService.cs", "src/Client.Maui/PlatformMauiHosting.cs", "Directory.Build.props",
                                      "Directory.Packages.props", "global.json", ".github/workflows/ci.yml",
                                      ".config/dotnet-tools.json", ".github/forbidden-licenses.json" })
             Assert.True(maui.IsMatch(path), $"{path} can break the MAUI build, so it must count as maui");
         foreach (var path in new[] { "src/Host/Program.cs", "src/Core/Entities/Tenant.cs", "src/Infrastructure/Email/BrandedEmail.cs",
-                                     "src/Web/Program.cs", "tests/Api.Tests/AuthTests.cs", "tests/E2E.Tests/Journeys.cs", "docs/notes/not-a-real-doc.md" })
-            Assert.False(maui.IsMatch(path), $"{path} cannot affect the MAUI app (it references only Shared.Ui)");
+                                     "src/Web/Program.cs", "src/Client.Web/PlatformWebHosting.cs", "tests/Api.Tests/AuthTests.cs", "tests/E2E.Tests/Journeys.cs", "docs/notes/not-a-real-doc.md" })
+            Assert.False(maui.IsMatch(path), $"{path} cannot affect the MAUI app (it references only Shared.Ui and, through it, Client)");
     }
 
     [Fact]
@@ -225,9 +225,22 @@ public class CiWorkflowTests
         var list = At("# ci-logic begin: release-pack-list");
         Assert.True(plan < list && list < pack, "the pack list is decided after the plan and before anything is packed");
         Assert.Contains("platform-packages.props", job, StringComparison.Ordinal);
-        Assert.Matches(@"(?m)^\s+dotnet restore ""\$p"" --locked-mode$", job);
-        Assert.Matches(@"(?m)^\s+dotnet pack ""\$p"" -c Release --no-restore -o artifacts$", job);
+        Assert.Matches(@"(?m)^\s+dotnet restore ""\$p"" --locked-mode -p:PlatformMauiAllTargets=true$", job);
+        Assert.Matches(@"(?m)^\s+dotnet pack ""\$p"" -c Release --no-restore -p:PlatformMauiAllTargets=true -o artifacts$", job);
         Assert.DoesNotMatch(@"(?m)^\s+(pack=|dotnet (restore|pack) )[^#\r\n]*\.sln[xf]?\b", job); // no step names a solution
+
+        // Where (Pkg 4.4): Perezosoft.Platform.Maui carries all four TFMs, and only a Windows host compiles
+        // net10.0-windows — with the MAUI workloads it also compiles the library's iOS and Mac Catalyst targets. So the
+        // one job runs on windows-latest, in bash (the ci-logic blocks are bash), installs the four workloads by name
+        // (`workload restore` would read only this host's TFMs) at ci.yml's workload set, before anything is packed.
+        Assert.Matches(@"(?m)^    runs-on: windows-latest$", job);
+        Assert.Matches(@"(?m)^    defaults:\s+run:\s+shell: bash$", job);
+        var workloads = At("dotnet workload install maui-android maui-ios maui-maccatalyst maui-windows --version ");
+        Assert.True(workloads < pack, "the MAUI workloads are installed before anything is packed");
+        var workloadSet = Regex.Match(Read(Ci), @"dotnet workload restore src/Maui/Perezosoft\.Maui\.csproj --version (\S+)").Groups[1].Value;
+        Assert.Contains($"--version {workloadSet}", job, StringComparison.Ordinal); // one workload set across the repo
+        var maui = Read("src/Client.Maui/Perezosoft.Client.Maui.csproj");
+        Assert.Contains("'$(PlatformMauiAllTargets)' == 'true'\">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst<", maui, StringComparison.Ordinal);
 
         Assert.Contains(".github/release-note-template.md", job, StringComparison.Ordinal);
         foreach (var section in new[] { "Schema change", "Register change", "Breaking" }) // ADR-034 §7

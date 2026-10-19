@@ -367,10 +367,12 @@ public class ArchitectureTests
     {
         // The notification bell polled on a real 60-second PeriodicTimer and stamped "read" and "time ago"
         // from the wall clock, so its poll lifecycle could only be tested by waiting real minutes — and was not.
-        // In the RCL: no ambient UtcNow/Now, and every timer or delay names the clock it runs on.
-        var files = SourceFiles(Path.Combine(RepoRoot(), "src", "Shared.Ui"))
-            .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Shared.Ui"), "*.razor")).ToList();
-        Assert.True(files.Count > 30, "probe: src/Shared.Ui moved");
+        // In the client code — the RCL and the client package it now shares the browser with (Pkg 4.1): no ambient
+        // UtcNow/Now, and every timer or delay names the clock it runs on.
+        var files = new[] { "Shared.Ui", "Client" }
+            .SelectMany(project => SourceFiles(Path.Combine(RepoRoot(), "src", project))
+                .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", project), "*.razor"))).ToList();
+        Assert.True(files.Count > 30, "probe: src/Shared.Ui or src/Client moved");
 
         var offenders = new List<string>();
         foreach (var file in files)

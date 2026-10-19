@@ -232,6 +232,14 @@
         "type": "Transitive",
         "resolved": "10.0.13",
         "contentHash": "BMeeoyNQHGWC/1KxTvCCgC9BpLjgGlIeLqRl5A6U+dg0CfuV+Ui8dT44oQxePNrU1RXY5IKgo5IvMjNPJt1dlw=="
+      },
+      "Perezosoft.Platform.Client": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.AspNetCore.Components.Authorization": "[10.0.13, )",
+          "Microsoft.AspNetCore.Components.Web": "[10.0.13, )",
+          "System.IdentityModel.Tokens.Jwt": "[8.19.1, )"
+        }
       }
     }
   }

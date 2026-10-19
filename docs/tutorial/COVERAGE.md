@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (26 files)
+## 1.1 — Solution, projects & supply chain (29 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -34,6 +34,9 @@
 - `nuget.config` — NuGet sources: nuget.org + the platform feed on GitHub Packages, source-mapped; the credential comes from .env at setup (Pkg 2.2, ADR-034)
 - `platform-packages.props` — the platform's package map: package id -> the project that packs it, read by an app's source switch (Pkg 2.4)
 - `src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
+- `src/Client.Maui/Perezosoft.Client.Maui.csproj` — created here; PackageReferences added as lessons need them
+- `src/Client.Web/Perezosoft.Client.Web.csproj` — created here; PackageReferences added as lessons need them
+- `src/Client/Perezosoft.Client.csproj` — created here; PackageReferences added as lessons need them
 - `src/Core/Perezosoft.Core.csproj` — created here; PackageReferences added as lessons need them
 - `src/Host/Perezosoft.Host.csproj` — created here; PackageReferences added as lessons need them
 - `src/Host/Properties/launchSettings.json`
@@ -286,32 +289,37 @@
 - `tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs` — self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
-## 3.4 — The web client & auth UI (133 files)
+## 3.4 — The web client & auth UI (134 files)
 
+- `src/Client.Web/Http/CookieHandler.cs`
+- `src/Client.Web/Http/CookieSessionStore.cs`
+- `src/Client.Web/PlatformWebHosting.cs` — AddPlatformWeb: the web host's platform half (Pkg 4.2)
+- `src/Client/Auth/AccessTokenState.cs` — the token in memory and its clock (split out of AuthService, v4 T57)
+- `src/Client/Auth/AppClaims.cs`
+- `src/Client/Auth/AuthProbes.cs` — staff / billing / providers probes (split out of AuthService, v4 T57)
+- `src/Client/Auth/AuthService.cs`
+- `src/Client/Auth/AuthWireModels.cs` — the JSON shapes the auth client reads (split out of AuthService, v4 T57)
+- `src/Client/Auth/BearerRetry.cs` — both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)
+- `src/Client/Auth/BearerScopedHandler.cs` — the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)
+- `src/Client/Auth/IOAuthInitiator.cs`
+- `src/Client/Auth/ISessionStore.cs` — per-platform session seam
+- `src/Client/Auth/NativeSignIn.cs` — body-token sign-in and OAuth resume (split out of AuthService, v4 T57)
+- `src/Client/Auth/PreferenceShadow.cs` — a just-saved theme/locale the token predates (split out of AuthService, v4 T57)
+- `src/Client/Auth/RenewalScheduler.cs` — the keep-alive timer (split out of AuthService, v4 T57)
+- `src/Client/Auth/SessionTransport.cs` — the refresh and logout calls per host (split out of AuthService, v4 T57)
+- `src/Client/Auth/SignInModels.cs` — SignInStatus / SignInResult (split out of AuthService, v4 T57)
+- `src/Client/IThemePersistence.cs` — theme persistence seam (THEME-1) — one localStorage impl serves web + MAUI
+- `src/Client/JsConfirm.cs`
+- `src/Client/LocalStorageThemePersistence.cs`
+- `src/Client/wwwroot/js/bfcache-guard.js` — reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)
+- `src/Client/wwwroot/js/theme.js` — THEME-1 pre-paint dark-mode bootstrap (data-bs-theme)
 - `src/Shared.Ui/App.razor`
-- `src/Shared.Ui/Auth/AccessTokenState.cs` — the token in memory and its clock (split out of AuthService, v4 T57)
-- `src/Shared.Ui/Auth/AppClaims.cs`
 - `src/Shared.Ui/Auth/AuthErrorCopy.cs` — server error code -> localized copy key; keeps 2.4's enumeration-safe collapse client-side (landed on develop post-write)
-- `src/Shared.Ui/Auth/AuthProbes.cs` — staff / billing / providers probes (split out of AuthService, v4 T57)
-- `src/Shared.Ui/Auth/AuthService.cs`
-- `src/Shared.Ui/Auth/AuthWireModels.cs` — the JSON shapes the auth client reads (split out of AuthService, v4 T57)
-- `src/Shared.Ui/Auth/BearerRetry.cs` — both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)
-- `src/Shared.Ui/Auth/BearerScopedHandler.cs` — the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)
-- `src/Shared.Ui/Auth/IOAuthInitiator.cs`
-- `src/Shared.Ui/Auth/ISessionStore.cs` — per-platform session seam
-- `src/Shared.Ui/Auth/NativeSignIn.cs` — body-token sign-in and OAuth resume (split out of AuthService, v4 T57)
-- `src/Shared.Ui/Auth/PreferenceShadow.cs` — a just-saved theme/locale the token predates (split out of AuthService, v4 T57)
-- `src/Shared.Ui/Auth/RenewalScheduler.cs` — the keep-alive timer (split out of AuthService, v4 T57)
-- `src/Shared.Ui/Auth/SessionTransport.cs` — the refresh and logout calls per host (split out of AuthService, v4 T57)
-- `src/Shared.Ui/Auth/SignInModels.cs` — SignInStatus / SignInResult (split out of AuthService, v4 T57)
 - `src/Shared.Ui/Components/AppHeader.razor`
 - `src/Shared.Ui/Components/AppHeader.razor.css` — co-located component CSS
 - `src/Shared.Ui/Components/ThemeSwitcher.razor`
-- `src/Shared.Ui/IThemePersistence.cs` — theme persistence seam (THEME-1) — one localStorage impl serves web + MAUI
-- `src/Shared.Ui/JsConfirm.cs`
 - `src/Shared.Ui/Layout/MainLayout.razor`
 - `src/Shared.Ui/Layout/MainLayout.razor.css`
-- `src/Shared.Ui/LocalStorageThemePersistence.cs`
 - `src/Shared.Ui/Pages/AuthCallback.razor`
 - `src/Shared.Ui/Pages/AuthError.razor`
 - `src/Shared.Ui/Pages/Home.razor`
@@ -327,10 +335,6 @@
 - `src/Shared.Ui/wwwroot/brand/lockup_light.svg` — placeholder brand assets — replaced in 9.1
 - `src/Shared.Ui/wwwroot/brand/lockup_light_1520.png` — placeholder brand assets — replaced in 9.1
 - `src/Shared.Ui/wwwroot/css/app.css`
-- `src/Shared.Ui/wwwroot/js/bfcache-guard.js` — reload bfcache restores — Back after sign-out can't show a stale authenticated view (QA-SEC-03)
-- `src/Shared.Ui/wwwroot/js/theme.js` — THEME-1 pre-paint dark-mode bootstrap (data-bs-theme)
-- `src/Web/Http/CookieHandler.cs`
-- `src/Web/Http/CookieSessionStore.cs`
 - `src/Web/Program.cs`
 - `src/Web/_Imports.razor`
 - `src/Web/wwwroot/apple_touch_180.png`
@@ -424,10 +428,10 @@
 
 ## 3.5 — Localization (EN/ES) (11 files)
 
+- `src/Client/ICulturePersistence.cs` — culture bootstrap seam (NATIVE-5); MAUI impl in A.1
+- `src/Client/LocalStorageCulturePersistence.cs`
 - `src/Infrastructure/Email/EmailStrings.es.resx`
 - `src/Shared.Ui/Components/LanguageSwitcher.razor`
-- `src/Shared.Ui/ICulturePersistence.cs` — culture bootstrap seam (NATIVE-5); MAUI impl in A.1
-- `src/Shared.Ui/LocalStorageCulturePersistence.cs`
 - `src/Shared.Ui/Resources/AppStrings.cs`
 - `src/Shared.Ui/Resources/AppStrings.es.resx`
 - `src/Shared.Ui/Resources/AppStrings.resx`
@@ -630,9 +634,9 @@
 ## 6.3 — Data protection: signed URLs & secrets at rest (7 files)
 
 - `src/Api/Controllers/FilesController.cs`
+- `src/Client/BrowserFileDownloadLauncher.cs`
+- `src/Client/IFileDownloadLauncher.cs` — download seam (NATIVE-3): web same-tab, native share sheet
 - `src/Infrastructure/Files/FileDownloadTokenizer.cs` — DataProtection-signed URLs
-- `src/Shared.Ui/BrowserFileDownloadLauncher.cs`
-- `src/Shared.Ui/IFileDownloadLauncher.cs` — download seam (NATIVE-3): web same-tab, native share sheet
 - `tests/Api.Tests/Files/FileDownloadTokenizerTests.cs`
 - `tests/Api.Tests/Files/FilesControllerTests.cs`
 - `tests/Api.Tests/Integration/ContributorRegistrationTests.cs` — every declared contributor resolves from the app DI (v3 TB-TEN-11)
@@ -770,7 +774,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (173 files)
+## 8.3 — The deploy pipeline & CI gates (176 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -786,6 +790,9 @@
 - `tests/ci-logic/cases/changes-classifier/build-props/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/build-props/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/client-is-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/client-is-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/changes-classifier/client-is-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/course-added-file/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/course-added-file/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/course-added-file/files/added.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -987,18 +994,23 @@
 
 ## A.1 — Appendix — MAUI shells & parity (43 files)
 
-- `src/Maui/App.xaml`
-- `src/Maui/App.xaml.cs`
-- `src/Maui/MainPage.xaml`
-- `src/Maui/MainPage.xaml.cs`
+- `src/Client.Maui/AndroidSystemBarTheme.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/PlatformApp.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/PlatformMauiHosting.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/PreferencesCulturePersistence.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/ShareFileDownloadLauncher.cs` — UsePlatformMaui / UsePlatformShell: the MAUI host's platform half (Pkg 4.3)
+- `src/Client.Maui/buildTransitive/Perezosoft.Platform.Maui.targets` — the release guards every app's MAUI build imports (Pkg 4.3)
+- `src/Client.Maui/buildTransitive/ReleaseGuards.targets` — the release guards every app's MAUI build imports (Pkg 4.3)
+- `src/Client/AppResumeNotifier.cs` — refresh-on-resume seam (NATIVE-4 G2)
+- `src/Client/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
 - `src/Maui/MauiProgram.cs`
 - `src/Maui/Platforms/Android/AndroidManifest.xml`
-- `src/Maui/Platforms/Android/AndroidSystemBarTheme.cs`
 - `src/Maui/Platforms/Android/MainActivity.cs`
 - `src/Maui/Platforms/Android/MainApplication.cs`
 - `src/Maui/Platforms/Android/Resources/values/colors.xml`
 - `src/Maui/Platforms/Android/Resources/xml/data_extraction_rules.xml`
 - `src/Maui/Platforms/Android/Resources/xml/network_security_config.xml`
+- `src/Maui/Platforms/Android/SystemBarColors.cs`
 - `src/Maui/Platforms/Android/WebAuthenticatorCallbackActivity.cs`
 - `src/Maui/Platforms/Android/network_security_config_release.xml`
 - `src/Maui/Platforms/MacCatalyst/AppDelegate.cs`
@@ -1014,14 +1026,9 @@
 - `src/Maui/Platforms/iOS/Info.plist`
 - `src/Maui/Platforms/iOS/Program.cs`
 - `src/Maui/Platforms/iOS/Resources/PrivacyInfo.xcprivacy`
-- `src/Maui/PreferencesCulturePersistence.cs`
 - `src/Maui/Properties/launchSettings.json`
-- `src/Maui/ReleaseGuards.targets`
-- `src/Maui/ShareFileDownloadLauncher.cs`
 - `src/Maui/wwwroot/index.html`
-- `src/Shared.Ui/AppResumeNotifier.cs` — refresh-on-resume seam (NATIVE-4 G2)
 - `src/Shared.Ui/Components/SystemBarThemeSync.razor` — renderless: relays theme.js's applied theme to ISystemBarTheme
-- `src/Shared.Ui/ISystemBarTheme.cs` — OS-drawn system-bar seam — Android paints its status bar from the page's theme
 - `tests/Api.Tests/NativeChromeGateTests.cs` — Android bar colours = app.css tokens; top inset applied once
 - `tests/Api.Tests/NativeShellGateTests.cs` — Android posture (no backup off the device, no cleartext beyond the dev loopback), signing hygiene and the icon ground, held as files (v4 T51, R104/R105)
 - `tests/Api.Tests/ToolsScriptsTests.cs` — the tools/ PowerShell contract (pwsh 7, ASCII or BOM, fail loud) and publish-native run against a fake dotnet and apksigner (v4 T52, R140)
@@ -1037,21 +1044,23 @@
 - `src/Api/Services/NativeAuthCodeService.cs`
 - `src/Api/Services/NativeAuthUrls.cs` — state CSRF round-trip through login→callback (v3 NAT-9)
 - `src/Api/Services/NativeRedirectPolicy.cs`
-- `src/Maui/Auth/DebugFileSessionStore.cs`
-- `src/Maui/Auth/LoopbackOAuthInitiator.cs`
-- `src/Maui/Auth/PreferencesOAuthResumeStore.cs`
-- `src/Maui/Auth/SecureStorageSessionStore.cs`
-- `src/Maui/Auth/WebAuthenticatorOAuthInitiator.cs`
-- `src/Shared.Ui/Auth/IOAuthResumeStore.cs` — OAuth resume-across-process-death seam (NATIVE-12)
-- `src/Shared.Ui/Auth/OAuthResumeResult.cs` — resume outcome handed to Login/Settings (NATIVE-12)
+- `src/Client.Maui/Auth/DebugFileSessionStore.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/LoopbackOAuthInitiator.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/PreferencesOAuthResumeStore.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/SecureStorageSessionStore.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client.Maui/Auth/WebAuthenticatorOAuthInitiator.cs` — the device session stores and OAuth initiators (Perezosoft.Platform.Maui, Pkg 4.3)
+- `src/Client/Auth/IOAuthResumeStore.cs` — OAuth resume-across-process-death seam (NATIVE-12)
+- `src/Client/Auth/OAuthResumeResult.cs` — resume outcome handed to Login/Settings (NATIVE-12)
 - `tests/Api.Tests/NativeAuthCodeServiceTests.cs`
 - `tests/Api.Tests/NativeAuthUrlsTests.cs`
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (64 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (66 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Client.Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Client/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Core/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Host/Persistence/Migrations/20260617235537_InitialCreate.Designer.cs` — dotnet ef migrations add — in the lesson that adds each entity
 - `src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs` — dotnet ef migrations add — in the lesson that adds each entity
@@ -1434,4 +1443,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1267 tracked files · 891 built in lessons · 376 bucketed · 0 unmapped
+**Totals:** 1276 tracked files · 898 built in lessons · 378 bucketed · 0 unmapped

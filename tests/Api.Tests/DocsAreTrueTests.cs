@@ -150,7 +150,7 @@ public class DocsAreTrueTests
         // .env.example documents every key an operator can set, and ends with the limits they cannot: a number
         // compiled into the code is invisible to whoever sizes a deployment unless it is written down there. The
         // 7 MiB attachment cap and the client's keep-alive timings shipped unlisted. A limit is a numeric or
-        // TimeSpan constant in Core or the client's auth code whose name says it bounds something.
+        // TimeSpan constant in Core or the client's auth code (Platform.Client, Pkg 4.1) whose name says it bounds something.
         var root = RepoRoot();
         var envExample = File.ReadAllText(Path.Combine(root, ".env.example")).ReplaceLineEndings("\n");
         // The platform's block sits in the shared skeleton; an app lists its own limits in a second block below it.
@@ -158,7 +158,7 @@ public class DocsAreTrueTests
         Assert.True(blocks.Count >= 1, ".env.example no longer has a 'Not configurable (…)' block");
         var block = string.Join("\n", blocks.Select(m => m.Value));
 
-        var limits = new[] { Path.Combine(root, "src", "Core"), Path.Combine(root, "src", "Shared.Ui", "Auth") }
+        var limits = new[] { Path.Combine(root, "src", "Core"), Path.Combine(root, "src", "Client", "Auth") }
             .SelectMany(SourceFiles)
             .SelectMany(f => CompiledInLimit.Matches(File.ReadAllText(f)).Select(m => m.Groups[1].Value))
             .Distinct()

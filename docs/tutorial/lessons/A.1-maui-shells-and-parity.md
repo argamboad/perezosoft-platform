@@ -21,9 +21,9 @@ pipeline; seams designed web-first (why native stays cheap); native-only fixes C
 compile + smoke CI gate across four platforms.
 
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/MauiProgram.cs`, `src/Maui/wwwroot/index.html`,
-`docs/NATIVE_PARITY.md`, `docs/MOBILE_TESTING.md`, `src/Maui/PreferencesCulturePersistence.cs`,
-`src/Maui/ShareFileDownloadLauncher.cs`, `src/Maui/Platforms/Android/MainActivity.cs`,
-`AndroidSystemBarTheme.cs` (#231), `src/Shared.Ui/Components/SystemBarThemeSync.razor`; tests
+`docs/NATIVE_PARITY.md`, `docs/MOBILE_TESTING.md`, `src/Client.Maui/PreferencesCulturePersistence.cs`,
+`src/Client.Maui/ShareFileDownloadLauncher.cs`, `src/Maui/Platforms/Android/MainActivity.cs`,
+`src/Client.Maui/PlatformMauiHosting.cs` (`UsePlatformMaui`), `src/Client.Maui/PlatformApp.cs` (the shell), `src/Client.Maui/AndroidSystemBarTheme.cs` and the app's `src/Maui/Platforms/Android/SystemBarColors.cs` (#231), `src/Shared.Ui/Components/SystemBarThemeSync.razor`; tests
 `tests/Ui.Tests/SystemBarThemeSyncTests.cs`, `tests/Api.Tests/NativeChromeGateTests.cs`.
 
 **Prerequisites:** 3.3/3.4 (the RCL + web client — the shared UI), 3.5 (`ICulturePersistence` — a
@@ -115,7 +115,7 @@ place a WebView diverges from a browser:
   leaving the native app's billing page stale. Fixed by `AppResumeNotifier` — the billing summary
   refetches when the app foregrounds.
 - **G3 — Android back button.** The hardware back button exited the app instead of navigating.
-  Fixed by walking the WebView history in `MainPage.OnBackButtonPressed`.
+  Fixed by walking the WebView history in `OnBackButtonPressed` — today `PlatformPage`'s, the shell Perezosoft.Platform.Maui supplies (Pkg 4.3).
 - **G5 — join by invite.** `Join.razor` read the token *only from the query string*, and a native app
   has no address bar — so a native-only member couldn't join. Fixed with a token-entry form (which
   helps the web too, for email clients that mangle links).
@@ -143,16 +143,17 @@ inset. So the fix is *native*: `MainActivity` pads the content by the status-bar
 the header's `env()` is 0 on every WebView and the height is never added twice. The strip behind the
 clock is the OS's, too, so no stylesheet colours it: `SystemBarThemeSync` (RCL) relays each theme
 `theme.js` applies (its `watch` hook, 3.4 §5a) to an `ISystemBarTheme` that only the Android host
-registers, and `SystemBarColors` paints the header's colour, or the page's ground on the sign-in
-screens and the boot state, which have no header (#231):
+registers, and it paints the header's colour, or the page's ground on the sign-in screens and the
+boot state, which have no header (#231). The painter is the platform's (Perezosoft.Platform.Maui, Pkg
+4.3); the colours are the app's own `SystemBarColors`, handed to it as a palette:
 
 ```csharp
-// src/Maui/Platforms/Android/AndroidSystemBarTheme.cs — follows the page's theme (SystemBarThemeSync)
-public sealed class AndroidSystemBarTheme : ISystemBarTheme
+// src/Client.Maui/AndroidSystemBarTheme.cs — follows the page's theme (SystemBarThemeSync)
+public sealed class AndroidSystemBarTheme(SystemBarPalette palette) : ISystemBarTheme
 {
     public Task ApplyAsync(string resolvedTheme, bool ground) =>
         MainThread.InvokeOnMainThreadAsync(() =>
-            SystemBarColors.Paint(Platform.CurrentActivity, resolvedTheme == "dark", ground));
+            SystemBars.Paint(Platform.CurrentActivity, palette, resolvedTheme == "dark", ground));
 }
 ```
 
@@ -164,7 +165,7 @@ the page reports its theme, `OnCreate` paints from the phone's own night mode on
 the boot state has no header. The colours are `app.css` tokens by construction:
 `NativeChromeGateTests` (`SystemBarColors_AreAppCssTokens_InEachTheme`,
 `MainActivity_CarriesNoLiteralColour`, `ThemeJs_TellsAWatcherEveryThemeItApplies`,
-`Rebranding_NamesTheAndroidSystemBars`) fails while this file disagrees with the stylesheet, and
+`Rebranding_NamesTheAndroidSystemBars`) fails while the app's `SystemBarColors` disagrees with the stylesheet, and
 `SystemBarThemeSyncTests` (Ui.Tests, bUnit) proves the relay itself —
 `WithNativeSystemBars_ItWatchesTheTheme_AndPassesEachOneOn`, `AnythingButDark_ReadsAsLight`,
 `WithNoHeader_TheBarTakesThePageGround_AndFollowsWhenThatChanges`, `OnTheWeb_ItStaysOutOfTheWay`.

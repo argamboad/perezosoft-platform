@@ -97,6 +97,9 @@
     <ItemGroup>
         <!-- Render the SHARED UI from the RCL. A net10.0-android/-windows app can consume a net10.0 RCL. -->
         <ProjectReference Include="..\Shared.Ui\Perezosoft.Shared.Ui.csproj" />
+        <!-- The platform's MAUI half (Pkg 4.3): the shell, UsePlatformMaui, the device stores. Downstream, the
+             Perezosoft.Platform.Maui package. -->
+        <ProjectReference Include="..\Client.Maui\Perezosoft.Client.Maui.csproj" />
     </ItemGroup>
 
     <!-- Dev convenience (Android): make sure VS invokes MSBuild on every Debug F5 so the
@@ -126,7 +129,9 @@
 
 
     <!-- Everything a non-Debug build must refuse or supply — the ApiBaseUrl check, Android signing, the
-         HTTPS-only network config — lives in ONE file under ONE condition (v4 T50). -->
-    <Import Project="ReleaseGuards.targets" />
+         HTTPS-only network config — lives in ONE file under ONE condition (v4 T50), shipped by Perezosoft.Platform.Maui
+         as buildTransitive (Pkg 4.3). An app gets it from the package; this host references the project, which carries
+         no buildTransitive, so it imports the file itself. -->
+    <Import Project="..\Client.Maui\buildTransitive\Perezosoft.Platform.Maui.targets" />
 
 </Project>

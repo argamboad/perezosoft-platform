@@ -46,11 +46,17 @@
     { "glob": "src/Host/*.http", "class": "adapts" },
     { "glob": "src/Infrastructure/*.csproj", "class": "adapts" },
     { "glob": "src/Core/*.csproj", "class": "adapts" },
+    { "glob": "src/Client/*.csproj", "class": "adapts" },
+    { "glob": "src/Client.Web/*.csproj", "class": "adapts" },
+    { "glob": "src/Client.Maui/*.csproj", "class": "adapts" },
     { "glob": "**/packages.lock.json", "class": "adapts" },
 
     { "glob": "src/Core/**", "class": "platform" },
     { "glob": "src/Infrastructure/**", "class": "platform" },
     { "glob": "src/Api/**", "class": "platform" },
+    { "glob": "src/Client/**", "class": "platform" },
+    { "glob": "src/Client.Web/**", "class": "platform" },
+    { "glob": "src/Client.Maui/**", "class": "platform" },
     { "glob": "src/Host/**", "class": "platform" },
 
     { "glob": "src/Shared.Ui/**", "class": "adapts" },

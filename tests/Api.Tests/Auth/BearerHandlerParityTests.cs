@@ -2,20 +2,39 @@ namespace Perezosoft.Api.Tests.Auth;
 
 /// <summary>
 /// v4 T32 (R126) + T49 (R102): the two hosts share ONE bearer handler, and it is the only place a client
-/// builds an <c>Authorization: Bearer</c> header. Source scans over the three client trees — a host that
-/// grew its own handler (unscoped, or without the renew-and-resend) is what these hold back.
+/// builds an <c>Authorization: Bearer</c> header. Source scans over the client trees — the client package and its web
+/// half (Pkg 4.1/4.2), the seeded UI, the two hosts — a host that grew its own handler (unscoped, or without the
+/// renew-and-resend) is what these hold back.
 /// </summary>
 public class BearerHandlerParityTests
 {
     [Theory]
-    [InlineData("src/Web/Program.cs")]
-    [InlineData("src/Maui/MauiProgram.cs")]
+    [InlineData("src/Client.Web/PlatformWebHosting.cs")] // the web host's registration, AddPlatformWeb (Pkg 4.2)
+    [InlineData("src/Client.Maui/PlatformMauiHosting.cs")] // the MAUI host's registration, UsePlatformMaui (Pkg 4.3)
     public void EveryHost_InstallsTheSharedScopedHandler(string host)
     {
         var source = File.ReadAllText(Path.Combine(RepoRoot(), host));
 
         Assert.Contains("new BearerScopedHandler(", source);
         Assert.DoesNotContain("AuthHeaderHandler", source); // the per-host handlers are gone, not merely unused
+    }
+
+    [Fact]
+    public void TheWebHost_TakesThePlatformsRegistration() // Pkg 4.2
+    {
+        // The web host installs the shared handler through AddPlatformWeb; a host that wired its own clients instead
+        // would skip the theory above without anyone noticing.
+        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Web", "Program.cs"));
+        Assert.Contains(".AddPlatformWeb(", source);
+        Assert.DoesNotContain("BearerScopedHandler", source);
+    }
+
+    [Fact]
+    public void TheMauiHost_TakesThePlatformsRegistration() // Pkg 4.3
+    {
+        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Maui", "MauiProgram.cs"));
+        Assert.Contains(".UsePlatformMaui(", source);
+        Assert.DoesNotContain("BearerScopedHandler", source);
     }
 
     [Fact]
@@ -35,14 +54,17 @@ public class BearerHandlerParityTests
             ["BearerRetry.cs"] = "the shared core: attach, renew once, resend",
             ["AuthProbes.cs"] = "the staff probe on the handler-less ApiAuth client: a relative API path, the in-memory token, no third party (moved out of AuthService by v4 T57)",
         };
-        var roots = new[] { "Shared.Ui", "Web", "Maui" }.Select(d => Path.Combine(RepoRoot(), "src", d));
+        var roots = new[] { "Client", "Client.Web", "Client.Maui", "Shared.Ui", "Web", "Maui" }.Select(d => Path.Combine(RepoRoot(), "src", d));
         var offenders = roots.SelectMany(r => Directory.EnumerateFiles(r, "*.cs", SearchOption.AllDirectories)
                 .Concat(Directory.EnumerateFiles(r, "*.razor", SearchOption.AllDirectories)))
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
             .Where(f => File.ReadAllText(f).Contains("\"Bearer\"", StringComparison.Ordinal))
             .Select(Path.GetFileName)
-            .Where(f => !allow.ContainsKey(f!))
             .ToList();
+        // Probe: the scan must see the one place that is allowed — when Pkg 4.1 moved BearerRetry into src/Client, the
+        // roots still named only the old trees, and the scan passed while reading none of the code it guards.
+        Assert.Contains("BearerRetry.cs", offenders);
+        offenders = offenders.Where(f => !allow.ContainsKey(f!)).ToList();
         Assert.True(offenders.Count == 0,
             $"Build the Bearer header only in BearerRetry (through BearerScopedHandler): {string.Join(", ", offenders)}");
     }
@@ -52,7 +74,7 @@ public class BearerHandlerParityTests
     {
         // The presigned download must not go through the default (bearer) client: AWS refuses a presigned
         // request with an Authorization header, and the handler would spend a refresh on the file host's behalf.
-        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Maui", "MauiProgram.cs"));
+        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Maui", "PlatformMauiHosting.cs")); // Pkg 4.3
         Assert.Contains("new ShareFileDownloadLauncher(new HttpClient", source);
         Assert.DoesNotContain("new ShareFileDownloadLauncher(sp.GetRequiredService<HttpClient>()", source);
     }

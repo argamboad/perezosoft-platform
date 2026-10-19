@@ -1,0 +1,8 @@
+<Project>
+  <!--
+    Carried into every app that references Perezosoft.Platform.Maui (NuGet's buildTransitive, Pkg 4.3): the release
+    guards. Paths inside resolve against the app's project, so they refuse or supply what the APP's non-Debug build
+    needs. The platform's own host, which references the project rather than the package, imports this file itself.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)ReleaseGuards.targets" />
+</Project>

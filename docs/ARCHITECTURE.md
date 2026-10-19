@@ -13,14 +13,19 @@
 ## 1. Solution map
 
 Two disjoint dependency trees, joined only by HTTP. The server tree is `Host → Api → {Core,
-Infrastructure} → Core`; the client tree is `{Web, Maui} → Shared.Ui`. `Shared.Ui` references
-**nothing** — client and server share no compiled code, only the JSON contract (documented by the
+Infrastructure} → Core`; the client tree is `Web → {Shared.Ui, Client.Web}`, `Maui → {Shared.Ui, Client.Maui}`,
+and `{Shared.Ui, Client.Web, Client.Maui} → Client`. `Client` references **nothing** of the server — client and server
+share no compiled code, only the JSON contract (documented by the
 [Postman collection](postman/README.md), ADR-023). `Core` has zero package references; it is the
 enforced dependency floor.
 
 **The platform ships as packages; the app is the host** (ADR-034, Packaging M3). `Core`, `Infrastructure` and `Api` are
 libraries published as `Perezosoft.Platform.Core`, `.Infrastructure` and `.Api` (MinVer-versioned from `v*` tags; the
-`.pdb` rides inside each `.nupkg`). `src/Host` is the one web project: it runs the platform and carries everything that
+`.pdb` rides inside each `.nupkg`). The client side follows (Packaging M4): `Client` (the session, the persistences and
+seams, the boot scripts) is `Perezosoft.Platform.Client`; `Client.Web` (`AddPlatformWeb`) is `Perezosoft.Platform.Web`;
+`Client.Maui` (`UsePlatformShell<TRoot>`, `UsePlatformMaui`, the device stores, the release guards as
+`buildTransitive`) is `Perezosoft.Platform.Maui`. `Shared.Ui` — every page, component, layout, string — is the app's
+seed, never packed. `src/Host` is the one web project: it runs the platform and carries everything that
 is the app's — `Program.cs` (two calls, `AddPlatform<AppDbContext>(AppComposition.ConfigurePlatform)` and
 `MapPlatformAsync()`, identical in every app), `AppComposition.cs` (the app's options, services and endpoints),
 `Features/**` (the slices), `Persistence/` (`AppDbContext : PlatformDbContext` and every migration), appsettings with only
@@ -344,25 +349,26 @@ set-based deletes are gated by RLS on the *ambient* tenant.
 
 ## 9. Client architecture ([ADR-C5](DECISIONS.md), [ADR-018](DECISIONS.md), [ADR-022](DECISIONS.md))
 
-All UI lives in the RCL; the hosts are thin composition roots that plug platform implementations
-into the same seams. This is the entire mechanism by which one codebase runs in a browser and in
+All UI lives in the RCL (`Shared.Ui`, the app's seed); the session and the seams live in `Client`, and each host's
+platform half is a package (`Client.Web`'s `AddPlatformWeb`, `Client.Maui`'s `UsePlatformMaui`) that plugs its
+implementations into the same seams. This is the entire mechanism by which one codebase runs in a browser and in
 four native shells.
 
 ```mermaid
 flowchart TB
-    subgraph rcl ["Shared.Ui (RCL) - pages, components, AuthService"]
+    subgraph rcl ["Client - AuthService and the seams (Shared.Ui renders the pages over them)"]
         SS["ISessionStore"]
         OI["IOAuthInitiator"]
         FD["IFileDownloadLauncher"]
         CP["ICulturePersistence"]
         TP["IThemePersistence"]
     end
-    subgraph web ["Web host (browser)"]
+    subgraph web ["Client.Web - AddPlatformWeb (browser)"]
         W1["CookieSessionStore (no-op:<br/>browser owns the HttpOnly cookie)"]
         W3["BrowserFileDownloadLauncher"]
         W4["LocalStorage culture + theme"]
     end
-    subgraph maui ["Maui host (native)"]
+    subgraph maui ["Client.Maui - UsePlatformMaui (native)"]
         M1["SecureStorageSessionStore<br/>(DebugFileSessionStore in Debug)"]
         M2["WebAuthenticator / Loopback<br/>OAuthInitiator"]
         M3["ShareFileDownloadLauncher (OS share sheet)"]
@@ -372,9 +378,9 @@ flowchart TB
     M1 & M2 & M3 & M4 --> rcl
 ```
 
-Client HTTP note (`src/Web/Program.cs`): `AuthService` is deliberately a **singleton**, and the
+Client HTTP note (`src/Client.Web/PlatformWebHosting.cs`, `AddPlatformWeb`): `AuthService` is deliberately a **singleton**, and the
 refresh/logout calls use a second named client (`"ApiAuth"`, cookie handler only) to break the
-DI cycle with the bearer handler. Both hosts install the one `BearerScopedHandler` (`Shared.Ui/Auth`,
+DI cycle with the bearer handler. Both hosts install the one `BearerScopedHandler` (`Client/Auth`,
 over `BearerRetry`), which asks `AuthService.GetFreshAccessTokenAsync` for the token — renewed first when
 about to expire (ADR-002 addendum 2026-09-22) — and attaches it **only to the API's own origin**: a foreign
 absolute URL (a presigned S3 download) gets no token and no refresh (v4 T49, R102). The native download

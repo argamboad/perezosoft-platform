@@ -6,6 +6,15 @@
   <Folder Name="/src/Host/">
     <Project Path="src/Host/Perezosoft.Host.csproj" />
   </Folder>
+  <Folder Name="/src/Client/">
+    <Project Path="src/Client/Perezosoft.Client.csproj" />
+  </Folder>
+  <Folder Name="/src/Client.Maui/">
+    <Project Path="src/Client.Maui/Perezosoft.Client.Maui.csproj" />
+  </Folder>
+  <Folder Name="/src/Client.Web/">
+    <Project Path="src/Client.Web/Perezosoft.Client.Web.csproj" />
+  </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/Perezosoft.Core.csproj" />
   </Folder>

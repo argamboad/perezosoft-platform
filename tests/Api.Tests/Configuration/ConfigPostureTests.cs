@@ -70,12 +70,12 @@ public class ConfigPostureTests
         // lost response becomes a theft verdict that revokes every session. Two projects hold the two numbers;
         // this pins them together under both the empty and the shipped configuration.
         var grace = TimeSpan.FromSeconds(new RefreshTokenSettings(Config(config)).ReuseGraceSeconds);
-        var clientWorstCase = Perezosoft.Shared.Ui.Auth.AuthService.RefreshTimeout + Perezosoft.Shared.Ui.Auth.AuthService.RenewRetryDelay;
+        var clientWorstCase = Perezosoft.Client.Auth.AuthService.RefreshTimeout + Perezosoft.Client.Auth.AuthService.RenewRetryDelay;
 
         Assert.True(grace > TimeSpan.Zero, "the grace window is on by default");
         Assert.True(clientWorstCase < grace,
-            $"AuthService.RefreshTimeout ({Perezosoft.Shared.Ui.Auth.AuthService.RefreshTimeout}) + RenewRetryDelay " +
-            $"({Perezosoft.Shared.Ui.Auth.AuthService.RenewRetryDelay}) must stay under RefreshToken:ReuseGraceSeconds ({grace}) — {config} config");
+            $"AuthService.RefreshTimeout ({Perezosoft.Client.Auth.AuthService.RefreshTimeout}) + RenewRetryDelay " +
+            $"({Perezosoft.Client.Auth.AuthService.RenewRetryDelay}) must stay under RefreshToken:ReuseGraceSeconds ({grace}) — {config} config");
     }
 
     [Fact]

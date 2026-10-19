@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    The platform's client, non-visual half (Pkg 4.1, ADR-034): the session (AuthService, the bearer handlers, the
+    keep-alive, native sign-in, the session and OAuth seams), the theme and culture persistences, the resume and
+    file-download seams, and the boot scripts every host loads (wwwroot/js: theme.js before first paint,
+    bfcache-guard.js). The Razor SDK only for the static web assets: this project has no components. The visual half —
+    every page, component, layout, string — is Shared.Ui, the app's own seed. Published as a package.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Client</PackageId>
+    <Description>Perezosoft Platform client: the session, its renewal and transport, the preference persistences and the boot scripts shared by every app's web and native hosts.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+
+</Project>

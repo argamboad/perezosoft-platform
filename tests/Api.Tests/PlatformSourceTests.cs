@@ -60,6 +60,12 @@ public class PlatformSourceTests
         Assert.DoesNotContain("NuGetLockFilePath", props, StringComparison.Ordinal);
         Assert.Contains("<PackageReference Remove=", targets, StringComparison.Ordinal);
         Assert.Contains("<ProjectReference Include=", targets, StringComparison.Ordinal);
+        // Switched to source, a MAUI app head keeps the release guards the package would have carried as buildTransitive
+        // (Pkg 4.4) — and only an app head (OutputType Exe), never the checkout's own library.
+        Assert.Contains("src/Client.Maui/buildTransitive/Perezosoft.Platform.Maui.targets", targets, StringComparison.Ordinal);
+        Assert.Contains("'$(UseMaui)' == 'true' and '$(OutputType)' == 'Exe'", targets, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(root, "src", "Client.Maui", "buildTransitive", "Perezosoft.Platform.Maui.targets")),
+            "the switch imports a file the platform no longer has");
 
         Assert.Contains("build/PlatformSource.props", File.ReadAllText(Path.Combine(root, "Directory.Build.props")).Replace('\\', '/'), StringComparison.Ordinal);
         Assert.Contains("build/PlatformSource.targets", File.ReadAllText(Path.Combine(root, "Directory.Build.targets")).Replace('\\', '/'), StringComparison.Ordinal);

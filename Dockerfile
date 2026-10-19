@@ -22,6 +22,8 @@ COPY src/Core/Perezosoft.Core.csproj src/Core/packages.lock.json src/Core/
 COPY src/Infrastructure/Perezosoft.Infrastructure.csproj src/Infrastructure/packages.lock.json src/Infrastructure/
 COPY src/Api/Perezosoft.Api.csproj src/Api/packages.lock.json src/Api/
 COPY src/Host/Perezosoft.Host.csproj src/Host/packages.lock.json src/Host/
+COPY src/Client/Perezosoft.Client.csproj src/Client/packages.lock.json src/Client/
+COPY src/Client.Web/Perezosoft.Client.Web.csproj src/Client.Web/packages.lock.json src/Client.Web/
 COPY src/Shared.Ui/Perezosoft.Shared.Ui.csproj src/Shared.Ui/packages.lock.json src/Shared.Ui/
 COPY src/Web/Perezosoft.Web.csproj src/Web/packages.lock.json src/Web/
 

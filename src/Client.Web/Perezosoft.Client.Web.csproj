@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The web host's platform half (Pkg 4.2, ADR-034): what every app's Blazor WebAssembly host wires the same way —
+    the API clients and their handlers (the browser's credentials for the HttpOnly refresh cookie, the bearer token
+    to the API origin only), the cookie session store, the browser persistences, AuthService, the clock — behind one
+    call, AddPlatformWeb, and the saved culture applied before the first render. The host keeps its root components
+    and anything of its own. Published as Perezosoft.Platform.Web; the folder and assembly say Client.Web because
+    src/Web is the app's host.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Web</PackageId>
+    <Description>Perezosoft Platform web host: AddPlatformWeb wires a Blazor WebAssembly app's API clients, session and preferences to the platform client.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Localization" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\Perezosoft.Client.csproj" />
+  </ItemGroup>
+
+</Project>

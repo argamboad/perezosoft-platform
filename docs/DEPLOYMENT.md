@@ -398,7 +398,7 @@ Send `out/<app>.apk`. The script **refuses to finish** unless `apksigner` report
 true` (v4 T50): it finds the SDK through `ANDROID_HOME`/`ANDROID_SDK_ROOT`, then Visual Studio's install,
 then Android Studio's, and throws when none is there — an unverified APK is never presented as "send THIS".
 
-**The Release guards** live in `src/Maui/ReleaseGuards.targets`, under one condition (`Configuration !=
+**The Release guards** live in `src/Client.Maui/buildTransitive/ReleaseGuards.targets`, under one condition (`Configuration !=
 Debug`, so `-c Staging` is guarded like `-c Release`): `ApiBaseUrl` must be present, `https://` and an
 **origin only** (no path, query or trailing slash — the OAuth URLs are concatenated onto it); the Android
 build signs through `apksigner` with the store key when the `AndroidSigning*` properties are supplied, else

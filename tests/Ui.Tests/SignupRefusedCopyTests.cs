@@ -3,6 +3,7 @@ using Bunit;
 using Xunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Perezosoft.Client.Auth;
 using Perezosoft.Shared.Ui.Auth;
 using Perezosoft.Shared.Ui.Pages;
 using Perezosoft.Ui.Tests.Infrastructure;

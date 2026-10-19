@@ -32,7 +32,8 @@ public class NativeChromeGateTests
 
     private static Dictionary<string, string> SystemBarConstants()
     {
-        var source = ReadRaw(AndroidDir, "AndroidSystemBarTheme.cs");
+        // The app's colours (Pkg 4.3: the painter is Perezosoft.Platform.Maui's, the palette the app's).
+        var source = ReadRaw(AndroidDir, "SystemBarColors.cs");
         Assert.Contains("class SystemBarColors", source);
         return Regex.Matches(source, @"const\s+string\s+(\w+)\s*=\s*""(#[0-9A-Fa-f]{6})""")
             .ToDictionary(m => m.Groups[1].Value, m => Hex(m.Groups[2].Value));
@@ -89,10 +90,13 @@ public class NativeChromeGateTests
     [Fact]
     public void TheAndroidShell_PaintsTheBarsFromThePage()
     {
+        // Pkg 4.3: the app hands its palette to UsePlatformMaui on Android, and the platform registers the painter with it.
         var program = ReadRaw("src", "Maui", "MauiProgram.cs");
+        var hosting = ReadRaw("src", "Client.Maui", "PlatformMauiHosting.cs");
         var layout = ReadRaw("src", "Shared.Ui", "Layout", "MainLayout.razor");
 
-        Assert.Matches(new Regex(@"#if ANDROID\s+(//[^\n]*\n\s*)*builder\.Services\.AddSingleton<ISystemBarTheme,\s*AndroidSystemBarTheme>\(\);"), program);
+        Assert.Matches(new Regex(@"#if ANDROID\s+SystemBars\s*=\s*SystemBarColors\.Palette,"), program);
+        Assert.Matches(new Regex(@"#if ANDROID\s+(//[^\n]*\n\s*)*if \(options\.SystemBars is \{ \} palette\)\s+services\.AddSingleton<ISystemBarTheme>\(new AndroidSystemBarTheme\(palette\)\);"), hosting);
         Assert.Contains("<SystemBarThemeSync", layout);
     }
 
@@ -112,7 +116,7 @@ public class NativeChromeGateTests
     [Fact]
     public void ThemeJs_TellsAWatcherEveryThemeItApplies()
     {
-        var js = ReadRaw("src", "Shared.Ui", "wwwroot", "js", "theme.js");
+        var js = ReadRaw("src", "Client", "wwwroot", "js", "theme.js");
 
         Assert.Contains("watch:", js);
         Assert.Contains("unwatch:", js);
