@@ -24,7 +24,8 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
         var appMap = Path.Combine(root, "platform-ownership.App.json");
         if (File.Exists(appMap)) rules = [.. rules, .. ParseRules(File.ReadAllText(appMap))];
         var tracked = Git(root, "ls-files").Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).ToList();
-        Assert.True(tracked.Count > 100, $"probe: git ls-files returned {tracked.Count} paths");
+        // Probe: git answered for THIS tree. Not a count — an app on the packages carries a few dozen files (Pkg 5.1e).
+        Assert.True(tracked.Contains("platform-ownership.json"), $"probe: git ls-files returned {tracked.Count} paths, without platform-ownership.json");
 
         var unclassified = tracked.Where(p => Classify(p, rules) is null).Order().ToList();
         Assert.True(unclassified.Count == 0, "tracked files with no ownership class — add a rule to platform-ownership.json (an app: platform-ownership.App.json): " + string.Join(", ", unclassified));
@@ -92,6 +93,7 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
         var (stampCommit, _) = ParseStamp(File.ReadAllText(Path.Combine(root, "platform-stamp.json")));
         var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
         if (stampCommit is null) { Assert.False(File.Exists(manifestPath)); return; }
+        Assert.True(File.Exists(manifestPath), "platform-stamp.json names a platform commit but tests/Api.Tests/App/platform-manifest.json is missing — run tools/port-platform.ps1");
         var (manifestCommit, _) = ParseManifest(File.ReadAllText(manifestPath));
         Assert.Equal(stampCommit, manifestCommit);
     }

@@ -388,8 +388,11 @@ public abstract class PlatformArchitectureSuite
         // R70 asked for bUnit coverage and was met by testing a single component; the five heaviest pages were
         // reached only when a browser journey happened to pass through them. The floor: every routable page
         // under src/Shared.Ui/Pages is rendered by at least one test in tests/Ui.Tests. It does not measure
-        // depth — it stops a new page from shipping with none.
-        var pages = Directory.EnumerateFiles(Path.Combine(Root, "src", "Shared.Ui", "Pages"), "*.razor")
+        // depth — it stops a new page from shipping with none. An app without the seeded UI (a host on the packages, Pkg
+        // 5.1e) has no pages to hold to it.
+        var pagesDir = Path.Combine(Root, "src", "Shared.Ui", "Pages");
+        if (!IsThePlatform && !Directory.Exists(pagesDir)) return;
+        var pages = Directory.EnumerateFiles(pagesDir, "*.razor")
             .Select(Path.GetFileNameWithoutExtension).ToList();
         Assert.True(pages.Count >= 8, "probe: src/Shared.Ui/Pages moved");
 
@@ -408,7 +411,9 @@ public abstract class PlatformArchitectureSuite
         var files = new[] { "Shared.Ui", "Client" }
             .SelectMany(project => SourceFiles(Path.Combine(Root, "src", project))
                 .Concat(SourceFiles(Path.Combine(Root, "src", project), "*.razor"))).ToList();
-        Assert.True(files.Count > 10, "probe: src/Shared.Ui (and, in the platform, src/Client) moved");
+        // An app without the seeded UI (a host on the packages, Pkg 5.1e) has no client code here to hold to it.
+        if (IsThePlatform || Directory.Exists(Path.Combine(Root, "src", "Shared.Ui")))
+            Assert.True(files.Count > 10, "probe: src/Shared.Ui (and, in the platform, src/Client) moved");
 
         var offenders = new List<string>();
         foreach (var file in files)

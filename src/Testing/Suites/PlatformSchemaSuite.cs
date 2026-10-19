@@ -65,8 +65,8 @@ public abstract class PlatformSchemaSuite<TProgram, TContext>(PlatformIntegratio
             if (!actual.TryGetValue(table, out var have)) { failures.Add($"{table}: table missing from the migrated database"); continue; }
             foreach (var facet in new[] { "columns", "constraints", "indexes", "policies" })
             {
-                var w = want[facet]!.ToJsonString();
-                var h = have[facet]!.ToJsonString();
+                var w = Canonical(facet, want[facet]!);
+                var h = Canonical(facet, have[facet]!);
                 if (w != h) failures.Add($"{table}.{facet}: differs\n      platform: {w}\n      here:     {h}");
             }
         }
@@ -84,6 +84,17 @@ public abstract class PlatformSchemaSuite<TProgram, TContext>(PlatformIntegratio
             $"the migrated database disagrees with {SchemaFile} (Arch A5): on the platform regenerate the file after a schema migration ({WriteSwitch}=1); "
             + "downstream, port the platform's migration or bring the table back to the platform's shape:\n  " + string.Join("\n  ", failures));
     }
+
+    /// <summary>
+    /// A facet as compared. Columns compare by name, not by position: a table's physical column order is how its
+    /// migrations happened to add them (a column added later lands last), which no code reads — an app that builds the
+    /// platform's tables in one migration orders them by the model and has the same schema (Pkg 5.1e). The other facets
+    /// are read in name order already.
+    /// </summary>
+    private static string Canonical(string facet, JsonNode node) =>
+        facet == "columns"
+            ? new JsonArray([.. node.AsArray().OrderBy(c => (string?)c!["name"], StringComparer.Ordinal).Select(c => c!.DeepClone())]).ToJsonString()
+            : node.ToJsonString();
 
     // ── extraction: what Postgres says the migrations built ──
 
