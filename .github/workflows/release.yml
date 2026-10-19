@@ -154,7 +154,13 @@ jobs:
       - name: Push the packages to GitHub Packages
         env:
           TOKEN: ${{ github.token }}
-        run: dotnet nuget push "artifacts/*.nupkg" --source "$FEED" --api-key "$TOKEN"
+        # One push per package, the shell expanding the files: on the Windows runner a quoted wildcard handed to
+        # `dotnet nuget push` finds nothing ("File does not exist") — the 1.0.0-alpha.2 run, 2026-10-19. --skip-duplicate makes a rerun of the
+        # same version finish what a failed run left (the tag is pushed only after every package, so the plan allows it).
+        run: |
+          for p in artifacts/*.nupkg; do
+            dotnet nuget push "$p" --source "$FEED" --api-key "$TOKEN" --skip-duplicate
+          done
 
       - name: Restore it back, as an app would (dry run)
         if: steps.plan.outputs.dry == 'true'
