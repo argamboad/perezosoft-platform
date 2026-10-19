@@ -1,13 +1,18 @@
 name: Release
 
 # Pkg 2.3 (ADR-034 §7): the platform's packages leave this repo only from here, and only by hand.
-#   - A manual "Run workflow" (ADR-031: no push trigger, no schedule). About 5 billed minutes a run.
+#   - A manual "Run workflow" (ADR-031: no push trigger, no schedule). About 10 minutes a run (the repo is public:
+#     not billed).
 #   - The version is a git tag `v<version>` that MinVer reads (Directory.Build.props): every packable project packs
 #     at exactly that version. Prereleases (`1.0.0-alpha.1`) from develop or main; a stable version only from main.
 #   - Order: plan (the version is checked before anything is built) → tag locally → pack → push the packages to
 #     GitHub Packages → push the tag → publish the release note. A failed push leaves no tag behind.
 #   - What is packed (Pkg 3.11): the projects platform-packages.props maps, one by one, never the solution — the
 #     solution holds src/Maui (net10.0-android), which no ubuntu runner can even restore without the MAUI workload.
+#   - Where (Pkg 4.4): ONE job on windows-latest, with the MAUI workloads. Perezosoft.Platform.Maui must carry all four
+#     TFMs, and only a Windows host compiles net10.0-windows; with the workloads it also compiles a LIBRARY's iOS and
+#     Mac Catalyst targets without a Mac (-p:PlatformMauiAllTargets=true adds them). One job keeps the order above:
+#     no artifact hand-off between runners, no half-pushed release. The steps run in Git Bash (shell: bash).
 #   - dry_run: packs only tools/release/dry-run (Perezosoft.Platform.DryRun) at a `-dry.` version, pushes it, restores
 #     it back the way an app would, and writes the note to the run's summary. No tag is pushed, no GitHub release.
 on:
@@ -44,8 +49,11 @@ concurrency:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: write   # the tag and the GitHub release
       packages: write   # push to GitHub Packages (the GITHUB_TOKEN, never a personal token)
@@ -98,6 +106,12 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: MAUI workloads (Perezosoft.Platform.Maui's four TFMs)
+        if: steps.plan.outputs.dry != 'true'
+        # By name, not `workload restore`: restore reads the project's TFMs for THIS host, which on Windows are android
+        # and windows only. The same workload set as ci.yml's device legs (keep them equal at an SDK bump).
+        run: dotnet workload install maui-android maui-ios maui-maccatalyst maui-windows --version 10.0.400.1
+
       - name: Tag locally (MinVer reads it)
         env:
           TAG: ${{ steps.plan.outputs.tag }}
@@ -124,9 +138,11 @@ jobs:
             echo "pack $p"
           done
           # ci-logic end: release-pack-list
+          # -p:PlatformMauiAllTargets=true gives the MAUI library its iOS and Mac Catalyst TFMs on this Windows host; the
+          # other projects ignore it.
           for p in $projects; do
-            dotnet restore "$p" --locked-mode
-            dotnet pack "$p" -c Release --no-restore -o artifacts
+            dotnet restore "$p" --locked-mode -p:PlatformMauiAllTargets=true
+            dotnet pack "$p" -c Release --no-restore -p:PlatformMauiAllTargets=true -o artifacts
           done
           ls artifacts/*.nupkg >/dev/null 2>&1 || { echo "::error::nothing was packed — no project is IsPackable yet"; exit 1; }
           # Every package carries exactly the tagged version (MinVer), or nothing is published.
@@ -181,8 +197,11 @@ jobs:
         run: |
           # Filled from .github/release-note-template.md; the three answers come from the run's inputs (ADR-034 §7).
           packages=$(for p in artifacts/*.nupkg; do printf -- '- `%s`\n' "$(basename "$p" .nupkg)"; done)
+          # The Windows runner's Python answers to `python` (a `python3` there may be the Store's stub); elsewhere it may
+          # be `python3` only.
+          py=$(command -v python || command -v python3)
           TEMPLATE=.github/release-note-template.md VERSION="${TAG#v}" PACKAGES="$packages" \
-            python3 - > note.md <<'PY'
+            "$py" - > note.md <<'PY'
           import os
           t = open(os.environ["TEMPLATE"], encoding="utf-8").read()
           for k in ("TAG", "VERSION", "REF", "SHA", "SCHEMA_CHANGE", "REGISTER_CHANGE", "BREAKING", "PACKAGES"):

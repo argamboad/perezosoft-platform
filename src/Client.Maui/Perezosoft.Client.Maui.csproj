@@ -11,6 +11,10 @@
     <TargetFrameworks>net10.0-android</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <!-- The release packs every TFM in one place (Pkg 4.4): a Windows runner with the MAUI workload compiles the iOS and
+         Mac Catalyst targets of a LIBRARY without a Mac (an app's would need Xcode). Opt-in, so an everyday Windows
+         build keeps its two targets; the release's pack-maui job passes -p:PlatformMauiAllTargets=true. -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows')) And '$(PlatformMauiAllTargets)' == 'true'">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
     <Nullable>enable</Nullable>

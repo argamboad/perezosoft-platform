@@ -23,7 +23,7 @@ compile + smoke CI gate across four platforms.
 **Maps to:** ADR-018, NATIVE epic · repo: `src/Maui/MauiProgram.cs`, `src/Maui/wwwroot/index.html`,
 `docs/NATIVE_PARITY.md`, `docs/MOBILE_TESTING.md`, `src/Client.Maui/PreferencesCulturePersistence.cs`,
 `src/Client.Maui/ShareFileDownloadLauncher.cs`, `src/Maui/Platforms/Android/MainActivity.cs`,
-`AndroidSystemBarTheme.cs` (#231), `src/Shared.Ui/Components/SystemBarThemeSync.razor`; tests
+`src/Client.Maui/PlatformMauiHosting.cs` (`UsePlatformMaui`), `src/Client.Maui/PlatformApp.cs` (the shell), `src/Client.Maui/AndroidSystemBarTheme.cs` and the app's `src/Maui/Platforms/Android/SystemBarColors.cs` (#231), `src/Shared.Ui/Components/SystemBarThemeSync.razor`; tests
 `tests/Ui.Tests/SystemBarThemeSyncTests.cs`, `tests/Api.Tests/NativeChromeGateTests.cs`.
 
 **Prerequisites:** 3.3/3.4 (the RCL + web client — the shared UI), 3.5 (`ICulturePersistence` — a
@@ -115,7 +115,7 @@ place a WebView diverges from a browser:
   leaving the native app's billing page stale. Fixed by `AppResumeNotifier` — the billing summary
   refetches when the app foregrounds.
 - **G3 — Android back button.** The hardware back button exited the app instead of navigating.
-  Fixed by walking the WebView history in `MainPage.OnBackButtonPressed`.
+  Fixed by walking the WebView history in `OnBackButtonPressed` — today `PlatformPage`'s, the shell Perezosoft.Platform.Maui supplies (Pkg 4.3).
 - **G5 — join by invite.** `Join.razor` read the token *only from the query string*, and a native app
   has no address bar — so a native-only member couldn't join. Fixed with a token-entry form (which
   helps the web too, for email clients that mangle links).

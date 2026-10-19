@@ -2,5 +2,8 @@ exit 0
 +pack src/Core/Perezosoft.Core.csproj
 +pack src/Infrastructure/Perezosoft.Infrastructure.csproj
 +pack src/Api/Perezosoft.Api.csproj
++pack src/Client/Perezosoft.Client.csproj
++pack src/Client.Web/Perezosoft.Client.Web.csproj
++pack src/Client.Maui/Perezosoft.Client.Maui.csproj
 -dry-run
 -slnx

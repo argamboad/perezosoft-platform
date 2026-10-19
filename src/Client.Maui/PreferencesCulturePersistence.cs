@@ -4,7 +4,7 @@ namespace Perezosoft.Client.Maui;
 
 /// <summary>
 /// Native implementation: OS <see cref="Preferences"/>, because that's the only store
-/// <c>MauiProgram</c> can read at startup — the WebView (and its localStorage) doesn't exist
+/// <c>UsePlatformMaui</c> can read at startup — the WebView (and its localStorage) doesn't exist
 /// yet when the process boots. Key mirrors the web's localStorage key for greppability.
 /// </summary>
 public class PreferencesCulturePersistence : ICulturePersistence
