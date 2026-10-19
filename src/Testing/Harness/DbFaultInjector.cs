@@ -2,7 +2,7 @@ using System.Data.Common;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>
 /// The harness's database-fault seam (v4 T54, R7). Attached to a context by

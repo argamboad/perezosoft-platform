@@ -46,6 +46,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Perezosoft.Core.csproj" />
+    <ProjectReference Include="..\..\src\Testing\Perezosoft.Testing.csproj" />
     <ProjectReference Include="..\..\src\Api\Perezosoft.Api.csproj" />
     <!-- The reference host (Pkg 3.2): Program (WebApplicationFactory<Program>) and the sample slice. -->
     <ProjectReference Include="..\..\src\Host\Perezosoft.Host.csproj" />

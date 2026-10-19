@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (29 files)
+## 1.1 — Solution, projects & supply chain (30 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -43,6 +43,7 @@
 - `src/Infrastructure/Perezosoft.Infrastructure.csproj` — created here; PackageReferences added as lessons need them
 - `src/Maui/Perezosoft.Maui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Shared.Ui/Perezosoft.Shared.Ui.csproj` — created here; PackageReferences added as lessons need them
+- `src/Testing/Perezosoft.Testing.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Properties/launchSettings.json`
 - `tests/Api.Tests/PackagingContractTests.cs` — the packages the platform publishes: the three ids, each depends only on published projects, versions from MinVer only when packing, the pdb inside the nupkg (Pkg 3.1)
@@ -53,17 +54,20 @@
 - `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tools/release/dry-run/Perezosoft.Platform.DryRun.csproj` — created here; PackageReferences added as lessons need them
 
-## 1.2 — First endpoint, first test (7 files)
+## 1.2 — First endpoint, first test (10 files)
 
 - `src/Api/PlatformHosting.cs` — AddPlatform / MapPlatformAsync: every registration and the pipeline Program.cs used to spell out (Pkg 3.3)
 - `src/Host/Perezosoft.Host.http` — REST client scratchpad — grows with each endpoint
 - `src/Host/Program.cs` — born here; since Pkg 3.3 only the composition order: AddPlatform, the app, MapPlatformAsync, the guard
+- `src/Testing/Harness/FakeHostEnvironment.cs`
+- `src/Testing/Harness/PlatformIntegrationFactory.cs` — the integration host, generic over the app's Program and context (Perezosoft.Platform.Testing, Pkg 5.1a)
+- `src/Testing/Harness/PlatformTestComposition.cs` — what an app's test assembly tells the packaged harness (Pkg 5.1a)
 - `tests/Api.Tests/HarnessSmokeTests.cs`
-- `tests/Api.Tests/Infrastructure/FakeHostEnvironment.cs`
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
+- `tests/Api.Tests/PlatformTestingUsings.cs` — the packaged harness's namespaces, globally (Pkg 5.1a)
 
-## 1.3 — Database & the test container (18 files)
+## 1.3 — Database & the test container (20 files)
 
 - `src/Api/PlatformDesignTimeDbContextFactory.cs` — the design-time factory every host derives from in one line (Pkg 3.5)
 - `src/Host/AppDbContextFactory.cs` — design-time factory for dotnet ef
@@ -71,15 +75,17 @@
 - `src/Host/Persistence/AppDbContext.cs` — the app's context: derives from PlatformDbContext and owns the migrations (Pkg 3.5)
 - `src/Infrastructure/Persistence/PlatformDbContext.cs` — born here as AppDbContext; filter added 2.6, interceptors 2.7/4.6, DbSets throughout; the packaged base since Pkg 3.5
 - `src/Infrastructure/Persistence/PlatformDbContextFactory.cs` — IDbContextFactory<PlatformDbContext> over the app's own factory (Pkg 3.5)
+- `src/Testing/Harness/CapturingLogger.cs` — the one log double the suite shares
+- `src/Testing/Harness/Concurrently.cs` — the shared concurrency runner (v4 T54, R7)
+- `src/Testing/Harness/DbFaultInjector.cs` — the database-fault + interleaving seam (v4 T54, R7)
+- `src/Testing/Harness/PlatformPostgresFixture.cs` — the database fixture, generic over the app's test context (Pkg 5.1a)
+- `src/Testing/Harness/Recording.cs` — the recording double: forwards to the real implementation and writes down what was asked (v4 T25, R151)
+- `src/Testing/Harness/ServiceHarness.cs`
+- `src/Testing/Harness/TestWidget.cs` — the tenant-scoped fixture entities and their contributors (R9, Arch A4)
 - `tests/Api.Tests/App/AppTestComposition.cs` — the app's half of the test chassis: its contributors and host pins (Arch A1)
 - `tests/Api.Tests/AppDbContextFactoryTests.cs`
-- `tests/Api.Tests/Infrastructure/CapturingLogger.cs` — the one log double the suite shares
-- `tests/Api.Tests/Infrastructure/Concurrently.cs` — the shared concurrency runner (v4 T54, R7)
-- `tests/Api.Tests/Infrastructure/DbFaultInjector.cs` — the database-fault + interleaving seam (v4 T54, R7)
 - `tests/Api.Tests/Infrastructure/PostgresFixture.cs`
 - `tests/Api.Tests/Infrastructure/PostgresTestBase.cs` — model-derived TRUNCATE (R11)
-- `tests/Api.Tests/Infrastructure/Recording.cs` — the recording double: forwards to the real implementation and writes down what was asked (v4 T25, R151)
-- `tests/Api.Tests/Infrastructure/ServiceHarness.cs`
 - `tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — test-only subclass so platform tests don't depend on Notes (R9)
 - `tests/Api.Tests/MigrationsTests.cs`
 - `tests/Api.Tests/PlatformDbContextTests.cs` — the packaged base, the app's context and migrations in the host, DI hands platform code the app's context (Pkg 3.5)
@@ -160,11 +166,11 @@
 - `src/Infrastructure/Email/EmailStrings.resx` — localized in 3.5
 - `src/Infrastructure/Email/SmtpEmailSender.cs` — MailKit quarantined here
 - `src/Infrastructure/Email/SmtpSettings.cs`
+- `src/Testing/Harness/TestEmails.cs` — the mails a default host builds (Pkg 3.9)
 - `tests/Api.Tests/Email/BrandedEmailTests.cs` — default brand = the platform's; an app brand renders; the app's strings win one culture at a time (Pkg 3.9)
 - `tests/Api.Tests/Email/ScratchAppEmailStrings.es.resx` — a scratch app's partial string overrides, for BrandedEmailTests (Pkg 3.9)
 - `tests/Api.Tests/Email/ScratchAppEmailStrings.resx` — a scratch app's partial string overrides, for BrandedEmailTests (Pkg 3.9)
 - `tests/Api.Tests/Email/SmtpMessageBuilderTests.cs` — MIME shape: CID images + attachment parts (JOBS-4)
-- `tests/Api.Tests/Infrastructure/TestEmails.cs` — the mails a default host builds (Pkg 3.9)
 - `tests/Api.Tests/SmtpSettingsTests.cs` — incl. the SMTP-revocation knob (PR #125)
 - `tests/Core.Tests/EmailAttachmentTests.cs` — attachment guard: 7 MiB raw total incl. inline images (10 MiB on the wire), ≤ 20 parts, strict type/subtype, safe base name (JOBS-4, v4 T40)
 
@@ -205,11 +211,11 @@
 - `src/Core/Abstractions/ICurrentTenant.cs`
 - `src/Core/Entities/ISharedOrTenantScoped.cs` — the sibling of ITenantScoped: rows shared (null) or one tenant's — second filter, write rule, four RLS policies (Arch A4)
 - `src/Core/Entities/ITenantScoped.cs` — the marker the filter keys off
+- `src/Testing/Architecture/TenantHatchGuard.cs` — polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)
+- `src/Testing/Harness/TwoTenants.cs` — the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)
 - `tests/Api.Tests/Architecture/CrossTenantTestSeedingTests.cs` — an OtherTenant/CrossTenant/IsTenantScoped test must seed through TwoTenants (v4 R146)
-- `tests/Api.Tests/Architecture/TenantHatchGuard.cs` — polices QueryAllTenants call sites (the sanctioned hatch stays reviewable)
 - `tests/Api.Tests/Architecture/TenantHatchGuardTests.cs`
 - `tests/Api.Tests/HttpCurrentTenantTests.cs`
-- `tests/Api.Tests/Infrastructure/TwoTenants.cs` — the one cross-tenant arrange: two distinct real tenants, each seeded its own way (v4 R146)
 - `tests/Api.Tests/Rls/SharedOrTenantRlsTests.cs` — the four command-scoped policies as the runtime role sees them (Arch A4)
 - `tests/Api.Tests/Tenancy/SharedOrTenantTests.cs` — the shared-or-tenant shape at the EF level, on the TestSharedWidget fixture (Arch A4)
 - `tests/Api.Tests/TenantInvariantTests.cs` — every ITenantScoped entity filtered or allowlisted (R2)
@@ -280,12 +286,12 @@
 ## 3.3 — Injected clocks & the architecture tests (9 files)
 
 - `src/Api/Endpoints/RouteTableGuard.cs` — boot-time backstop: two endpoints with one method + pattern refuse to start, both named (v4 T13)
+- `src/Testing/Architecture/RoutePrefixInspector.cs` — route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)
+- `src/Testing/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
+- `src/Testing/Architecture/SliceWriteInspector.cs` — which entities a slice writes: the matcher behind the one-writer gate (Arch A8)
 - `tests/Api.Tests/App/AppAllowlists.cs` — the app's entries in the platform's gates: handled sets, fixed-host senders, purposes (Arch A1)
-- `tests/Api.Tests/Architecture/RoutePrefixInspector.cs` — route-prefix uniqueness scans MapTenantFeatureGroup too (v3 ADV-P4-1/R100)
 - `tests/Api.Tests/Architecture/RoutePrefixInspectorTests.cs`
-- `tests/Api.Tests/Architecture/SliceReferenceInspector.cs` — slice isolation matches a namespace on a boundary, so Reports and Reports2 coexist (v4 ADV-P4-12)
 - `tests/Api.Tests/Architecture/SliceReferenceInspectorTests.cs`
-- `tests/Api.Tests/Architecture/SliceWriteInspector.cs` — which entities a slice writes: the matcher behind the one-writer gate (Arch A8)
 - `tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs` — self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 
@@ -553,6 +559,7 @@
 - `src/Infrastructure/Billing/FakeBillingProvider.cs` — throws outside Development (R1)
 - `src/Infrastructure/Persistence/Configurations/SubscriptionConfiguration.cs`
 - `src/Shared.Ui/Pages/Billing.razor` — BILLING-8 billing summary page
+- `src/Testing/Harness/TestPlans.cs` — the catalog tests build from the platform's default options (Pkg 3.7)
 - `tests/Api.Tests/Billing/AppBillingGateTests.cs` — an app's own billing-only controller follows the gate (Pkg 3.10)
 - `tests/Api.Tests/Billing/BillingControllerTests.cs`
 - `tests/Api.Tests/Billing/BillingGateTests.cs` — GATES-1
@@ -563,7 +570,6 @@
 - `tests/Api.Tests/Billing/PlanCatalogTests.cs` — GATES-1 pins the catalog's fail-closed Free fallback
 - `tests/Api.Tests/Billing/RequireEntitlementFilterTests.cs`
 - `tests/Api.Tests/Billing/SubscriptionTenantIsolationTests.cs`
-- `tests/Api.Tests/Infrastructure/TestPlans.cs` — the catalog tests build from the platform's default options (Pkg 3.7)
 - `tests/Api.Tests/Integration/FeaturesEndpointTests.cs` — GATES-1
 - `tests/E2E.Tests/BillingJourneyTests.cs` — fake-provider upgrade loop
 - `tests/E2E.Tests/GateJourneyTests.cs` — GATES-1/2 end to end: the gates-off lane (billing unset, a one-domain green list), v4 T48
@@ -607,8 +613,8 @@
 - `src/Core/Authorization/PermissionRegistry.cs` — the host's permissions and their rows: the platform's, plus what an app adds (Pkg 3.8)
 - `src/Core/Authorization/RolePermissions.cs` — matrix: coarse capabilities, not ACLs; built per host from its registry (Pkg 3.8)
 - `src/Shared.Ui/Pages/Household.razor` — admin-aware roster UI
-- `tests/Api.Tests/Infrastructure/TenantPermissionGate.cs` — test double for the permission seam
-- `tests/Api.Tests/Infrastructure/TestPermissions.cs` — the matrix a default host builds (Pkg 3.8)
+- `src/Testing/Harness/TenantPermissionGate.cs` — test double for the permission seam
+- `src/Testing/Harness/TestPermissions.cs` — the matrix a default host builds (Pkg 3.8)
 - `tests/Api.Tests/Integration/RbacForbiddenIntegrationTests.cs`
 - `tests/Api.Tests/Rbac/AppPermissionTests.cs`
 - `tests/Api.Tests/Rbac/MemberRoleManagementTests.cs`
@@ -645,7 +651,7 @@
 
 - `src/Core/Abstractions/IOutboundUrlGuard.cs`
 - `src/Infrastructure/Http/OutboundUrlGuard.cs` — SSRF: block loopback/RFC-1918/metadata (R3)
-- `tests/Api.Tests/Infrastructure/AllowAllUrlGuard.cs` — test-only bypass
+- `src/Testing/Harness/AllowAllUrlGuard.cs` — test-only bypass
 - `tests/Api.Tests/Webhooks/OutboundUrlGuardTests.cs`
 
 ## 6.5 — MFA / TOTP step-up (22 files)
@@ -759,12 +765,12 @@
 ## 8.1 — Single-origin hosting (8 files)
 
 - `src/Api/Configuration/ProxyForwardingExtensions.cs` — config-gated forwarded headers
+- `src/Testing/Harness/TempWebRoot.cs`
 - `tests/Api.Tests/Hosting/AppPolicyTests.cs`
 - `tests/Api.Tests/Hosting/AppRoutePrefixTests.cs`
 - `tests/Api.Tests/Hosting/BrandStringsTests.cs`
 - `tests/Api.Tests/Hosting/ProxyForwardingTests.cs`
 - `tests/Api.Tests/Hosting/RouteTableGuardTests.cs`
-- `tests/Api.Tests/Infrastructure/TempWebRoot.cs`
 - `tests/Api.Tests/Integration/SingleOriginHostingTests.cs`
 
 ## 8.2 — Container & staging (4 files)
@@ -961,7 +967,9 @@
 - `src/Infrastructure/Persistence/RlsPostureGuard.cs` — gates prod activation (ADR-020)
 - `src/Infrastructure/Persistence/RlsSessionInterceptor.cs` — sets the tenant GUC per connection
 - `src/Infrastructure/Persistence/RlsTags.cs`
-- `tests/Api.Tests/Architecture/CrossTenantWriteGuard.cs` — EnterTenant required on set-based cross-tenant writes — tags don't render for ExecuteUpdate (v3/T7)
+- `src/Testing/Architecture/CrossTenantWriteGuard.cs` — EnterTenant required on set-based cross-tenant writes — tags don't render for ExecuteUpdate (v3/T7)
+- `src/Testing/Rls/RlsSchemaProbe.cs` — the RLS runtime-role setup and the schema probe (Perezosoft.Platform.Testing, Pkg 5.1a)
+- `src/Testing/Rls/RlsTestSetup.cs` — the RLS runtime-role setup and the schema probe (Perezosoft.Platform.Testing, Pkg 5.1a)
 - `tests/Api.Tests/Architecture/CrossTenantWriteGuardTests.cs`
 - `tests/Api.Tests/PlatformStepTests.cs` — every published step is applied by a migration; a published step never changes (Pkg 3.6)
 - `tests/Api.Tests/Rls/CrossTenantTagSiteTests.cs` — backstop + migration-parity + posture-guard tests
@@ -970,9 +978,7 @@
 - `tests/Api.Tests/Rls/RlsMigrationGateBitesTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsMigrationGateTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsPostureGuardTests.cs` — backstop + migration-parity + posture-guard tests
-- `tests/Api.Tests/Rls/RlsSchemaProbe.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
-- `tests/Api.Tests/Rls/RlsTestSetup.cs` — backstop + migration-parity + posture-guard tests
 
 ## 9.1 — Make it yours (rebrand & de-sample) (15 files)
 
@@ -986,8 +992,8 @@
 - `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
 - `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
 - `src/Infrastructure/Persistence/platform-schema.json` — embedded in the Infrastructure package (Pkg 3.5): the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
+- `src/Testing/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
-- `tests/Api.Tests/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
 - `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
 - `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
 - `tools/port-platform.ps1` — ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)
@@ -1056,7 +1062,7 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (66 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (67 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Client.Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1118,6 +1124,7 @@
 - `src/Host/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Testing/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/Api.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/Core.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1443,4 +1450,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1276 tracked files · 898 built in lessons · 378 bucketed · 0 unmapped
+**Totals:** 1283 tracked files · 904 built in lessons · 379 bucketed · 0 unmapped

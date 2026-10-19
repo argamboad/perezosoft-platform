@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Perezosoft.Api.Tests.Architecture;
+namespace Perezosoft.Testing.Architecture;
 
 /// <summary>
 /// Pure scanner shared by the ban gate (<c>QueryAllTenants_IsNotComposedWithSetBasedWrites</c>) and the test

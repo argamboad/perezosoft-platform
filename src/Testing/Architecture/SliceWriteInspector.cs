@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Perezosoft.Api.Tests.Architecture;
+namespace Perezosoft.Testing.Architecture;
 
 /// <summary>
 /// Pure write-site matcher behind <c>EveryEntity_HasOneWritingSlice</c> (Arch A8, R162) and its self-test

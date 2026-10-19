@@ -1,7 +1,7 @@
 using System.Net;
 using Perezosoft.Core.Abstractions;
 
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>
 /// Permissive <see cref="IOutboundUrlGuard"/> for tests that aren't exercising the SSRF guard itself —

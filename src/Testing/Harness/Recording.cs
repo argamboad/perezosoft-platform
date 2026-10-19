@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>One call a <see cref="Recording{T}"/> saw: the interface method and the arguments it was given.</summary>
 public sealed record RecordedCall(string Method, IReadOnlyList<object?> Args);

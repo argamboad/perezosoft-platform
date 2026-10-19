@@ -1,4 +1,4 @@
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>
 /// The harness's concurrency runner (v4 T54, R7): starts every operation, lines them up behind one gate so they

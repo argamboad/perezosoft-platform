@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>Records level + rendered message of every log entry (one copy for the suite — v4 T54, R7).</summary>
-internal sealed class CapturingLogger<T> : ILogger<T>
+public sealed class CapturingLogger<T> : ILogger<T>
 {
     public List<(LogLevel Level, string Message)> Entries { get; } = [];
 

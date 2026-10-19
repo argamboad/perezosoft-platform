@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Perezosoft.Api.Tests.Architecture;
+namespace Perezosoft.Testing.Architecture;
 
 /// <summary>
 /// The platform/app boundary as pure functions (Arch A2, R160), so <c>PlatformOwnershipTests</c> can hold them on

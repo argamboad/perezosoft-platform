@@ -556,7 +556,10 @@ public class EnforcementGateTests
 
         // Testcontainers builders: new XxxBuilder("image:tag")
         var builderImage = new Regex(@"new\s+\w*Builder\s*\(\s*""([^""]+)""");
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories))
+        // tests/ and the packaged harness (src/Testing, Pkg 5.1a), where the database fixture and integration host now
+        // name their Postgres image.
+        foreach (var file in new[] { "tests", Path.Combine("src", "Testing") }
+                     .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*.cs", SearchOption.AllDirectories)))
         {
             if (file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
                 || file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
@@ -614,7 +617,10 @@ public class EnforcementGateTests
             foreach (Match m in image.Matches(File.ReadAllText(compose)))
                 Check(m.Groups[1].Value, "docker-compose.yml");
         var builder = new Regex(@"new\s+\w*Builder\s*\(\s*""([^""]+)""");
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories))
+        // tests/ and the packaged harness (src/Testing, Pkg 5.1a), where the database fixture and integration host now
+        // name their Postgres image.
+        foreach (var file in new[] { "tests", Path.Combine("src", "Testing") }
+                     .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*.cs", SearchOption.AllDirectories)))
         {
             if (file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
                 || file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
@@ -663,7 +669,7 @@ public class EnforcementGateTests
         Assert.Matches(@"(?m)^\s*image:\s*\S+", workflow);          // services: at least one
         Assert.Matches(@"docker run\s", workflow);                   // docker run: at least one
         Assert.Matches(@"(?m)^FROM\s+\S+", File.ReadAllText(Path.Combine(root, "Dockerfile")));
-        Assert.Contains("new PostgreSqlBuilder(\"", File.ReadAllText(Path.Combine(root, "tests", "Api.Tests", "Infrastructure", "PostgresFixture.cs")));
+        Assert.Contains("new PostgreSqlBuilder(\"", File.ReadAllText(Path.Combine(root, "src", "Testing", "Harness", "PlatformPostgresFixture.cs")));
 
         static bool Floats(string tag) => tag.Equals("latest", StringComparison.OrdinalIgnoreCase) || Regex.IsMatch(tag, @"^v?\d+$");
         Assert.True(Floats("latest"));
@@ -683,13 +689,13 @@ public class EnforcementGateTests
         // diverged from upstream. Now the sample's unit is its own two migrations (class `sample` in the ownership map),
         // and every other migration is held free of it. The snapshot is the app's (class `adapts`) and is not scanned.
         var root = RepoRoot();
-        var rules = Architecture.PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
+        var rules = PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         // Designer files are the model snapshot at that point in the chain (generated, and the snapshot is the app's), so only
         // the migrations' own operations are read, with comment lines dropped: the question is what the SQL names.
         // Downstream, the platform's migrations are the ones its manifest lists; the app's own may name a Notes column.
         var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
         var platformPaths = File.Exists(manifestPath)
-            ? Architecture.PlatformOwnership.ParseManifest(File.ReadAllText(manifestPath)).Entries.Select(e => e.Path).ToHashSet(StringComparer.Ordinal)
+            ? PlatformOwnership.ParseManifest(File.ReadAllText(manifestPath)).Entries.Select(e => e.Path).ToHashSet(StringComparer.Ordinal)
             : null;
         var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Host", "Persistence", "Migrations"), "*.cs")
             .Where(f => !f.EndsWith("ModelSnapshot.cs", StringComparison.Ordinal) && !f.EndsWith(".Designer.cs", StringComparison.Ordinal))
@@ -697,11 +703,11 @@ public class EnforcementGateTests
                           Text: string.Join('\n', File.ReadLines(f).Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)))))
             .Where(m => platformPaths is null || platformPaths.Contains(m.Rel))
             .ToList();
-        var sample = migrations.Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) == Architecture.PlatformOwnership.Class.Sample).Select(m => m.Rel).ToList();
+        var sample = migrations.Where(m => PlatformOwnership.Classify(m.Rel, rules) == PlatformOwnership.Class.Sample).Select(m => m.Rel).ToList();
         if (Directory.Exists(Path.Combine(root, "src", "Host", "Features", "Notes"))) // an app that removed the sample keeps none of its migrations
             Assert.True(sample.Count >= 2, "probe: the sample's own migrations (AddNotesSample, NotesSampleRlsPolicy) are classed `sample`");
         var offenders = migrations
-            .Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) != Architecture.PlatformOwnership.Class.Sample)
+            .Where(m => PlatformOwnership.Classify(m.Rel, rules) != PlatformOwnership.Class.Sample)
             .Where(m => Regex.IsMatch(m.Text, @"""\bNotes\b"""))
             .Select(m => m.Rel).ToList();
         Assert.True(offenders.Count == 0, "a platform migration names the sample's table — the sample must stay removable without editing platform history (Arch A6): " + string.Join(", ", offenders));
@@ -720,7 +726,7 @@ public class EnforcementGateTests
         [
             "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Host/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
-            "tests/Api.Tests/Infrastructure/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
+            "src/Testing/Harness/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
             "tests/Ui.Tests/Infrastructure/TestHttpHandler.cs",
         ];
         // How the sample would be named from a composition file; the ban-list literals in ArchitectureTests' Notes-independence
@@ -814,12 +820,12 @@ public class EnforcementGateTests
 
         // Downstream, a target over a producer-only file (the platform's release machinery, Pkg 2.5) has neither its file nor
         // its cases; run.py skips it the same way. In the platform every target must have both.
-        var platform = Architecture.PlatformOwnership.IsThePlatform(root);
-        var rules = Architecture.PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
+        var platform = PlatformOwnership.IsThePlatform(root);
+        var rules = PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         foreach (var t in targets)
         {
             if (!platform && t.Skip(2).All(f => !File.Exists(Path.Combine(root, f))
-                    && Architecture.PlatformOwnership.Classify(f, rules) == Architecture.PlatformOwnership.Class.Producer))
+                    && PlatformOwnership.Classify(f, rules) == PlatformOwnership.Class.Producer))
                 continue;
             var cases = Path.Combine(root, "tests", "ci-logic", "cases", t[1]);
             Assert.True(Directory.Exists(cases) && Directory.EnumerateDirectories(cases).Any(), $"target `{t[1]}` has no cases");

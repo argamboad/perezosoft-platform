@@ -269,14 +269,6 @@
           "xunit.extensibility.execution": "[2.9.3]"
         }
       },
-      "xunit.extensibility.core": {
-        "type": "Transitive",
-        "resolved": "2.9.3",
-        "contentHash": "kf3si0YTn2a8J8eZNb+zFpwfoyvIrQ7ivNk5ZYA5yuYk1bEtMe4DxJ2CF/qsRgmEnDr7MnW1mxylBaHTZ4qErA==",
-        "dependencies": {
-          "xunit.abstractions": "2.0.3"
-        }
-      },
       "xunit.extensibility.execution": {
         "type": "Transitive",
         "resolved": "2.9.3",
@@ -349,6 +341,15 @@
         "dependencies": {
           "Microsoft.IdentityModel.JsonWebTokens": "8.19.1",
           "Microsoft.IdentityModel.Tokens": "8.19.1"
+        }
+      },
+      "xunit.extensibility.core": {
+        "type": "CentralTransitive",
+        "requested": "[2.9.3, )",
+        "resolved": "2.9.3",
+        "contentHash": "kf3si0YTn2a8J8eZNb+zFpwfoyvIrQ7ivNk5ZYA5yuYk1bEtMe4DxJ2CF/qsRgmEnDr7MnW1mxylBaHTZ4qErA==",
+        "dependencies": {
+          "xunit.abstractions": "2.0.3"
         }
       }
     }

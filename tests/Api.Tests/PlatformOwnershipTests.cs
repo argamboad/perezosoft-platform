@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using Perezosoft.Api.Tests.Architecture;
 using Xunit.Abstractions;
-using static Perezosoft.Api.Tests.Architecture.PlatformOwnership;
+using static Perezosoft.Testing.Architecture.PlatformOwnership;
 
 namespace Perezosoft.Api.Tests;
 

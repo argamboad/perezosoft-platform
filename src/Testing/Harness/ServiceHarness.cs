@@ -7,18 +7,18 @@ using Perezosoft.Core.Repositories;
 using Perezosoft.Infrastructure.Persistence;
 using Perezosoft.Infrastructure.Repositories;
 
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>
-/// Wires the real repositories + services around a single <see cref="AppDbContext"/>
+/// Wires the real repositories + services around a single context (the app's, as a <see cref="PlatformDbContext"/>)
 /// (so they share one transaction/change-tracker, as in production) with lightweight
 /// test doubles for settings, email, and the clock. Construct one per logical actor:
 /// the context's current tenant drives the global query filter.
 /// </summary>
-public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, ICurrentTenant? currentTenant = null,
+public sealed class ServiceHarness(PlatformDbContext db, TimeProvider? clock = null, ICurrentTenant? currentTenant = null,
     SignupSettings? signup = null)
 {
-    public AppDbContext Db { get; } = db;
+    public PlatformDbContext Db { get; } = db;
     public TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 
     /// <summary>The ambient tenant QuotaService counts seats against. Defaults to "no tenant" (null),
@@ -86,12 +86,12 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
     }
 
     /// <summary>Every <see cref="ITenantDataContributor"/> DI registers, as production resolves them: the platform's six
-    /// plus the app's slices' (<c>AppTestComposition.Contributors</c>, Arch A1). The whole set, so an accept-and-dissolve
+    /// plus the app's slices' (<see cref="PlatformTestComposition.Contributors"/>, Arch A1). The whole set, so an accept-and-dissolve
     /// test proves no slice counts an empty household as content and every slice's wipe runs inside the dissolve.</summary>
     public IReadOnlyList<ITenantDataContributor> Contributors() =>
     [
         .. PlatformContributors(),
-        .. Perezosoft.Api.Tests.App.AppTestComposition.Contributors(Db, Clock),
+        .. PlatformTestComposition.Contributors(Db, Clock),
     ];
 
     /// <summary>The platform's own contributors: API keys, webhooks, usage metering, billing, the audit log, the outbox.</summary>
@@ -109,14 +109,14 @@ public sealed class ServiceHarness(AppDbContext db, TimeProvider? clock = null, 
     ];
 }
 
-internal sealed class TestRefreshSettings(int expiryDays = 30, int reuseGraceSeconds = 60, int? absoluteLifetimeDays = null) : IRefreshTokenSettings
+public sealed class TestRefreshSettings(int expiryDays = 30, int reuseGraceSeconds = 60, int? absoluteLifetimeDays = null) : IRefreshTokenSettings
 {
     public int ExpiryDays => expiryDays;
     public int ReuseGraceSeconds => reuseGraceSeconds;
     public int? AbsoluteLifetimeDays => absoluteLifetimeDays;
 }
 
-internal sealed class TestPasswordlessSettings : IPasswordlessSettings
+public sealed class TestPasswordlessSettings : IPasswordlessSettings
 {
     public int MagicLinkLifespanMinutes { get; init; } = 15;
     public int OtpLifespanMinutes { get; init; } = 10;
@@ -125,31 +125,31 @@ internal sealed class TestPasswordlessSettings : IPasswordlessSettings
     public int OtpLockoutWindowMinutes { get; init; } = 15;
 }
 
-internal sealed class TestMfaSettings : IMfaSettings
+public sealed class TestMfaSettings : IMfaSettings
 {
     public int MaxAttempts { get; init; } = 5;
     public int LockoutWindowMinutes { get; init; } = 15;
 }
 
-internal sealed class TestAppSettings : IApplicationSettings
+public sealed class TestAppSettings : IApplicationSettings
 {
-    public string ClientUrl => LocalPorts.WebHttpsUrl;
+    public string ClientUrl => PlatformTestComposition.ClientUrl;
     public string NativeCallbackScheme => string.Empty;
 }
 
-internal sealed class TestInvitationSettings(int lifespanDays = 7) : IInvitationSettings
+public sealed class TestInvitationSettings(int lifespanDays = 7) : IInvitationSettings
 {
     public int LifespanDays => lifespanDays;
 }
 
-internal sealed class TestJwtSettings : IJwtSettings
+public sealed class TestJwtSettings : IJwtSettings
 {
     public string SecretKey { get; init; } = "test-secret-key-at-least-32-chars-long-000";
     public string Issuer => "PerezosoftTests";
     public int ExpiryMinutes => 60;
 }
 
-internal sealed class NoopEmailSender : IEmailSender
+public sealed class NoopEmailSender : IEmailSender
 {
     public Task SendAsync(string to, string subject, string htmlBody,
         IReadOnlyList<EmailInlineImage>? inlineImages = null, IReadOnlyList<EmailAttachment>? attachments = null,
@@ -157,7 +157,7 @@ internal sealed class NoopEmailSender : IEmailSender
 }
 
 /// <summary>Test double for the export service — used by controller tests that don't exercise export.</summary>
-internal sealed class StubExportService : Perezosoft.Api.Services.ITenantExportService
+public sealed class StubExportService : Perezosoft.Api.Services.ITenantExportService
 {
     public bool Called { get; private set; }
 

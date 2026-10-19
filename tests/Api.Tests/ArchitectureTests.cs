@@ -35,7 +35,7 @@ public class ArchitectureTests
             .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Api", "Endpoints")))
             .Select(f => (f, File.ReadAllText(f)));
 
-        var offenders = Architecture.TenantHatchGuard.FindOffenders(sources);
+        var offenders = TenantHatchGuard.FindOffenders(sources);
         Assert.True(offenders.Count == 0,
             "Request-path code (Features/ + Endpoints/) must not bypass the tenant filter — use "
             + $"IRepository<T>.QueryAllTenants() only in a *DataContributor:\n - {string.Join("\n - ", offenders)}");
@@ -54,7 +54,7 @@ public class ArchitectureTests
             .Concat(SourceFiles(Path.Combine(RepoRoot(), "src", "Infrastructure")))
             .Select(f => (f, File.ReadAllText(f)));
 
-        var offenders = Architecture.CrossTenantWriteGuard.FindOffenders(sources);
+        var offenders = CrossTenantWriteGuard.FindOffenders(sources);
         Assert.True(offenders.Count == 0,
             $"QueryAllTenants() must not be composed with a set-based write:\n - {string.Join("\n - ", offenders)}");
     }
@@ -537,7 +537,7 @@ public class ArchitectureTests
         var controllerSources = apiSources;
         var groupSources = apiSources;
 
-        var dupes = Architecture.RoutePrefixInspector.FindDuplicatePrefixes(controllerSources, groupSources);
+        var dupes = RoutePrefixInspector.FindDuplicatePrefixes(controllerSources, groupSources);
         Assert.True(dupes.Count == 0,
             $"Route prefixes must be unique across controllers, feature groups, and endpoint groups: {string.Join(", ", dupes)}");
     }
@@ -559,7 +559,7 @@ public class ArchitectureTests
             var others = slices.Where(s => !string.Equals(s, slice, StringComparison.Ordinal)).ToList();
             foreach (var file in SourceFiles(Path.Combine(featuresDir, slice!)))
             {
-                if (Architecture.SliceReferenceInspector.ReferencedSlices(File.ReadAllText(file), others!).Count > 0)
+                if (SliceReferenceInspector.ReferencedSlices(File.ReadAllText(file), others!).Count > 0)
                     offenders.Add(Path.GetFileName(file)!);
             }
         }
@@ -591,7 +591,7 @@ public class ArchitectureTests
             {
                 var generic = Regex.Matches(text, @"\bclass\s+(?<name>\w+)<(?<param>\w+)>")
                     .ToDictionary(m => m.Groups["param"].Value, m => m.Groups["name"].Value);
-                foreach (var (written, _) in Architecture.SliceWriteInspector.Writes(text))
+                foreach (var (written, _) in SliceWriteInspector.Writes(text))
                 {
                     var entities = generic.TryGetValue(written, out var baseName) && typeArgs.TryGetValue(baseName, out var args) ? args : [written];
                     foreach (var entity in entities)
@@ -743,8 +743,11 @@ public class ArchitectureTests
         // accepted (tiny RFC-6238 surface, no I/O), but only while it stays a ONE-FILE dependency:
         // confined to MfaService so it can be swapped for another implementation (or inline HMAC)
         // behind IMfaService without touching anything else. Tests may reference it freely (they
-        // generate codes to drive the real service). See docs/TECH_STACK.md.
+        // generate codes to drive the real service) — and so may the packaged test harness, src/Testing (Pkg 5.1a),
+        // whose integration host computes codes the same way. See docs/TECH_STACK.md.
+        var testing = Path.Combine(RepoRoot(), "src", "Testing") + Path.DirectorySeparatorChar;
         var offenders = SourceFiles(Path.Combine(RepoRoot(), "src"))
+            .Where(f => !f.StartsWith(testing, StringComparison.OrdinalIgnoreCase))
             .Where(f => File.ReadAllText(f).Contains("OtpNet"))
             .Select(f => Path.GetFileName(f))
             .Where(name => name != "MfaService.cs")

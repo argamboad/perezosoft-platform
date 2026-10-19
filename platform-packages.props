@@ -13,6 +13,7 @@
     <PlatformPackage Include="Perezosoft.Platform.Client" Source="src/Client/Perezosoft.Client.csproj" />
     <PlatformPackage Include="Perezosoft.Platform.Web" Source="src/Client.Web/Perezosoft.Client.Web.csproj" />
     <PlatformPackage Include="Perezosoft.Platform.Maui" Source="src/Client.Maui/Perezosoft.Client.Maui.csproj" />
+    <PlatformPackage Include="Perezosoft.Platform.Testing" Source="src/Testing/Perezosoft.Testing.csproj" />
     <PlatformPackage Include="Perezosoft.Platform.DryRun" Source="tools/release/dry-run/Perezosoft.Platform.DryRun.csproj" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>
 /// The one way a cross-tenant test arranges its world (R146, v4 audit H4/T10): two tenants, each seeded through

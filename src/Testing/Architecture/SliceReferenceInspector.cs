@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Perezosoft.Api.Tests.Architecture;
+namespace Perezosoft.Testing.Architecture;
 
 /// <summary>
 /// Pure slice-reference matcher behind <c>FeatureFolders_DoNotReferenceEachOthersNamespaces</c> and its

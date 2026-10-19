@@ -10,7 +10,7 @@ using Perezosoft.Api.Authentication;
 using Perezosoft.Core.Authorization;
 using Perezosoft.Core.Repositories;
 
-namespace Perezosoft.Api.Tests.Infrastructure;
+namespace Perezosoft.Testing;
 
 /// <summary>
 /// Runs the <see cref="RequireTenantPermissionAttribute"/> that guards a controller action, exactly as

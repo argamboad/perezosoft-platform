@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The platform's test harness and guards (Pkg 5.1a, ADR-034 as amended: three test packages by runner — this one is
+    xUnit's). The integration host and the database fixture, generic over the app's Program and AppDbContext; the
+    service harness and its doubles; the fixture entities; the architecture guards and inspectors; the RLS setup and
+    probe. An app's test assembly references it, declares its one-line host and fixture subclasses, and fills
+    PlatformTestComposition from a module initializer. A library, not a test project: no test SDK, no runner.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Testing</PackageId>
+    <Description>Perezosoft Platform test harness: the integration host and database fixture generic over an app's Program and context, the service harness, the architecture guards and the RLS probe, for xUnit.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Otp.NET" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <!-- Testcontainers pulls a vulnerable SSH.NET transitively; the same pin the test projects carry. -->
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="xunit.extensibility.core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Api\Perezosoft.Api.csproj" />
+  </ItemGroup>
+
+</Project>

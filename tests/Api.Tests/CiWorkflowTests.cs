@@ -108,7 +108,7 @@ public class CiWorkflowTests
         // any workflow, keeps it.
         var workflows = Directory.EnumerateFiles(Path.Combine(RepoRoot(), ".github", "workflows"), "*.yml")
             .Select(f => ".github/workflows/" + Path.GetFileName(f)).ToList();
-        if (Architecture.PlatformOwnership.IsThePlatform(RepoRoot())) // release.yml is producer-only (Pkg 2.5): an app has none
+        if (PlatformOwnership.IsThePlatform(RepoRoot())) // release.yml is producer-only (Pkg 2.5): an app has none
             Assert.Contains(".github/workflows/release.yml", workflows); // probe: the walk sees every workflow
         foreach (var file in workflows)
         {
@@ -198,7 +198,7 @@ public class CiWorkflowTests
         Assert.Contains("<MinVerTagPrefix>v</MinVerTagPrefix>", props, StringComparison.Ordinal);
 
         // The workflow and its note template are producer-only (Pkg 2.5): held here, in the platform; an app has neither.
-        if (!Architecture.PlatformOwnership.IsThePlatform(RepoRoot())) return;
+        if (!PlatformOwnership.IsThePlatform(RepoRoot())) return;
         const string Release = ".github/workflows/release.yml";
         var yml = Read(Release);
         var on = yml[yml.IndexOf("\non:\n", StringComparison.Ordinal)..yml.IndexOf("\njobs:\n", StringComparison.Ordinal)];

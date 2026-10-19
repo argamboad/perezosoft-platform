@@ -64,6 +64,7 @@ public class TestIdContractTests
         var allowed = new Dictionary<string, string>
         {
             ["tests/Api.Tests/LocalDotEnvTests.cs"] = "opts the assembly out of the developer's .env (LocalDotEnv.SkipVariable); not a feature gate",
+            ["tests/Api.Tests/App/AppTestComposition.cs"] = "hands the app's contributors, pins and swaps to the packaged harness (PlatformTestComposition, Pkg 5.1a); switches nothing",
         };
 
         var root = RepoRoot();
