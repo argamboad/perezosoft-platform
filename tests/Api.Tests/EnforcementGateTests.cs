@@ -727,7 +727,7 @@ public class EnforcementGateTests
             "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Host/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
             "src/Testing/Harness/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
-            "tests/Ui.Tests/Infrastructure/TestHttpHandler.cs",
+            "src/Testing.Ui/TestHttpHandler.cs",
         ];
         // How the sample would be named from a composition file; the ban-list literals in ArchitectureTests' Notes-independence
         // gate are strings, not references, and are not among these.

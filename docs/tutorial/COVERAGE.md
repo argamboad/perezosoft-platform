@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (30 files)
+## 1.1 — Solution, projects & supply chain (32 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -43,12 +43,14 @@
 - `src/Infrastructure/Perezosoft.Infrastructure.csproj` — created here; PackageReferences added as lessons need them
 - `src/Maui/Perezosoft.Maui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Shared.Ui/Perezosoft.Shared.Ui.csproj` — created here; PackageReferences added as lessons need them
+- `src/Testing.Ui/Perezosoft.Testing.Ui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Testing/Perezosoft.Testing.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Properties/launchSettings.json`
 - `tests/Api.Tests/PackagingContractTests.cs` — the packages the platform publishes: the three ids, each depends only on published projects, versions from MinVer only when packing, the pdb inside the nupkg (Pkg 3.1)
 - `tests/Api.Tests/Perezosoft.Api.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Api.Tests/PlatformSourceTests.cs` — the local source switch: every packable project is in the package map; the switch reads .env and never touches the committed lockfile (Pkg 2.4)
+- `tests/Client.Tests/Perezosoft.Client.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/E2E.Tests/Perezosoft.E2E.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
@@ -299,7 +301,7 @@
 - `tests/Api.Tests/ArchitectureTests.cs` — born here; gains a rule per part (R5/R6/R15…)
 - `tests/Api.Tests/CompositionSmokeTests.cs` — the platform's one-line composition smoke (Pkg 5.1b)
 
-## 3.4 — The web client & auth UI (134 files)
+## 3.4 — The web client & auth UI (141 files)
 
 - `src/Client.Web/Http/CookieHandler.cs`
 - `src/Client.Web/Http/CookieSessionStore.cs`
@@ -345,6 +347,15 @@
 - `src/Shared.Ui/wwwroot/brand/lockup_light.svg` — placeholder brand assets — replaced in 9.1
 - `src/Shared.Ui/wwwroot/brand/lockup_light_1520.png` — placeholder brand assets — replaced in 9.1
 - `src/Shared.Ui/wwwroot/css/app.css`
+- `src/Testing.Ui/FakeCulturePersistence.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/FakeFileDownloadLauncher.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/FakeSessionStore.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/FakeStringLocalizer.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/FakeThemePersistence.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/PlatformComponentTestBase.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/TestClock.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/TestHttpHandler.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
+- `src/Testing.Ui/TestJwt.cs` — the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder
 - `src/Web/Program.cs`
 - `src/Web/_Imports.razor`
 - `src/Web/wwwroot/apple_touch_180.png`
@@ -404,17 +415,14 @@
 - `tests/Api.Tests/Auth/BearerHandlerParityTests.cs` — both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)
 - `tests/Api.Tests/BfcacheGuardTests.cs` — pins the guard's contract + presence in BOTH hosts' index.html
 - `tests/Api.Tests/JsLogicTests.cs` — runs tests/js-logic inside the test gate and requires a node test per bootstrap file (v4 T53, R142)
+- `tests/Client.Tests/AuthServiceTests.cs` — the client package's own tests on the packaged chassis: sign-in, refresh, the keep-alive (Pkg 5.1c)
+- `tests/Client.Tests/BearerScopedHandlerTests.cs` — API requests carry the bearer; a foreign host gets none and spends no refresh (v4 T49)
+- `tests/Client.Tests/SessionKeepAliveTests.cs` — the client package's own tests on the packaged chassis: sign-in, refresh, the keep-alive (Pkg 5.1c)
 - `tests/E2E.Tests/ThemeJourneyTests.cs` — dark-mode journey (live flip, reload persist, cross-device reconcile)
 - `tests/Ui.Tests/AdminConsoleGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/App/TestHttpHandler.App.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/AuthServiceTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/BearerScopedHandlerTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/BillingGateUiTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/HomePageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/Infrastructure/ComponentTestBase.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/Infrastructure/Fakes.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/Infrastructure/TestHttpHandler.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
-- `tests/Ui.Tests/Infrastructure/TestJwt.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/LocaleReloadDeepLinkTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/LocaleReloadLoopGuardTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/NotifyBillingTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -423,6 +431,7 @@
 - `tests/Ui.Tests/Pages/HouseholdPageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/Pages/LoginAndJoinPageTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/Pages/RemainingControlsTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
+- `tests/Ui.Tests/PlatformTestingUsings.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/PreferenceScopingTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/PreferenceSyncClaimTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
 - `tests/Ui.Tests/ReconcileMatrixTests.cs` — bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test
@@ -1068,7 +1077,7 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (67 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (69 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Client.Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1130,9 +1139,11 @@
 - `src/Host/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Testing.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Testing/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/Api.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `tests/Client.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/Core.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/E2E.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `tests/Ui.Tests/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1456,4 +1467,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1289 tracked files · 910 built in lessons · 379 bucketed · 0 unmapped
+**Totals:** 1300 tracked files · 919 built in lessons · 381 bucketed · 0 unmapped

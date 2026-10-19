@@ -1,9 +1,9 @@
 using System.Net;
 using Xunit;
 using Perezosoft.Client.Auth;
-using Perezosoft.Ui.Tests.Infrastructure;
+using Perezosoft.Testing.Ui;
 
-namespace Perezosoft.Ui.Tests;
+namespace Perezosoft.Client.Tests;
 
 /// <summary>
 /// v4 T49 (NAT-12, R102): the one bearer handler both hosts install attaches the token — and renews on a 401 —
@@ -11,7 +11,7 @@ namespace Perezosoft.Ui.Tests;
 /// untouched: no Authorization header (AWS rejects a presigned request that carries one) and no refresh spent
 /// on the file host's behalf.
 /// </summary>
-public class BearerScopedHandlerTests : ComponentTestBase
+public class BearerScopedHandlerTests : PlatformComponentTestBase
 {
     private static readonly Uri ApiOrigin = new("http://localhost");
 

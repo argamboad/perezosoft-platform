@@ -434,8 +434,8 @@ app's half of the context in `AppDbContext.App.cs` (partial class, `OnAppModelCr
 `tests/Api.Tests/App/AppAllowlists.cs` for every allowlist the gates read (`EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`,
 `EveryUserKeyedEntity_IsWiredIntoAccountErasure`, the outbound-HTTP, controller, type-name, tenant-id and
 data-protection sets); `AppTestComposition.cs` for the harness's contributors and the integration host's pins;
-`RulesEnforcement.App.cs` for the manifest's per-app `Pending`/`NotHere`; `tests/Ui.Tests/App/TestHttpHandler.App.cs`
-for the UI stub. `Program.cs` calls the two composition methods once and runs the startup tasks; nothing in it
+`RulesEnforcement.App.cs` for the manifest's per-app `Pending`/`NotHere`; the UI stub's app half
+(`TestHttpHandler.App.cs`, retired in Pkg 5.1c: the packaged `TestHttpHandler` is open to subclassing). `Program.cs` calls the two composition methods once and runs the startup tasks; nothing in it
 changes per app. The checklist in `WAYS_OF_WORKING.md` names these files and
 `AddASliceChecklist_NamesEveryArtifactAGateForces` still holds it to the gates (`EveryEntity_IsDocumentedInDataModel`,
 `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`, `PostmanParityTests`); `CompositionFiles_AreFreeOfTheSampleSlice`

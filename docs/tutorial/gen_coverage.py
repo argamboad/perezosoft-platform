@@ -334,6 +334,9 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Testing/Architecture/SliceWriteInspector.cs", "3.3", "which entities a slice writes: the matcher behind the one-writer gate (Arch A8)"),
     ("tests/Api.Tests/Architecture/SliceWriteInspectorTests.cs", "3.3", "self-test of the write matcher: reads are free, writes and chained set-based writes count (Arch A8)"),
     ("tests/Ui.Tests/SystemBarThemeSyncTests.cs", "A.1", "the RCL relay from theme.js to ISystemBarTheme — the Android status bar follows the page (#231)"),
+    ("src/Testing.Ui/*", "3.4", "the bUnit chassis, packaged (Perezosoft.Platform.Testing.Ui, Pkg 5.1c): the base, the HTTP stub, the doubles, the clock, the JWT builder"),
+    ("tests/Client.Tests/BearerScopedHandlerTests.cs", "3.4", "API requests carry the bearer; a foreign host gets none and spends no refresh (v4 T49)"),
+    ("tests/Client.Tests/*", "3.4", "the client package's own tests on the packaged chassis: sign-in, refresh, the keep-alive (Pkg 5.1c)"),
     ("tests/Ui.Tests/*", "3.4", "bUnit component-test chassis for the RCL (v3 TOOL-2) — doubles + one proving test"),
     ("src/Web/Program.cs", "3.4", ""),
     ("src/Web/_Imports.razor", "3.4", ""),
@@ -577,7 +580,6 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Client/Auth/BearerRetry.cs", "3.4", "both hosts' bearer core: attach the token, renew once and resend on a 401 (v4 T32, R126); scoped to the API origin (v4 T49)"),
     ("src/Client/Auth/BearerScopedHandler.cs", "3.4", "the one bearer handler both hosts install; foreign absolute URLs get no token and no refresh (v4 T49, R102)"),
     ("tests/Api.Tests/Auth/BearerHandlerParityTests.cs", "3.4", "both hosts install BearerScopedHandler; nobody else builds a bearer; the native download client is plain (v4 T32/T49)"),
-    ("tests/Ui.Tests/BearerScopedHandlerTests.cs", "3.4", "API requests carry the bearer; a foreign host gets none and spends no refresh (v4 T49)"),
 
     # ---- Part 8 ----
     ("src/Api/Configuration/ProxyForwardingExtensions.cs", "8.1", "config-gated forwarded headers"),

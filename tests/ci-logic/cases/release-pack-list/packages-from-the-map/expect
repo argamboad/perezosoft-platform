@@ -6,5 +6,6 @@ exit 0
 +pack src/Client.Web/Perezosoft.Client.Web.csproj
 +pack src/Client.Maui/Perezosoft.Client.Maui.csproj
 +pack src/Testing/Perezosoft.Testing.csproj
++pack src/Testing.Ui/Perezosoft.Testing.Ui.csproj
 -dry-run
 -slnx

@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Perezosoft.Client.Auth;
 
-namespace Perezosoft.Ui.Tests.Infrastructure;
+namespace Perezosoft.Testing.Ui;
 
 /// <summary>
 /// Builds an access token the way <see cref="AuthService"/> reads it: it parses claims with

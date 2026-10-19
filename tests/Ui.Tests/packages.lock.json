@@ -422,6 +422,15 @@
           "System.IdentityModel.Tokens.Jwt": "[8.19.1, )"
         }
       },
+      "Perezosoft.Platform.Testing.Ui": {
+        "type": "Project",
+        "dependencies": {
+          "AngleSharp": "[1.5.2, )",
+          "Microsoft.Extensions.TimeProvider.Testing": "[10.7.0, )",
+          "Perezosoft.Platform.Client": "[1.0.0, )",
+          "bunit": "[2.7.2, )"
+        }
+      },
       "perezosoft.shared.ui": {
         "type": "Project",
         "dependencies": {

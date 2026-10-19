@@ -30,12 +30,18 @@
   <Folder Name="/src/Testing/">
     <Project Path="src/Testing/Perezosoft.Testing.csproj" />
   </Folder>
+  <Folder Name="/src/Testing.Ui/">
+    <Project Path="src/Testing.Ui/Perezosoft.Testing.Ui.csproj" />
+  </Folder>
   <Folder Name="/src/Web/">
     <Project Path="src/Web/Perezosoft.Web.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/Api.Tests/">
     <Project Path="tests/Api.Tests/Perezosoft.Api.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Client.Tests/">
+    <Project Path="tests/Client.Tests/Perezosoft.Client.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Core.Tests/">
     <Project Path="tests/Core.Tests/Perezosoft.Core.Tests.csproj" />

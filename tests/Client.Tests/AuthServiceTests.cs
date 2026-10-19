@@ -1,8 +1,8 @@
 using System.Net;
-using Perezosoft.Ui.Tests.Infrastructure;
+using Perezosoft.Testing.Ui;
 using Xunit;
 
-namespace Perezosoft.Ui.Tests;
+namespace Perezosoft.Client.Tests;
 
 /// <summary>
 /// v3 audit TB-UI backfill (T45c) — the AuthService contracts the whole client hangs off:
@@ -11,7 +11,7 @@ namespace Perezosoft.Ui.Tests;
 /// with a revoked token), claim reads never throw on a hostile token, impersonation is claim-driven,
 /// and the staff probe caches per identity without caching transient failures.
 /// </summary>
-public class AuthServiceTests : ComponentTestBase
+public class AuthServiceTests : PlatformComponentTestBase
 {
     [Fact]
     public async Task SignedIn_FiresOnTransitionOnly_NotOnRotation()

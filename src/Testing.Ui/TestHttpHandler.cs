@@ -1,14 +1,14 @@
 using System.Net;
 using System.Text;
 
-namespace Perezosoft.Ui.Tests.Infrastructure;
+namespace Perezosoft.Testing.Ui;
 
 /// <summary>
 /// A controllable <see cref="HttpMessageHandler"/> for the client's <see cref="HttpClient"/>: route
 /// "METHOD /path" to a canned response, and record every request for assertions. Unmatched requests 404
 /// (a component that calls an unstubbed endpoint fails loudly rather than hanging).
 /// </summary>
-public sealed partial class TestHttpHandler : HttpMessageHandler // the app's half: App/TestHttpHandler.App.cs (Arch A1)
+public class TestHttpHandler : HttpMessageHandler // packaged (Pkg 5.1c): an app adds stub shapes by extension method or subclass
 {
     private readonly Dictionary<string, Func<HttpRequestMessage, HttpResponseMessage>> _routes = new(StringComparer.OrdinalIgnoreCase);
 

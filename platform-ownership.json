@@ -23,6 +23,7 @@
     { "glob": "tools/release/**", "class": "producer" },
     { "glob": "tests/ci-logic/cases/release-plan/**", "class": "producer" },
     { "glob": "platform-packages.props", "class": "producer" },
+    { "glob": "tests/Client.Tests/**", "class": "producer" },
     { "glob": "src/Host/Features/Notes/**", "class": "sample" },
     { "glob": "src/Core/Entities/Note.cs", "class": "sample" },
     { "glob": "src/Host/Persistence/Configurations/NoteConfiguration.cs", "class": "sample" },
@@ -50,6 +51,7 @@
     { "glob": "src/Client.Web/*.csproj", "class": "adapts" },
     { "glob": "src/Client.Maui/*.csproj", "class": "adapts" },
     { "glob": "src/Testing/*.csproj", "class": "adapts" },
+    { "glob": "src/Testing.Ui/*.csproj", "class": "adapts" },
     { "glob": "**/packages.lock.json", "class": "adapts" },
 
     { "glob": "src/Core/**", "class": "platform" },
@@ -59,6 +61,7 @@
     { "glob": "src/Client.Web/**", "class": "platform" },
     { "glob": "src/Client.Maui/**", "class": "platform" },
     { "glob": "src/Testing/**", "class": "platform" },
+    { "glob": "src/Testing.Ui/**", "class": "platform" },
     { "glob": "src/Host/**", "class": "platform" },
 
     { "glob": "src/Shared.Ui/**", "class": "adapts" },
