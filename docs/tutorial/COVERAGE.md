@@ -21,7 +21,7 @@
 - `tests/Api.Tests/LocalPortsTests.cs` — each app's local port block, held in every source; no two apps share a port (Local Dev Alignment L4)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (32 files)
+## 1.1 — Solution, projects & supply chain (33 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)
@@ -43,6 +43,7 @@
 - `src/Infrastructure/Perezosoft.Infrastructure.csproj` — created here; PackageReferences added as lessons need them
 - `src/Maui/Perezosoft.Maui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Shared.Ui/Perezosoft.Shared.Ui.csproj` — created here; PackageReferences added as lessons need them
+- `src/Testing.E2E/Perezosoft.Testing.E2E.csproj` — created here; PackageReferences added as lessons need them
 - `src/Testing.Ui/Perezosoft.Testing.Ui.csproj` — created here; PackageReferences added as lessons need them
 - `src/Testing/Perezosoft.Testing.csproj` — created here; PackageReferences added as lessons need them
 - `src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
@@ -459,17 +460,20 @@
 - `tests/E2E.Tests/I18nTests.cs`
 - `tests/E2E.Tests/LocaleMismatchJoinTests.cs` — locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)
 
-## 3.6 — The E2E harness (Playwright) (19 files)
+## 3.6 — The E2E harness (Playwright) (23 files)
 
+- `src/Testing.E2E/BlazorBoot.cs` — the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)
+- `src/Testing.E2E/BlazorBootCore.cs` — the boot helper's decision, Playwright-free (v4 T55, R109)
+- `src/Testing.E2E/Mailpit.cs` — read OTPs from the fake inbox
+- `src/Testing.E2E/PlatformE2EHosts.cs` — where the app under test listens: runsettings, then environment, then the app's ports (Pkg 5.1d)
+- `src/Testing.E2E/PlatformE2ETestBase.cs` — the journey base, packaged (Perezosoft.Platform.Testing.E2E, Pkg 5.1d): browser, hosts, billing webhook, console report
 - `tests/Api.Tests/E2E/BlazorBootTests.cs` — the boot decision driven by a scripted page — the audit's six cases (v4 T55)
 - `tests/Api.Tests/E2eShardsTests.cs` — the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)
 - `tests/Api.Tests/TestIdContractTests.cs` — the test-id contract (every id a test or QA case references exists) and the ban on process-wide switches in tests (v4 T59, R149/R154)
 - `tests/E2E.Tests/AuthFlowTests.cs`
-- `tests/E2E.Tests/BlazorBoot.cs` — the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)
-- `tests/E2E.Tests/BlazorBootCore.cs` — the boot helper's decision, Playwright-free (v4 T55, R109)
-- `tests/E2E.Tests/E2ETestBase.cs`
+- `tests/E2E.Tests/E2EHosts.cs` — this repo's ports, handed to the packaged harness (Pkg 5.1d)
+- `tests/E2E.Tests/E2ETestBase.cs` — this repo's journey base: the packaged one plus the sign-in and invite helpers over its page objects (Pkg 5.1d)
 - `tests/E2E.Tests/MagicLinkJourneyTests.cs` — happy + single-use
-- `tests/E2E.Tests/Mailpit.cs` — read OTPs from the fake inbox
 - `tests/E2E.Tests/Pages/AdminConsolePage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/BasePage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/BillingPage.cs` — Page Object Model
@@ -477,6 +481,7 @@
 - `tests/E2E.Tests/Pages/JoinPage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/LoginPage.cs` — Page Object Model
 - `tests/E2E.Tests/Pages/SettingsPage.cs` — Page Object Model
+- `tests/E2E.Tests/PlatformTestingUsings.cs` — the packaged journey harness's namespace, globally (Pkg 5.1d)
 - `tests/E2E.Tests/SessionJourneyTests.cs` — session journeys only a browser can prove: Back after sign-out with the back/forward cache on, keep-alive on Playwright's clock, a theme save during a renewal (v4 T58)
 - `tests/E2E.Tests/playwright.runsettings`
 - `tools/e2e.ps1` — runs the E2E suite against a stack wired for testing, .env untouched (Local Dev Alignment L12)
@@ -683,6 +688,7 @@
 - `src/Shared.Ui/Components/MfaCard.razor`
 - `src/Shared.Ui/Pages/Settings.razor`
 - `src/Shared.Ui/wwwroot/js/mfa-qr.js` — JS interop to render the TOTP QR
+- `src/Testing.E2E/Totp.cs`
 - `tests/Api.Tests/DataProtectionIdentityTests.cs` — DataProtection purposes frozen — a rename orphans every protected payload (v3 TR-8)
 - `tests/Api.Tests/Integration/MfaStepUpIntegrationTests.cs` — step-up on EVERY sign-in path
 - `tests/Api.Tests/Mfa/MfaChallengeServiceTests.cs`
@@ -690,7 +696,6 @@
 - `tests/Api.Tests/Mfa/MfaServiceTests.cs`
 - `tests/Api.Tests/Mfa/RecoveryCodeHasherTests.cs`
 - `tests/E2E.Tests/MfaJourneyTests.cs`
-- `tests/E2E.Tests/Totp.cs`
 
 ## 7.1 — GDPR: export & erasure (8 files)
 
@@ -1077,7 +1082,7 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (69 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (70 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Client.Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1139,6 +1144,7 @@
 - `src/Host/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Testing.E2E/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Testing.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Testing/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Web/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1467,4 +1473,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1300 tracked files · 919 built in lessons · 381 bucketed · 0 unmapped
+**Totals:** 1306 tracked files · 924 built in lessons · 382 bucketed · 0 unmapped

@@ -1,6 +1,6 @@
 using OtpNet;
 
-namespace Perezosoft.E2E.Tests;
+namespace Perezosoft.Testing.E2E;
 
 /// <summary>Computes the current TOTP for a Base32 secret — the same OtpNet the API uses (MFA-1).</summary>
 public static class Totp

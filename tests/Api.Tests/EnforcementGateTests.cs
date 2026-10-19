@@ -309,18 +309,21 @@ public class EnforcementGateTests
         // magic-link URL was spent twice — UX-8), and only BlazorBoot knows how. So no journey or page object
         // navigates or reloads an IPage itself: BlazorBoot.cs is the one caller (and BlazorBootCore.cs, whose page
         // is its own IBootPage seam). The Windows native smoke drives a WebView2 through CDP with no Blazor loader
-        // to watch, and is the one deliberate exception.
-        var e2e = Path.Combine(RepoRoot(), "tests", "E2E.Tests");
+        // to watch, and is the one deliberate exception. The journeys and the packaged harness they stand on
+        // (src/Testing.E2E, Pkg 5.1d) are both scanned.
+        var root = RepoRoot();
+        var harness = Path.Combine(root, "src", "Testing.E2E");
         var receiver = new System.Text.RegularExpressions.Regex(@"\b\w*[pP]age\.(GotoAsync|ReloadAsync)\(");
-        var offenders = Directory.EnumerateFiles(e2e, "*.cs", SearchOption.AllDirectories)
+        var offenders = new[] { Path.Combine(root, "tests", "E2E.Tests"), harness }
+            .SelectMany(d => Directory.EnumerateFiles(d, "*.cs", SearchOption.AllDirectories))
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
                      && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
             .Where(f => Path.GetFileName(f) is not ("BlazorBoot.cs" or "BlazorBootCore.cs" or "NativeSmokeTests.cs"))
             .Where(f => receiver.IsMatch(File.ReadAllText(f)))
-            .Select(f => Path.GetRelativePath(e2e, f))
+            .Select(f => Path.GetRelativePath(root, f))
             .ToList();
         Assert.True(offenders.Count == 0, $"IPage.GotoAsync/ReloadAsync outside BlazorBoot.cs (use BlazorBoot.GotoAsync / ReloadAsync): {string.Join(", ", offenders)}");
-        Assert.Matches(receiver, File.ReadAllText(Path.Combine(e2e, "BlazorBoot.cs"))); // probe alive
+        Assert.Matches(receiver, File.ReadAllText(Path.Combine(harness, "BlazorBoot.cs"))); // probe alive
     }
 
     [Theory]
@@ -332,7 +335,7 @@ public class EnforcementGateTests
         var ci = File.ReadAllText(Path.Combine(RepoRoot(), workflow));
         var step = ci[ci.IndexOf("- name: Slowest journeys", StringComparison.Ordinal)..];
         step = step[..step.IndexOf("- name: ", 10, StringComparison.Ordinal)];
-        Assert.Contains($"budget = {Perezosoft.E2E.Tests.BlazorBootCore.DeadBootsPerRun}  #", step);
+        Assert.Contains($"budget = {Perezosoft.Testing.E2E.BlazorBootCore.DeadBootsPerRun}  #", step);
         Assert.Contains("if len(boots) > budget:", step);
         Assert.Contains("raise SystemExit(1)", step);
         Assert.Contains("sorted({line.strip()", step); // per journey, deduplicated (LB-DEP-6b)

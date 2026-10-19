@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Playwright;
 using NUnit.Framework;
 
-namespace Perezosoft.E2E.Tests;
+namespace Perezosoft.Testing.E2E;
 
 /// <summary>
 /// Every full navigation boots the Blazor WebAssembly app from scratch: the loader fetches the runtime

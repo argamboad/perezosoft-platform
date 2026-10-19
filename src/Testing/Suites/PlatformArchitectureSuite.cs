@@ -728,11 +728,11 @@ public abstract class PlatformArchitectureSuite
         // accepted (tiny RFC-6238 surface, no I/O), but only while it stays a ONE-FILE dependency:
         // confined to MfaService so it can be swapped for another implementation (or inline HMAC)
         // behind IMfaService without touching anything else. Tests may reference it freely (they
-        // generate codes to drive the real service) — and so may the packaged test harness, src/Testing (Pkg 5.1a),
-        // whose integration host computes codes the same way. See docs/TECH_STACK.md.
-        var testing = Path.Combine(Root, "src", "Testing") + Path.DirectorySeparatorChar;
-        var offenders = SourceFiles(Path.Combine(Root, "src"))
-            .Where(f => !f.StartsWith(testing, StringComparison.OrdinalIgnoreCase))
+        // generate codes to drive the real service) — and so may the packaged test harnesses, src/Testing* (Pkg 5.1a,
+        // 5.1d), whose integration host and journey Totp compute codes the same way. See docs/TECH_STACK.md.
+        var src = Path.Combine(Root, "src");
+        var offenders = SourceFiles(src)
+            .Where(f => !Path.GetRelativePath(src, f).StartsWith("Testing", StringComparison.OrdinalIgnoreCase))
             .Where(f => File.ReadAllText(f).Contains("OtpNet"))
             .Select(f => Path.GetFileName(f))
             .Where(name => name != "MfaService.cs")

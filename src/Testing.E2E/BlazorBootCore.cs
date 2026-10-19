@@ -1,4 +1,4 @@
-namespace Perezosoft.E2E.Tests;
+namespace Perezosoft.Testing.E2E;
 
 // The testable core of BlazorBoot (v4 audit T55, R109): the retry decision, with the browser behind three
 // small delegates so it runs under plain unit tests without Playwright. BlazorBoot.cs (the Playwright

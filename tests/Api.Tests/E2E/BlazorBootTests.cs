@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Time.Testing;
-using Perezosoft.E2E.Tests;
+using Perezosoft.Testing.E2E;
 
 namespace Perezosoft.Api.Tests.E2E;
 
 /// <summary>
 /// v4 audit T55 (UX-8/9, DEP-21, LB-DEP-6b; R109): the E2E boot helper's retry decision, driven with a scripted
-/// page — no browser. <see cref="BlazorBootCore"/> is the E2E project's file, linked into this one: what
+/// page — no browser. <see cref="BlazorBootCore"/> is the journey package's file (src/Testing.E2E, Pkg 5.1d), linked into this one: what
 /// these prove is what every journey's navigation does on CI. The cases are the audit's (1)–(6).
 /// </summary>
 public class BlazorBootTests

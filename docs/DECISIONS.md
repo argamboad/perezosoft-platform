@@ -1811,7 +1811,7 @@ or vanishes in its namespace, and the first port lane shared its Docker daemon w
 Testcontainers' Postgres and `docker-build` start and stop containers all the time. Every dead boot ever
 seen ran on that lane; lanes 2 and 3, with their own daemons, never failed once. CPU only ever governed speed.
 Two fixes, both kept: the first lane got its own daemon (`runner-dind-1`; rule: no port lane shares a
-daemon with anything that creates containers), and `tests/E2E.Tests/BlazorBoot.cs` makes the suite survive
+daemon with anything that creates containers), and `BlazorBoot.cs` (packaged in `src/Testing.E2E` since Pkg 5.1d) makes the suite survive
 the failure anyway — after every full navigation it watches the page and the browser console together (app
 up, Blazor's banner, or a failed framework fetch), reloads on a dead boot (three tries), then fails with the
 console attached; every red journey prints that console. With that, `e2e` needs only `changes` again on both

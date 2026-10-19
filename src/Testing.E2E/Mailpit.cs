@@ -1,18 +1,21 @@
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 
-namespace Perezosoft.E2E.Tests;
+namespace Perezosoft.Testing.E2E;
 
 /// <summary>
-/// Minimal client for the dev Mailpit REST API (this repo's Mailpit UI port, local-ports.props) so E2E tests can read
-/// the OTP code / magic link the app "sends" — the same trick a manual tester uses.
+/// Minimal client for the dev Mailpit REST API so E2E tests can read the OTP code / magic link the app "sends" — the
+/// same trick a manual tester uses. Where Mailpit listens: MAILPIT_BASE_URL, else the app's Mailpit UI port
+/// (<see cref="PlatformE2EHosts.MailUi"/>, from its local-ports.props), read on first use.
 /// </summary>
 public static class Mailpit
 {
-    private static readonly HttpClient Http = new()
+    private static readonly Lazy<HttpClient> Client = new(() => new HttpClient
     {
-        BaseAddress = new Uri(Environment.GetEnvironmentVariable("MAILPIT_BASE_URL") ?? LocalPorts.MailUiUrl),
-    };
+        BaseAddress = new Uri(PlatformE2EHosts.Resolve("MAILPIT_BASE_URL", PlatformE2EHosts.MailUi)),
+    });
+
+    private static HttpClient Http => Client.Value;
 
     /// <summary>Deletes all trapped messages (call before triggering a fresh email).</summary>
     public static Task ClearAsync() => Http.DeleteAsync("/api/v1/messages");

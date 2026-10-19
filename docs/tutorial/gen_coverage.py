@@ -375,15 +375,18 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/E2E.Tests/I18nTests.cs", "3.5", ""),
     ("tests/Api.Tests/ResourceParityTests.cs", "3.5", "EN/ES resx key parity, no duplicate or unprefixed keys (2026-07 truth-up; v4 T9)"),
     ("tests/E2E.Tests/LocaleMismatchJoinTests.cs", "3.5", "locale-mismatch reload preserves /join (v3 TB-UI-16, UX-1 end-to-end)"),
-    ("tests/E2E.Tests/E2ETestBase.cs", "3.6", ""),
+    ("tests/E2E.Tests/E2ETestBase.cs", "3.6", "this repo's journey base: the packaged one plus the sign-in and invite helpers over its page objects (Pkg 5.1d)"),
+    ("tests/E2E.Tests/E2EHosts.cs", "3.6", "this repo's ports, handed to the packaged harness (Pkg 5.1d)"),
+    ("tests/E2E.Tests/PlatformTestingUsings.cs", "3.6", "the packaged journey harness's namespace, globally (Pkg 5.1d)"),
+    ("src/Testing.E2E/PlatformE2ETestBase.cs", "3.6", "the journey base, packaged (Perezosoft.Platform.Testing.E2E, Pkg 5.1d): browser, hosts, billing webhook, console report"),
+    ("src/Testing.E2E/PlatformE2EHosts.cs", "3.6", "where the app under test listens: runsettings, then environment, then the app's ports (Pkg 5.1d)"),
     ("tests/Api.Tests/E2eShardsTests.cs", "3.6", "the [Explicit] native smoke stays out of the browser shards; the story's suite size is derived (v4 T12)"),
-    ("tests/E2E.Tests/Mailpit.cs", "3.6", "read OTPs from the fake inbox"),
-    ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)"),
-    ("tests/E2E.Tests/BlazorBootCore.cs", "3.6", "the boot helper's decision, Playwright-free (v4 T55, R109)"),
+    ("src/Testing.E2E/Mailpit.cs", "3.6", "read OTPs from the fake inbox"),
+    ("src/Testing.E2E/BlazorBoot.cs", "3.6", "the Playwright adapter of the boot helper: reload a dead WASM boot (landed URL, network deaths only, 3 tries + a per-run allowance) instead of waiting the journey's whole timeout (#17/#18, v4 T55)"),
+    ("src/Testing.E2E/BlazorBootCore.cs", "3.6", "the boot helper's decision, Playwright-free (v4 T55, R109)"),
     ("tests/Api.Tests/E2E/BlazorBootTests.cs", "3.6", "the boot decision driven by a scripted page — the audit's six cases (v4 T55)"),
     ("tests/E2E.Tests/Pages/*", "3.6", "Page Object Model"),
     ("tests/E2E.Tests/AuthFlowTests.cs", "3.6", ""),
-    ("tests/E2E.Tests/BlazorBoot.cs", "3.6", "reload a dead WASM boot (at most 3 tries, browser console attached) instead of waiting the journey's whole timeout (#17/#18)"),
 
     # ---- Part 4 ----
     ("src/Core/Abstractions/IOutbox.cs", "4.1", ""),
@@ -514,7 +517,7 @@ RULES: list[tuple[str, str, str]] = [
     ("tests/Api.Tests/Mfa/*", "6.5", ""),
     ("tests/Api.Tests/Integration/MfaStepUpIntegrationTests.cs", "6.5", "step-up on EVERY sign-in path"),
     ("tests/E2E.Tests/MfaJourneyTests.cs", "6.5", ""),
-    ("tests/E2E.Tests/Totp.cs", "6.5", ""),
+    ("src/Testing.E2E/Totp.cs", "6.5", ""),
 
     # ---- Part 7 ----
     ("src/Core/Abstractions/IUserDataContributor.cs", "7.1", "per-user erasure seam (R12)"),

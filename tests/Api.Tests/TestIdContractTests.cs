@@ -65,6 +65,7 @@ public class TestIdContractTests
         {
             ["tests/Api.Tests/LocalDotEnvTests.cs"] = "opts the assembly out of the developer's .env (LocalDotEnv.SkipVariable); not a feature gate",
             ["tests/Api.Tests/App/AppTestComposition.cs"] = "hands the app's contributors, pins and swaps to the packaged harness (PlatformTestComposition, Pkg 5.1a); switches nothing",
+            ["tests/E2E.Tests/E2EHosts.cs"] = "hands the app's local ports to the packaged journey harness (PlatformE2EHosts, Pkg 5.1d); switches nothing",
         };
 
         var root = RepoRoot();
