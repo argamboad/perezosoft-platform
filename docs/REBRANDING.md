@@ -192,13 +192,9 @@ These must all match each other **and** your OAuth provider registration:
 `ApplicationId` per the list above and stopping there **breaks the native CI smokes and Catalyst
 SecureStorage** — these four reference `com.perezosoft.platform` directly and must move in the same
 commit:
-- **`.github/workflows/ci.yml` — the iOS-simulator smoke** (`xcrun simctl launch … com.perezosoft.platform`
-  in `native-smoke-apple`): launches the app by bundle id; a renamed app never starts → red canary. The
-  same block globs the bundle path `Perezosoft.Maui.app` (follows the project/assembly name) and sets the
-  `SIMCTL_CHILD_PEREZOSOFT_API_BASE_URL` env prefix — sweep the whole step, not just the id.
-- **`.github/workflows/ci.yml` — the Android smoke** (`adb install …/com.perezosoft.platform-Signed.apk`,
-  `adb shell monkey -p …`, `adb shell pidof …` in `native-smoke-android`): the APK filename derives from
-  `ApplicationId`, so install, launch, and the crash-log `pidof` all miss after a rename.
+- **The CI native smokes no longer name the app** (Pkg 5.4): the reusable `app-ci.yml` launches, installs and finds the
+  app by the `<ApplicationId>` in `src/Maui/*.csproj`, its API-URL variable by the brand in `platform-stamp.json`
+  (`.github/scripts/app-names.sh`) — rename the `ApplicationId` and CI follows.
 - **`tests/native-smoke-android/smoke.js`** — the `PKG` fallback (`process.env.NATIVE_SMOKE_PKG ||
   'com.perezosoft.platform'`). The env override exists, but CI doesn't set it — update the committed
   default.

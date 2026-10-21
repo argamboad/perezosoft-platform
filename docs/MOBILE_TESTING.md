@@ -42,7 +42,8 @@ device hitting `localhost:5238` (the app *and* the in-app browser tab) reaches y
 
 ## 3. Run the app
 
-**Start profiles.** Run `pwsh tools/dev-profiles.ps1` once per clone. It writes the profiles for Visual Studio (the
+**Start profiles.** Run `pwsh tools/dev-profiles.ps1` (or `dotnet platform dev-profiles`, the tool, Pkg 5.3) once per
+clone. It writes the profiles for Visual Studio (the
 startup dropdown, from `<Sln>.slnLaunch.user`) and VS Code (Run and Debug, from the `"launch"` block of
 `.vscode/settings.json`). Both files are gitignored, because the VS Code device profiles name your own phone and
 tablet.

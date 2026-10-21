@@ -47,6 +47,26 @@ public class ToolCommandsTests
         Assert.Equal(2, await ToolCommands.RunAsync(["no-such-command"], RepoRoot()));
     }
 
+    [Fact]
+    public void EveryCommandTheDocsName_IsACommandOfTheTool() // Pkg 5.6
+    {
+        // The docs teach `dotnet platform <command>` (WAYS_OF_WORKING's table, the guides): a renamed or invented command
+        // there sends a reader to an error. Every one they name is one the tool has.
+        var root = RepoRoot();
+        var known = ToolCommands.Scripts.Select(c => c.Name).Append(ToolCommands.Up).ToHashSet(StringComparer.Ordinal);
+        var docs = new[] { "README.md", "CONTRIBUTING.md", "CLAUDE.md", ".github/release-note-template.md" }
+            .Select(f => Path.Combine(root, f)).Where(File.Exists)
+            .Concat(Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
+                .Where(f => !f.Replace('\\', '/').Contains("/docs/audits/", StringComparison.Ordinal)))
+            .Concat(Directory.EnumerateFiles(Path.Combine(root, "tests"), "README.md", SearchOption.AllDirectories));
+        var named = docs.SelectMany(f => System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f), @"dotnet platform ([a-z][a-z0-9-]*)")
+                .Select(m => (File: Path.GetRelativePath(root, f), Command: m.Groups[1].Value)))
+            .ToList();
+        Assert.True(named.Count >= 5, $"probe: the docs name {named.Count} tool commands");
+        var unknown = named.Where(n => !known.Contains(n.Command)).Select(n => $"{n.File}: {n.Command}").Distinct().ToList();
+        Assert.True(unknown.Count == 0, "the docs name commands the tool does not have: " + string.Join(", ", unknown));
+    }
+
     private static string RepoRoot() =>
         ToolCommands.FindRepoRoot(AppContext.BaseDirectory) ?? throw new InvalidOperationException("repo root not found");
 }
