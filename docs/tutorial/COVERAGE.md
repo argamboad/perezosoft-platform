@@ -466,8 +466,9 @@
 - `tests/js-logic/smoke.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
 - `tests/js-logic/theme.test.js` — the wwwroot/js bootstraps and the Android smoke's retry policy, run for real with node --test against stubs (v4 T53, R142)
 
-## 3.5 — Localization (EN/ES) (11 files)
+## 3.5 — Localization (EN/ES) (12 files)
 
+- `src/Client.Web/buildTransitive/Perezosoft.Platform.Web.props` — full ICU data, carried into every WebAssembly host on the package, so the saved culture can be applied before the first render (Pkg 4.5)
 - `src/Client/ICulturePersistence.cs` — culture bootstrap seam (NATIVE-5); MAUI impl in A.1
 - `src/Client/LocalStorageCulturePersistence.cs`
 - `src/Infrastructure/Email/EmailStrings.es.resx`
@@ -1508,4 +1509,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1341 tracked files · 957 built in lessons · 384 bucketed · 0 unmapped
+**Totals:** 1342 tracked files · 958 built in lessons · 384 bucketed · 0 unmapped

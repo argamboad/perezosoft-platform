@@ -28,6 +28,13 @@
   </PropertyGroup>
 
   <!--
+    Perezosoft.Platform.Web's build settings (Pkg 4.5: full ICU data), likewise carried as buildTransitive: switched to
+    source, a Blazor WebAssembly host imports them from the checkout. Only a WebAssembly host reads them.
+  -->
+  <Import Project="$(_PlatformSourceDir)src/Client.Web/buildTransitive/Perezosoft.Platform.Web.props"
+          Condition="'$(PlatformSource)' != '' and '$(UsingMicrosoftNETSdkBlazorWebAssembly)' == 'true' and Exists('$(_PlatformSourceDir)src/Client.Web/buildTransitive/Perezosoft.Platform.Web.props')" />
+
+  <!--
     Perezosoft.Platform.Build switched to source (Pkg 5.2): a project reference carries no build files, so its targets come
     from the checkout here (its props in part 1), unless the project already has them — the platform's own projects do.
   -->

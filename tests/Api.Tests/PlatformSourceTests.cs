@@ -66,6 +66,11 @@ public class PlatformSourceTests
         Assert.Contains("'$(UseMaui)' == 'true' and '$(OutputType)' == 'Exe'", targets, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(root, "src", "Client.Maui", "buildTransitive", "Perezosoft.Platform.Maui.targets")),
             "the switch imports a file the platform no longer has");
+        // Likewise a WebAssembly host keeps the full globalization data Perezosoft.Platform.Web carries (Pkg 4.5).
+        Assert.Contains("src/Client.Web/buildTransitive/Perezosoft.Platform.Web.props", targets, StringComparison.Ordinal);
+        Assert.Contains("'$(UsingMicrosoftNETSdkBlazorWebAssembly)' == 'true'", targets, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(root, "src", "Client.Web", "buildTransitive", "Perezosoft.Platform.Web.props")),
+            "the switch imports a file the platform no longer has");
 
         Assert.Contains("build/PlatformSource.props", File.ReadAllText(Path.Combine(root, "Directory.Build.props")).Replace('\\', '/'), StringComparison.Ordinal);
         Assert.Contains("build/PlatformSource.targets", File.ReadAllText(Path.Combine(root, "Directory.Build.targets")).Replace('\\', '/'), StringComparison.Ordinal);

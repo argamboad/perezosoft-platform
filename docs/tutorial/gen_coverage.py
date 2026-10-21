@@ -347,6 +347,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Client.Web/Http/CookieHandler.cs", "3.4", ""),
     ("src/Client.Web/Http/CookieSessionStore.cs", "3.4", ""),
     ("src/Client.Web/PlatformWebHosting.cs", "3.4", "AddPlatformWeb: the web host's platform half (Pkg 4.2)"),
+    ("src/Client.Web/buildTransitive/Perezosoft.Platform.Web.props", "3.5", "full ICU data, carried into every WebAssembly host on the package, so the saved culture can be applied before the first render (Pkg 4.5)"),
     ("src/Web/appsettings*.json", "3.4", ""),
     ("src/Web/wwwroot/*", "3.4", ""),
     ("src/Shared.Ui/App.razor", "3.4", ""),

@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    What a Blazor WebAssembly host on Perezosoft.Platform.Web needs from its build (Pkg 4.5, #444). Carried as
+    buildTransitive, so an app's host gets it from the package and sets nothing itself; the platform's own host, which
+    references this project rather than the package, imports this file.
+
+    Full ICU data: UseStoredCultureAsync() (PlatformWebHosting) switches the culture to the user's saved one before the
+    first render, and Blazor refuses a culture change it was not built for ("Blazor detected a change in the application's
+    culture that is not supported with the current project configuration") unless the host loads all the globalization
+    data. A host that wants otherwise sets the property itself, and that is kept.
+  -->
+  <PropertyGroup>
+    <BlazorWebAssemblyLoadAllGlobalizationData Condition="'$(BlazorWebAssemblyLoadAllGlobalizationData)' == ''">true</BlazorWebAssemblyLoadAllGlobalizationData>
+  </PropertyGroup>
+
+</Project>

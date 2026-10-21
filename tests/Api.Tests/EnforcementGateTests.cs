@@ -437,6 +437,23 @@ public class EnforcementGateTests
     }
 
     [Fact]
+    public void WebPackage_CarriesFullGlobalizationData_IntoTheHost() // Pkg 4.5 (#444)
+    {
+        // Found by #413's scratch app: a WebAssembly host on Perezosoft.Platform.Web whose UseStoredCultureAsync() switches
+        // to the saved culture fails at boot unless the HOST loads all the globalization data — a setting the package
+        // depended on but did not carry. It carries it now, as buildTransitive, without overriding a host that chose;
+        // the platform's host, on the project, imports the same file and keeps no line of its own.
+        var props = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Web", "buildTransitive", "Perezosoft.Platform.Web.props"));
+        Assert.Contains("<BlazorWebAssemblyLoadAllGlobalizationData Condition=\"'$(BlazorWebAssemblyLoadAllGlobalizationData)' == ''\">true</BlazorWebAssemblyLoadAllGlobalizationData>", props);
+        var packed = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Web", "Perezosoft.Client.Web.csproj"));
+        Assert.Contains(@"<None Include=""buildTransitive\**"" Pack=""true"" PackagePath=""buildTransitive\"" />", packed);
+
+        var host = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Web", "Perezosoft.Web.csproj"));
+        Assert.Contains(@"<Import Project=""..\Client.Web\buildTransitive\Perezosoft.Platform.Web.props"" />", host);
+        Assert.DoesNotContain("<BlazorWebAssemblyLoadAllGlobalizationData>", host);
+    }
+
+    [Fact]
     public void PublishScript_ThrowsUnlessTheSignatureIsVerified_AndFindsTheSdkThroughAndroidHome()
     {
         var script = File.ReadAllText(Path.Combine(RepoRoot(), "tools", "publish-native.ps1"));

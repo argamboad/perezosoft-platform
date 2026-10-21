@@ -39,7 +39,8 @@ Any key missing from a culture file falls back to the neutral (English) file.
   it); invitations use the **inviter's** saved locale.
 
 The WASM host loads full globalization data (`BlazorWebAssemblyLoadAllGlobalizationData`) so
-non-English cultures format dates/numbers correctly.
+non-English cultures format dates/numbers correctly and the saved culture can be applied before the first render.
+`Perezosoft.Platform.Web` carries the setting into the host (Pkg 4.5); a host sets it only to opt out.
 
 ## Adding a language (example: French, `fr`)
 1. Copy `src/Shared.Ui/Resources/AppStrings.resx` → `AppStrings.fr.resx` and translate every
