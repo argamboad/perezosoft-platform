@@ -11,6 +11,11 @@
       "version": "2.7.1",
       "commands": ["dotnet-project-licenses"],
       "rollForward": false
+    },
+    "perezosoft.platform.tool": {
+      "version": "1.0.0-alpha.3",
+      "commands": ["dotnet-platform"],
+      "rollForward": false
     }
   }
 }

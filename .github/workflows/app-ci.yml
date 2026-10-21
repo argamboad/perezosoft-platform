@@ -32,6 +32,9 @@ on:
 # Every checkout also sets `persist-credentials: false` so no step after it holds the token (v4 audit DEP-14).
 permissions:
   contents: read
+  # The platform's feed (GitHub Packages): the jobs that restore read Perezosoft.Platform.* (an app's packages, the dotnet
+  # tool in .config/dotnet-tools.json) with the job token — GitHub Packages asks for one even for a public package.
+  packages: read
 
 # Where the platform's files are, and the source switch when asked for (PlatformSource is the property
 # build/PlatformSource.props reads; MSBuild sees an environment variable as one). A switched restore cannot be locked.
@@ -46,6 +49,10 @@ jobs:
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -266,6 +273,10 @@ jobs:
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -350,6 +361,10 @@ jobs:
         include: ${{ fromJSON(needs.changes.outputs.buildmatrix) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -415,6 +430,10 @@ jobs:
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -667,6 +686,9 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
       DEVELOPER_DIR: /Applications/Xcode_26.6.app
     steps:
       - uses: actions/checkout@v5
@@ -725,6 +747,9 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
       DEVELOPER_DIR: /Applications/Xcode_26.6.app
     steps:
       - uses: actions/checkout@v5
@@ -883,6 +908,10 @@ jobs:
     if: needs.changes.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
+    env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -1006,6 +1035,10 @@ jobs:
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     services:
       db:
         image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
@@ -1193,6 +1226,10 @@ jobs:
         shard: [1]
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
+      # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     services:
       db:
         image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
