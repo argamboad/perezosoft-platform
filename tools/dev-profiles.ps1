@@ -54,7 +54,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repo = Split-Path $PSScriptRoot -Parent
+# The repo: the one `dotnet platform` runs in (PLATFORM_REPO_ROOT, Pkg 5.3), else the parent of tools/.
+$repo = $(if ($env:PLATFORM_REPO_ROOT) { $env:PLATFORM_REPO_ROOT } else { Split-Path -Parent $PSScriptRoot })
 
 # --- the Android SDK (the same resolution as tools/android-emulator.ps1, so both use VS's adb) ---
 $sdk = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, (Join-Path $env:LOCALAPPDATA 'Android/Sdk'),

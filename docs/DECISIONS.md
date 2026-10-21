@@ -2001,7 +2001,10 @@ apps × fixes, and a missed port drifts silently. Delphos and further apps are c
    *amended 2026-10-19, Pkg 5.2:* an app takes it once with CPM's `GlobalPackageReference`; what steers a restore stays a
    file in the repo, because a package arrives only after the restore that brings it: the lockfile setting and the local
    source switch, `build/PlatformSource.*`, which imports the build package's files from the checkout when on). Beside them: a dotnet tool
-   (`dotnet platform <command>`: the port, the QA generators with their Python inside it), a reusable CI workflow
+   (`dotnet platform <command>`: the port, the QA generators with their Python inside it — *amended 2026-10-21, Pkg 5.3:*
+   the scripts stay where they are in the platform, `tools/*.ps1` and the QA generators in `docs/`, and the tool packs
+   them as they are; each takes the repo from `PLATFORM_REPO_ROOT`, which the tool sets; `up` starts the repo's db and
+   mail and the telemetry dashboard; an app pins the tool from the first prerelease that carries it), a reusable CI workflow
    (`workflow_call`, the same billed minutes as ADR-031's shape) and `argamboad/.github` for the community files.
    The domains — auth, tenancy, billing, jobs, files, GDPR, MFA, notifications, admin, public API, webhooks,
    observability — are **namespaces inside those packages and options on `AddPlatform(o => …)`**, never packages of

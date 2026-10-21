@@ -461,6 +461,9 @@
           "xunit.extensibility.core": "[2.9.3, )"
         }
       },
+      "perezosoft.platform.tool": {
+        "type": "Project"
+      },
       "perezosoft.shared.ui": {
         "type": "Project",
         "dependencies": {

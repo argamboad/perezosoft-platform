@@ -39,6 +39,9 @@
   <Folder Name="/src/Testing.Ui/">
     <Project Path="src/Testing.Ui/Perezosoft.Testing.Ui.csproj" />
   </Folder>
+  <Folder Name="/src/Tool/">
+    <Project Path="src/Tool/Perezosoft.Platform.Tool.csproj" />
+  </Folder>
   <Folder Name="/src/Web/">
     <Project Path="src/Web/Perezosoft.Web.csproj" />
   </Folder>

@@ -18,6 +18,8 @@
     <PlatformPackage Include="Perezosoft.Platform.Testing.E2E" Source="src/Testing.E2E/Perezosoft.Testing.E2E.csproj" />
     <!-- Build files only: the source switch imports them from the checkout and drops the reference (build/PlatformSource.*). -->
     <PlatformPackage Include="Perezosoft.Platform.Build" Source="src/Build/Perezosoft.Platform.Build.csproj" />
+    <!-- A dotnet tool (`dotnet platform`): an app pins it in .config/dotnet-tools.json, never a PackageReference. -->
+    <PlatformPackage Include="Perezosoft.Platform.Tool" Source="src/Tool/Perezosoft.Platform.Tool.csproj" />
     <PlatformPackage Include="Perezosoft.Platform.DryRun" Source="tools/release/dry-run/Perezosoft.Platform.DryRun.csproj" />
   </ItemGroup>
 </Project>

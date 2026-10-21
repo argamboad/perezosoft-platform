@@ -15,6 +15,7 @@ generators fails CI. It also proves the generators still run. Run from the repo'
 
 Requires: reportlab (to run the generators) + pypdf (to read text). Exits non-zero on drift.
 """
+import os
 import re
 import subprocess
 import sys
@@ -22,7 +23,9 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parent  # where the generators sit (docs/, or inside the dotnet tool, Pkg 5.3)
+# The repo's docs: the one `dotnet platform` runs in (PLATFORM_REPO_ROOT), else this file's folder.
+DOCS = Path(os.environ["PLATFORM_REPO_ROOT"]) / "docs" if os.environ.get("PLATFORM_REPO_ROOT") else HERE
 ARTIFACTS = [
     ("gen_qa_guide.py", "QA_TEST_GUIDE.pdf"),
     ("gen_qa_runlog.py", "QA_RUN_LOG.pdf"),
@@ -44,7 +47,7 @@ def signoff_drift() -> list[str]:
     in one of them. Within a table a case may repeat: a re-run appends a new row (the run log is
     append-only, .github/scripts/qa-runlog-append-only.sh).
     """
-    plan = (HERE / "QA_TEST_PLAN.md").read_text(encoding="utf-8")
+    plan = (DOCS / "QA_TEST_PLAN.md").read_text(encoding="utf-8")
     cases = set(re.findall(r"^### (QA-[A-Z0-9]+-\d+) — ", plan, re.M))
     sheet = re.search(r"^## 16\. Sign-off sheet$(.*?)^## 17\.", plan, re.M | re.S)
     if not sheet:
@@ -65,13 +68,13 @@ def signoff_drift() -> list[str]:
 def main() -> int:
     drift = signoff_drift()
     for script, out in ARTIFACTS:
-        committed = HERE / out
+        committed = DOCS / out
         if not committed.exists():
             drift.append(f"{out}: missing — run `python {script}` in docs/ and commit it.")
             continue
 
         before = text_of(committed)                              # the committed artifact's text
-        subprocess.run([sys.executable, script], cwd=HERE, check=True)  # regenerate (overwrites in place)
+        subprocess.run([sys.executable, str(HERE / script)], cwd=DOCS, check=True)  # regenerate (overwrites in place)
         after = text_of(committed)                               # the freshly generated text
 
         if before != after:

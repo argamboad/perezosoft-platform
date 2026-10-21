@@ -46,7 +46,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$root = Split-Path -Parent $PSScriptRoot
+# The repo: the one `dotnet platform` runs in (PLATFORM_REPO_ROOT, Pkg 5.3), else the parent of tools/.
+$root = $(if ($env:PLATFORM_REPO_ROOT) { $env:PLATFORM_REPO_ROOT } else { Split-Path -Parent $PSScriptRoot })
 Set-Location $root
 
 # --- this repo's port block ---------------------------------------------------------------------------------------

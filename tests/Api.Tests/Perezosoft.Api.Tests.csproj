@@ -47,6 +47,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Perezosoft.Core.csproj" />
     <ProjectReference Include="..\..\src\Testing\Perezosoft.Testing.csproj" />
+    <!-- The operator tool (Pkg 5.3): its command table, and a command run through it (ToolCommandsTests). -->
+    <ProjectReference Include="..\..\src\Tool\Perezosoft.Platform.Tool.csproj" />
     <ProjectReference Include="..\..\src\Api\Perezosoft.Api.csproj" />
     <!-- The reference host (Pkg 3.2): Program (WebApplicationFactory<Program>) and the sample slice. -->
     <ProjectReference Include="..\..\src\Host\Perezosoft.Host.csproj" />
