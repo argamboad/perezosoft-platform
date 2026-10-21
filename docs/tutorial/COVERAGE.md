@@ -25,7 +25,7 @@
 - `tests/Api.Tests/ToolCommandsTests.cs` — every operator script is a `dotnet platform` command, shipped beside the tool; one run through it (Pkg 5.3)
 - `tools/ports.ps1` — writes the repo's port block from local-ports.props into the files that cannot read MSBuild (Arch A10)
 
-## 1.1 — Solution, projects & supply chain (40 files)
+## 1.1 — Solution, projects & supply chain (47 files)
 
 - `.config/dotnet-tools.json` — committed CI tool-version manifest (v3 T51/R63)
 - `Directory.Build.props` — imports the build package from source, the source switch and the packing settings; the lockfiles (Pkg 5.2)
@@ -66,6 +66,13 @@
 - `tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/E2E.Tests/Perezosoft.E2E.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tests/Ui.Tests/Perezosoft.Ui.Tests.csproj` — created here; PackageReferences added as lessons need them
+- `tests/ci-logic/cases/app-names/the-platform/files/src/Api/Perezosoft.Api.csproj` — created here; PackageReferences added as lessons need them
+- `tests/ci-logic/cases/app-names/the-platform/files/src/Host/Perezosoft.Host.csproj` — created here; PackageReferences added as lessons need them
+- `tests/ci-logic/cases/app-names/the-platform/files/src/Maui/Perezosoft.Maui.csproj` — created here; PackageReferences added as lessons need them
+- `tests/ci-logic/cases/app-names/the-platform/files/src/Web/Perezosoft.Web.csproj` — created here; PackageReferences added as lessons need them
+- `tests/ci-logic/cases/app-names/the-platform/files/tests/Api.Tests/Perezosoft.Api.Tests.csproj` — created here; PackageReferences added as lessons need them
+- `tests/ci-logic/cases/app-names/the-platform/files/tests/Core.Tests/Perezosoft.Core.Tests.csproj` — created here; PackageReferences added as lessons need them
+- `tests/ci-logic/cases/app-names/the-platform/files/tests/E2E.Tests/Perezosoft.E2E.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tools/release/dry-run/Perezosoft.Platform.DryRun.csproj` — created here; PackageReferences added as lessons need them
 
 ## 1.2 — First endpoint, first test (10 files)
@@ -127,11 +134,13 @@
 
 - `src/Api/Services/ErrorResponse.cs` — shared envelope; never ex.Message (R16/R18)
 
-## 1.6 — CI from commit one (3 files)
+## 1.6 — CI from commit one (5 files)
 
 - `.github/forbidden-licenses.json` — copyleft ban (R26)
 - `.github/pull_request_template.md` — the PR checklist — process as a gate
-- `.github/workflows/ci.yml` — born here (build+test+secret/license gates); every part adds jobs — e2e 3.6, docker 8.2, deploy 8.3, native A.1
+- `.github/scripts/app-names.sh` — what a repo's projects and app are called, found by convention, so one workflow serves every app (Pkg 5.4)
+- `.github/workflows/app-ci.yml` — every gate as one reusable workflow the platform and each app call (Pkg 5.4); every part adds jobs — e2e 3.6, docker 8.2, deploy 8.3, native A.1
+- `.github/workflows/ci.yml` — born here (build+test+secret/license gates); since Pkg 5.4 the triggers only, calling app-ci.yml
 
 ## 2.1 — Users & JWT access tokens (23 files)
 
@@ -809,7 +818,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (176 files)
+## 8.3 — The deploy pipeline & CI gates (189 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -819,6 +828,19 @@
 - `tests/Api.Tests/CiWorkflowTests.cs` — the CI shape on billed minutes: PR = web gates, device legs + deploys on request, a timeout on every job (ADR-031; R98/R137/R139)
 - `tests/Api.Tests/Integration/PostmanParityTests.cs` — every mapped /api endpoint documented in the canonical collection (v3 TR-6)
 - `tests/Api.Tests/Integration/VersionEndpointTests.cs` — version-gated deploy smoke
+- `tests/ci-logic/cases/app-names/a-rebranded-app/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/a-rebranded-app/files/platform-stamp.json` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/a-rebranded-app/files/src/Host/JiggerJot.Host.csproj` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/a-rebranded-app/files/src/Maui/JiggerJot.Maui.csproj` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/a-rebranded-app/files/tests/Ui.Tests/JiggerJot.Ui.Tests.csproj` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/an-app-on-the-packages/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/an-app-on-the-packages/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/an-app-on-the-packages/files/platform-stamp.json` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/an-app-on-the-packages/files/src/Host/Scratch.Host.csproj` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/an-app-on-the-packages/files/tests/Api.Tests/Scratch.Api.Tests.csproj` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/the-platform/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/the-platform/files/platform-stamp.json` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/app-names/the-platform/files/tests/native-smoke-android/smoke.js` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/changes-classifier/backend-only-is-not-maui/files/diff.txt` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -1486,4 +1508,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1319 tracked files · 935 built in lessons · 384 bucketed · 0 unmapped
+**Totals:** 1341 tracked files · 957 built in lessons · 384 bucketed · 0 unmapped

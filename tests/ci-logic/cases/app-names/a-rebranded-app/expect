@@ -1,0 +1,6 @@
+exit 0
++HOST_PROJ=src/Host/JiggerJot.Host.csproj
++MAUI_NAME=JiggerJot.Maui
++APP_ID=com.jiggerjot.app
++API_URL_VAR=JIGGERJOT_API_BASE_URL
++TEST_PROJS=tests/Ui.Tests/JiggerJot.Ui.Tests.csproj

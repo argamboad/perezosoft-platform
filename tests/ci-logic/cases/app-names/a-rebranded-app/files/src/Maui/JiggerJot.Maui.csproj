@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <UseMaui>true</UseMaui>
+    <ApplicationId>com.jiggerjot.app</ApplicationId>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,10 @@
+exit 0
++HOST_PROJ=src/Host/Scratch.Host.csproj
++WEB_PROJ=
++MAUI_PROJ=
++E2E_PROJ=
++TEST_PROJS=tests/Api.Tests/Scratch.Api.Tests.csproj
++MAUI_NAME=
++APP_ID=
++API_URL_VAR=SCRATCH_API_BASE_URL
++SMOKE_DIR=.platform/tests/native-smoke-android

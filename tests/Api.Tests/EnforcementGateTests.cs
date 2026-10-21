@@ -35,7 +35,7 @@ public class EnforcementGateTests
             $"Dockerfile runtime image (aspnet:{runtimeTag}) != the ASP.NET package line ({aspNetPackage}).");
 
         // CI must read the SDK from global.json, never hardcode one.
-        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Contains("global-json-file: global.json", ci);
         Assert.DoesNotContain("dotnet-version:", ci); // a hardcoded setup-dotnet version would fork the pin
 
@@ -100,7 +100,7 @@ public class EnforcementGateTests
         Assert.Matches(@"chown [^\n]*app:app [^\n]*/app/storage", beforeUser);
 
         // CI proves it on the built image.
-        Assert.Contains("/app/storage/.write-probe", File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml")));
+        Assert.Contains("/app/storage/.write-probe", File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "app-ci.yml")));
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void EveryCiJob_EitherGatesOnChanges_OrIsOnTheAlwaysRunList(string workflow) // LOCALCI-3
     {
         // The point of the paths gate is that a docs-only push stops billing thirty minutes for
@@ -198,7 +198,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void MarkdownAnywhere_IsNeverCodeOrNative(string workflow) // LOCALCI-3 follow-up
     {
         // A docs-only pull request that touched tests/E2E.Tests/README.md billed the FULL run — build,
@@ -230,7 +230,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void Classifier_CountsEveryFileAGateReads_AsCode(string workflow) // v4 DEP-15 (R97)
     {
         // One positive per file class the old regex missed: a PR touching only one of these skipped build-test (and
@@ -246,18 +246,18 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void NativeClassifier_CoversEveryNativeInput(string workflow) // v4 NAT-16 / S0-G6 (R106)
     {
         var (_, Native, _) = ClassifierOf(workflow);
         foreach (var path in new[] { "Directory.Build.props", "Directory.Packages.props", "global.json", "tools/publish-native.ps1",
                                      "src/Build/buildTransitive/Perezosoft.Platform.Build.props", "build/Packing.props",
-                                     "src/Maui/MauiProgram.cs", ".github/workflows/ci.yml" })
+                                     "src/Maui/MauiProgram.cs", ".github/workflows/ci.yml", ".github/workflows/app-ci.yml" })
             Assert.True(Native(path), $"{workflow}: {path} can break a native build, so it must run the native legs");
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void Classifier_FailsOpen_OnEveryOutput(string workflow) // v4 LB-DEP-9 (R143)
     {
         // The unknown-diff-base branch exists to run everything; an output it leaves false is a job it quietly skips.
@@ -273,7 +273,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void EveryRepoFileTheTestsRead_ClassifiesAsCode(string workflow) // v4 DEP-15 / TB-DOC-7 (R97)
     {
         // Reflective: every string literal (and every Path.Combine join) in this test project that names an existing
@@ -333,7 +333,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void BootRetryBudget_IsOneNumber_InTheSuiteAndTheSlowestJourneysStep(string workflow)
     {
         // The suite stops at DeadBootsPerRun dead boots per process; the "Slowest journeys" step reads the same
@@ -447,7 +447,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void ReleaseLeg_BuildsRelease_VerifiesV2OrV3_AndProvesTheGuardFires(string workflow)
     {
         // The only MAUI Release build CI runs: a device leg, only when a "Run workflow" asks for android (ADR-031).
@@ -539,7 +539,7 @@ public class EnforcementGateTests
 
         // Workflow services: `image: repo/name:tag`, and `docker run … <image>` steps (the image is the first
         // bare word after the options; `--entrypoint sh` takes a value, so skip an option's argument too).
-        var workflow = Path.Combine(root, ".github", "workflows", "ci.yml");
+        var workflow = Path.Combine(root, ".github", "workflows", "app-ci.yml");
         var workflowText = File.ReadAllText(workflow);
         foreach (Match m in new Regex(@"(?m)^\s*image:\s*([^\s#]+)").Matches(workflowText))
             Check(m.Groups[1].Value, "ci.yml services");
@@ -619,7 +619,7 @@ public class EnforcementGateTests
         var offenders = new List<string>();
 
         var image = new Regex(@"(?m)^\s*image:\s*([^\s#]+)");
-        foreach (Match m in image.Matches(File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"))))
+        foreach (Match m in image.Matches(File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"))))
             Check(m.Groups[1].Value, "ci.yml services");
         var compose = Path.Combine(root, "docker-compose.yml");
         if (File.Exists(compose))
@@ -648,14 +648,14 @@ public class EnforcementGateTests
         Assert.DoesNotMatch(@"(?im)^\s*#\s*syntax\s*=", File.ReadAllText(Path.Combine(root, "Dockerfile")));
 
         // Testcontainers' own Ryuk reaper is a Docker Hub image too; CI turns it off (a runner is thrown away anyway).
-        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Matches(@"TESTCONTAINERS_RYUK_DISABLED:\s*""true""", ci);
 
         // And the mirror has a limit of its own: sixty fixtures pulling at once answered `toomanyrequests: Rate
         // exceeded` (2026-10-09). The job pulls each test image once, before the tests, so the fixtures find it
         // locally; the images named here are the ones the fixtures use.
         foreach (var pulled in new[] { "public.ecr.aws/docker/library/postgres:17.11", "ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z" })
-            Assert.Contains(pulled, ci.Split("- name: Test (Core + Api + Ui)")[0]);
+            Assert.Contains(pulled, ci.Split("- name: Test (every tests/ project but the journeys)")[0]);
 
         void Check(string reference, string where)
         {
@@ -674,7 +674,7 @@ public class EnforcementGateTests
         // This holds the reach: the four places an image is named each have at least one image today, and the
         // tag rule refuses exactly the floating shapes.
         var root = RepoRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Matches(@"(?m)^\s*image:\s*\S+", workflow);          // services: at least one
         Assert.Matches(@"docker run\s", workflow);                   // docker run: at least one
         Assert.Matches(@"(?m)^FROM\s+\S+", File.ReadAllText(Path.Combine(root, "Dockerfile")));
@@ -857,7 +857,7 @@ public class EnforcementGateTests
         // literal GateJourneyTests uses, every deployment gate has a tagged journey, and the default lane leaves
         // the gate journeys out (they would fail against billing-on).
         var root = RepoRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         var gates = File.ReadAllText(Path.Combine(root, "tests", "E2E.Tests", "GateJourneyTests.cs"));
         var script = File.ReadAllText(Path.Combine(root, "tools", "e2e.ps1"));
 

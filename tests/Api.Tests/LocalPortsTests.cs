@@ -143,7 +143,7 @@ public class LocalPortsTests
         // out on "No OTP email" (y-el-vuelto, 2026-09-24).
         var block = Block();
         var failures = new List<string>();
-        foreach (var (file, hostNetworking) in new[] { (".github/workflows/ci.yml", false) })
+        foreach (var (file, hostNetworking) in new[] { (".github/workflows/app-ci.yml", false) })
         {
             var ci = Read(file);
             var services = Regex.Matches(ci, @"image: ghcr\.io/axllent/mailpit[^\n]*\n\s*ports: (\[[^\]]*\])");

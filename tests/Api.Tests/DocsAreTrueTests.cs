@@ -322,7 +322,7 @@ public class DocsAreTrueTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void CourseCoverageAndQuotes_AreCheckedBesideTheQaArtifacts(string workflow) // v4 audit TR-19/TR-12 (T61), R114/R115
     {
         // The course lives in perezosoft-platform; a downstream app has no docs/tutorial, and this fact holds nothing there.

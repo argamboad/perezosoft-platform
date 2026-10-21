@@ -85,6 +85,7 @@
 
     { "glob": "tools/**", "class": "platform" },
     { "glob": ".github/scripts/**", "class": "platform" },
+    { "glob": ".github/workflows/app-ci.yml", "class": "platform" },
     { "glob": ".github/workflows/**", "class": "adapts" },
     { "glob": ".github/**", "class": "adapts" },
 

@@ -11,7 +11,7 @@ namespace Perezosoft.Api.Tests;
 /// </summary>
 public class E2eShardsTests
 {
-    public static TheoryData<string> Workflows => [".github/workflows/ci.yml"];
+    public static TheoryData<string> Workflows => [".github/workflows/app-ci.yml"];
 
     [Theory]
     [MemberData(nameof(Workflows))]
