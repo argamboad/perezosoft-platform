@@ -26,7 +26,8 @@ not asserted by a reviewer. **Do not run another discovery audit — keep these 
   `MapTenantFeatureGroup` scaffolding — because every feature copies it.
 - [x] **5. Docs don't contradict code, and the invariants are enforced in CI** — warnings-as-errors
   (`Directory.Build.props`), the architecture tests (B9-1), and the migration-drift guard
-  (`MigrationsTests`) all run in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+  (`MigrationsTests`) all run in CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml) calling the reusable
+  [`app-ci.yml`](.github/workflows/app-ci.yml) (Pkg 5.4).
 
 ## v2 extension (2026-07) — post-platform-epic invariants
 
@@ -55,7 +56,7 @@ v1.0 (R1–R35)** — read it before writing/modifying code. The new machine-enf
 | Migration-drift + rollback | `tests/Api.Tests/MigrationsTests.cs` | a model change with no migration; a broken migration up **or** `Down` |
 | Per-test isolation | `tests/Api.Tests/Infrastructure/PostgresTestBase.cs` | order-dependent / leaky relational tests |
 | Warnings-as-errors | `Directory.Build.props` | nullable violations + every compiler/analyzer warning |
-| CI gate | `.github/workflows/ci.yml` | all of the above, on every PR to `main`/`develop` |
+| CI gate | `.github/workflows/ci.yml` → `app-ci.yml` | all of the above, on every PR to `main`/`develop` |
 
 When you add a feature, copy `src/Host/Features/Notes` (the DELETE-ME reference slice), comply with
 `FOUNDATION_RULES.md`, and keep these guards green. That is the whole contract.

@@ -266,6 +266,31 @@ each package id to the project that packs it, which `PlatformSourceTests` holds 
   ships as a release (DEPLOYMENT §12) before the app's PR can rely on it.
 - A path that is not a platform checkout fails the build, instead of quietly building against the packages.
 
+## The operator tool — `dotnet platform` (Pkg 5.3)
+
+The platform's scripts run the same in every repo through one dotnet tool, `Perezosoft.Platform.Tool`, pinned in
+`.config/dotnet-tools.json` (`dotnet tool restore`). It finds the repo it is run in and runs the script against it; the
+arguments after the command go to the script.
+
+| Command | What it does |
+|---|---|
+| `dotnet platform up` | the repo's compose `db` + `mail`, and the machine's telemetry dashboard (started or reused, never stopped) |
+| `dotnet platform e2e [-Filter …] [-Gates]` | the browser journeys against a local stack (`tests/E2E.Tests/README.md`) |
+| `dotnet platform ports [-Apply]` | hold every file that states a local port to `local-ports.props` |
+| `dotnet platform port -Platform <checkout> [-To <commit>] [-Apply]` | port the platform's changes into a clone-made app |
+| `dotnet platform publish-native -ApiBaseUrl <url> [-Android] [-Windows]` | the native apps, signature verified (`docs/DEPLOYMENT.md` §9) |
+| `dotnet platform android-emulator -Avd <name> -Port <port>` / `dev-profiles` | the emulator and the editor's start profiles (`docs/MOBILE_TESTING.md`) |
+| `dotnet platform telemetry` | the shared Aspire dashboard |
+| `dotnet platform qa-guide` / `qa-runlog` / `check-qa` | the QA PDFs from `docs/QA_TEST_PLAN.md`, and their sync check (Python + `docs/requirements.txt`) |
+
+In the platform the scripts also run where they live (`pwsh tools/e2e.ps1`, `python docs/gen_qa_guide.py` from
+`docs/`) — the tool packs those same files. PowerShell 7 is a prerequisite, and Python for the QA commands.
+
+**CI is one reusable workflow (Pkg 5.4).** Every gate lives in `.github/workflows/app-ci.yml`; a repo's own `ci.yml` keeps
+the triggers (ADR-031) and calls it — the platform with `uses: ./.github/workflows/app-ci.yml`, an app with
+`uses: argamboad/perezosoft-platform/.github/workflows/app-ci.yml@<platform tag>`. A gate whose input a repo lacks (no
+journeys, no Dockerfile, no QA plan) does not run there.
+
 ## Testing strategy (TDD — constant)
 
 **Test-Driven Development is the default on every slice.** Write the failing test first; only
@@ -295,7 +320,9 @@ without a test that drove it.
 
 ### E2E tests (`E2E.Tests` — Playwright/NUnit)
 - One test file per epic, mirroring `docs/stories/`.
-- Tests inherit from Playwright's `PageTest`; use Page Object Model (`tests/E2E.Tests/Pages/`).
+- Tests inherit from `E2ETestBase`, the repo's own base over the packaged `PlatformE2ETestBase`
+  (`Perezosoft.Platform.Testing.E2E`, Pkg 5.1d — Playwright's `PageTest` underneath); use Page Object Model
+  (`tests/E2E.Tests/Pages/`).
 - Cover the Gherkin happy path + key unhappy paths through the real running UI.
 - Run against the full stack: `docker compose up -d`, then start the API and Web. OTP-based
   tests read codes from **Mailpit**, so the API must send to Mailpit (the dev default) — see
@@ -311,9 +338,11 @@ pwsh tests/E2E.Tests/bin/Debug/net10.0/playwright.ps1 install
 ### Running tests
 ```sh
 dotnet test tests/Core.Tests
-dotnet test tests/Api.Tests   # spins up a Postgres Testcontainer; Docker must be running
-# E2E — requires docker compose + the API & Web running (see tests/E2E.Tests/README.md)
-dotnet test tests/E2E.Tests
+dotnet test tests/Api.Tests     # spins up a Postgres Testcontainer; Docker must be running
+dotnet test tests/Ui.Tests      # bUnit, on the packaged harness (Perezosoft.Platform.Testing.Ui)
+dotnet test tests/Client.Tests  # the client package's own tests (the platform only)
+# E2E — the stack started and stopped for you (tests/E2E.Tests/README.md)
+dotnet platform e2e             # in the platform also: pwsh tools/e2e.ps1
 ```
 
 ## How Claude Code should use this

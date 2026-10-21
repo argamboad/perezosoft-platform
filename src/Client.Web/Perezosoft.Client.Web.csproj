@@ -31,4 +31,9 @@
     <ProjectReference Include="..\Client\Perezosoft.Client.csproj" />
   </ItemGroup>
 
+  <!-- What a host on this package needs from its build (full ICU data, Pkg 4.5), carried into the app's host. -->
+  <ItemGroup>
+    <None Include="buildTransitive\**" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+
 </Project>

@@ -211,7 +211,8 @@ generated redirect URIs match what you register. Render redeploys on the env cha
 > That run re-runs every web gate on the branch and deploys only if they all pass.
 
 Render can also deploy on every push to the branch it tracks. To instead gate deploys on **green CI** and
-run an automated post-deploy smoke, wire the pipeline in `.github/workflows/ci.yml`:
+run an automated post-deploy smoke, wire the pipeline the `deploy` input of `.github/workflows/ci.yml` runs (the
+deploy jobs of the reusable `app-ci.yml`, Pkg 5.4):
 
 1. In Render → your staging service → **Settings → Deploy Hook**, copy the hook URL, and **turn off
    "Auto-Deploy"** (so CI is the only trigger — no double deploys).
@@ -392,6 +393,7 @@ it publishes, picks the signed APK, copies it to `out/<app>.apk` and prints the 
 ```powershell
 pwsh tools/publish-native.ps1 -ApiBaseUrl https://<your-host>            # both platforms
 pwsh tools/publish-native.ps1 -ApiBaseUrl https://<your-host> -Android   # just the phone
+dotnet platform publish-native -ApiBaseUrl https://<your-host>          # the same script, through the tool (Pkg 5.3)
 ```
 
 Send `out/<app>.apk`. The script **refuses to finish** unless `apksigner` reports `Verified using v2/v3 …

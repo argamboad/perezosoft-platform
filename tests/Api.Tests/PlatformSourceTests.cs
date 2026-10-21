@@ -17,7 +17,7 @@ public class PlatformSourceTests
         var root = RepoRoot();
         // The map and the packable projects are the publisher's (producer-only, Pkg 2.5): an app's switch reads the map
         // from the platform checkout it points at, never from its own tree, and an app packs nothing.
-        if (!Architecture.PlatformOwnership.IsThePlatform(root)) return;
+        if (!PlatformOwnership.IsThePlatform(root)) return;
         var packable = Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
             .Select(f => (Path: Path.GetRelativePath(root, f).Replace('\\', '/'), File: f))
             .Where(p => !p.Path.Contains("/obj/", StringComparison.Ordinal) && !p.Path.Contains("/bin/", StringComparison.Ordinal)
@@ -65,6 +65,11 @@ public class PlatformSourceTests
         Assert.Contains("src/Client.Maui/buildTransitive/Perezosoft.Platform.Maui.targets", targets, StringComparison.Ordinal);
         Assert.Contains("'$(UseMaui)' == 'true' and '$(OutputType)' == 'Exe'", targets, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(root, "src", "Client.Maui", "buildTransitive", "Perezosoft.Platform.Maui.targets")),
+            "the switch imports a file the platform no longer has");
+        // Likewise a WebAssembly host keeps the full globalization data Perezosoft.Platform.Web carries (Pkg 4.5).
+        Assert.Contains("src/Client.Web/buildTransitive/Perezosoft.Platform.Web.props", targets, StringComparison.Ordinal);
+        Assert.Contains("'$(UsingMicrosoftNETSdkBlazorWebAssembly)' == 'true'", targets, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(root, "src", "Client.Web", "buildTransitive", "Perezosoft.Platform.Web.props")),
             "the switch imports a file the platform no longer has");
 
         Assert.Contains("build/PlatformSource.props", File.ReadAllText(Path.Combine(root, "Directory.Build.props")).Replace('\\', '/'), StringComparison.Ordinal);

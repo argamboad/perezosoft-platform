@@ -85,6 +85,11 @@
     <PackageVersion Include="Testcontainers.Minio" Version="4.12.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
+    <!-- The packaged harness (Perezosoft.Platform.Testing, Pkg 5.1a) needs xunit's extension points only (IAsyncLifetime),
+         not the test-project bundle; same version as xunit. -->
+    <PackageVersion Include="xunit.extensibility.core" Version="2.9.3" />
+    <!-- The inheritable suites (Pkg 5.1b) assert, so the package takes xunit's assertions too; same version. -->
+    <PackageVersion Include="xunit.assert" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageVersion Include="Microsoft.Playwright.NUnit" Version="1.60.0" />
     <PackageVersion Include="NUnit" Version="4.3.2" />

@@ -1,23 +1,7 @@
 <Project>
-
-  <!--
-    Imported by MSBuild after each project's own content. The local source switch's second half (Pkg 2.4, ADR-034):
-    with PlatformSource on, Perezosoft.Platform.* packages become project references to that checkout. A no-op in the
-    platform itself, which references no platform package. Later shipped by Perezosoft.Platform.Build (buildTransitive).
-  -->
+  <!-- The second halves, after each project's own content (Pkg 5.2): the build package's targets (LocalPorts), the local
+       source switch's reference swap (Pkg 2.4), what a packable project ships (Pkg 3.1). -->
+  <Import Project="$(MSBuildThisFileDirectory)src/Build/buildTransitive/Perezosoft.Platform.Build.targets" />
   <Import Project="$(MSBuildThisFileDirectory)build/PlatformSource.targets" />
-
-  <!--
-    What a packable project ships (Pkg 3.1, ADR-034), here and not in Directory.Build.props because only now is the
-    project's own IsPackable known. The portable .pdb rides inside the .nupkg beside the .dll (GitHub Packages serves no
-    .snupkg symbol package; an *embedded* pdb is no answer, NuGet then fails with NU5026 looking for the file), SourceLink
-    (bundled in the SDK) maps the sources back to GitHub, and a CI build is deterministic. PackagingContractTests holds these.
-  -->
-  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
-  </PropertyGroup>
-
+  <Import Project="$(MSBuildThisFileDirectory)build/Packing.targets" />
 </Project>

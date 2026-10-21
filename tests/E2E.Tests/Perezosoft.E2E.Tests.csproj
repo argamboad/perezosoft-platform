@@ -13,8 +13,6 @@
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Playwright.NUnit" />
-    <!-- Compute TOTP codes from the enrollment secret for the MFA enroll+step-up journey. -->
-    <PackageReference Include="Otp.NET" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit.Analyzers" />
     <PackageReference Include="NUnit3TestAdapter" />
@@ -22,6 +20,11 @@
 
   <ItemGroup>
     <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The packaged journey harness (Pkg 5.1d): the base, BlazorBoot, Mailpit, Totp. -->
+    <ProjectReference Include="..\..\src\Testing.E2E\Perezosoft.Testing.E2E.csproj" />
   </ItemGroup>
 
 </Project>

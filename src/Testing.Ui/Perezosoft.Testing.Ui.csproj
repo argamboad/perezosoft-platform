@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The platform's component and client test harness (Pkg 5.1c, ADR-034 as amended: three test packages by runner —
+    this one is bUnit's). PlatformComponentTestBase registers a double for every seam the client and the seeded pages
+    inject (AuthService over TestHttpHandler and FakeSessionStore, the clock, the persistences, the download and resume
+    seams, bUnit's NavigationManager and JSInterop); an app's seeded Ui.Tests derive it and add their strings'
+    localizer (FakeStringLocalizer<TResource>). A library, not a test project.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Testing.Ui</PackageId>
+    <Description>Perezosoft Platform component test harness for bUnit: a base that wires every client seam to a test double, the HTTP stub, the session and preference doubles, the test clock and the JWT builder.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="bunit" />
+    <!-- bUnit pulls AngleSharp 1.4.0 (GHSA-pgww-w46g-26qg); the patched pin the Ui tests carry. -->
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\Perezosoft.Client.csproj" />
+  </ItemGroup>
+
+</Project>

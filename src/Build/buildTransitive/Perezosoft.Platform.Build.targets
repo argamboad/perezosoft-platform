@@ -1,0 +1,53 @@
+<Project>
+
+  <!--
+    Perezosoft.Platform.Build, the targets half (Pkg 5.2): imported from the same three places as the props half, once.
+  -->
+  <PropertyGroup>
+    <_PlatformBuildTargetsImported>true</_PlatformBuildTargetsImported>
+  </PropertyGroup>
+
+  <!--
+    LocalPorts (Arch A10): the class is generated into obj/ from the local-ports.props properties before the project
+    compiles, and rewritten only when they change. It runs before XamlPreCompile too (#379): WinUI's markup compiler, on
+    the MAUI Windows target, is a Csc pass of its own that comes before CoreCompile.
+  -->
+  <Target Name="GenerateLocalPorts" BeforeTargets="BeforeCompile;CoreCompile;XamlPreCompile" Condition="'$(GenerateLocalPorts)' == 'true'">
+    <PropertyGroup>
+      <_LocalPortsFile>$(IntermediateOutputPath)LocalPorts.g.cs</_LocalPortsFile>
+      <!-- In the project's own namespace: an internal class of the same name in a referenced assembly (InternalsVisibleTo)
+           would otherwise collide (CS0436), and the innermost namespace wins the lookup. -->
+      <_LocalPortsNamespace>$(RootNamespace)</_LocalPortsNamespace>
+      <_LocalPortsNamespace Condition="'$(_LocalPortsNamespace)' == ''">$(AssemblyName)</_LocalPortsNamespace>
+      <_LocalPortsNamespace Condition="'$(_LocalPortsNamespace)' == ''">$(MSBuildProjectName)</_LocalPortsNamespace>
+    </PropertyGroup>
+    <Error Condition="'$(LocalApiHttpsPort)' == ''" Text="$(MSBuildProjectName) asks for LocalPorts (GenerateLocalPorts), but no local-ports.props was found above it. Add one at the repo root (Arch A10)." />
+    <ItemGroup>
+      <_LocalPortsLine Include="// &lt;auto-generated/&gt; from local-ports.props by Perezosoft.Platform.Build (Arch A10). Edit the props, not this file." />
+      <_LocalPortsLine Include="namespace $(_LocalPortsNamespace)%3B" />
+      <_LocalPortsLine Include="/// &lt;summary&gt;This repo's block of local ports and the origins built from them. One source: local-ports.props.&lt;/summary&gt;" />
+      <_LocalPortsLine Include="internal static class LocalPorts" />
+      <_LocalPortsLine Include="{" />
+      <_LocalPortsLine Include="    public const int Db = $(LocalDbPort)%3B" />
+      <_LocalPortsLine Include="    public const int Smtp = $(LocalSmtpPort)%3B" />
+      <_LocalPortsLine Include="    public const int MailUi = $(LocalMailUiPort)%3B" />
+      <_LocalPortsLine Include="    public const int App = $(LocalAppPort)%3B" />
+      <_LocalPortsLine Include="    public const int ApiHttps = $(LocalApiHttpsPort)%3B" />
+      <_LocalPortsLine Include="    public const int ApiHttp = $(LocalApiHttpPort)%3B" />
+      <_LocalPortsLine Include="    public const int WebHttps = $(LocalWebHttpsPort)%3B" />
+      <_LocalPortsLine Include="    public const int WebHttp = $(LocalWebHttpPort)%3B" />
+      <_LocalPortsLine Include="    public const string ApiHttpsUrl = &quot;https://localhost:$(LocalApiHttpsPort)&quot;%3B" />
+      <_LocalPortsLine Include="    public const string ApiHttpUrl = &quot;http://localhost:$(LocalApiHttpPort)&quot;%3B" />
+      <_LocalPortsLine Include="    public const string WebHttpsUrl = &quot;https://localhost:$(LocalWebHttpsPort)&quot;%3B" />
+      <_LocalPortsLine Include="    public const string WebHttpUrl = &quot;http://localhost:$(LocalWebHttpPort)&quot;%3B" />
+      <_LocalPortsLine Include="    public const string MailUiUrl = &quot;http://localhost:$(LocalMailUiPort)&quot;%3B" />
+      <_LocalPortsLine Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_LocalPortsFile)" Lines="@(_LocalPortsLine)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(_LocalPortsFile)" />
+      <FileWrites Include="$(_LocalPortsFile)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

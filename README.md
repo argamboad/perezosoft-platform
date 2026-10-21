@@ -61,7 +61,7 @@ app-specific docs; after that it's your feature slices, with per-epic user stori
 
 The three apps run side by side on one machine, each on its own block, so a stack never answers for another. This
 table is the same in all three repos. A repo states its block ONCE, in `local-ports.props`: code reads it through the
-generated `LocalPorts` class, `pwsh tools/ports.ps1 -Apply` writes it into the files that cannot read MSBuild (compose
+generated `LocalPorts` class, `pwsh tools/ports.ps1 -Apply` (`dotnet platform ports -Apply`) writes it into the files that cannot read MSBuild (compose
 defaults, launch profiles, appsettings, `.env.example`, the Postman environment, this row), and `LocalPortsTests` fails
 on any file that disagrees, on a port number in code, and if two apps share a port.
 API http is the port the Android emulator uses; the app container is `docker compose --profile app up`.

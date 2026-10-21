@@ -26,7 +26,7 @@ param(
     # build at the wrong host is worse than a missing argument).
     [Parameter(Mandatory = $true)][string] $ApiBaseUrl,
     # <repo>\out - the same folder DEPLOYMENT section 9 publishes to, and gitignored. Do not move it.
-    [string] $Out = (Join-Path (Split-Path -Parent $PSScriptRoot) "out"),
+    [string] $Out = (Join-Path $(if ($env:PLATFORM_REPO_ROOT) { $env:PLATFORM_REPO_ROOT } else { Split-Path -Parent $PSScriptRoot }) "out"),
     [switch] $Android,
     [switch] $Windows,
     # The store key (Android). Omit both for a sideload signed with this machine's debug key. The keystore
@@ -38,7 +38,8 @@ param(
 $ErrorActionPreference = "Stop"
 if (-not $Android -and -not $Windows) { $Android = $true; $Windows = $true }
 
-$repo = Split-Path -Parent $PSScriptRoot
+# The repo: the one `dotnet platform` runs in (PLATFORM_REPO_ROOT, Pkg 5.3), else the parent of tools/.
+$repo = $(if ($env:PLATFORM_REPO_ROOT) { $env:PLATFORM_REPO_ROOT } else { Split-Path -Parent $PSScriptRoot })
 $proj = Get-ChildItem (Join-Path $repo "src/Maui") -Filter *.csproj | Select-Object -First 1
 if (-not $proj) { throw "No MAUI project under src/Maui" }
 # The shell project is <App>.Maui; the artifact is the app, so drop the suffix - Vuelto.apk, not Vuelto.Maui.apk.

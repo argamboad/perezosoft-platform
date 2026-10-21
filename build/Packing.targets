@@ -1,0 +1,16 @@
+<Project>
+
+  <!--
+    What a packable project ships (Pkg 3.1, ADR-034), here and not in Packing.props because only now is the project's own
+    IsPackable known. The portable .pdb rides inside the .nupkg beside the .dll (GitHub Packages serves no .snupkg symbol
+    package; an *embedded* pdb is no answer, NuGet then fails with NU5026 looking for the file), SourceLink (bundled in the
+    SDK) maps the sources back to GitHub, and a CI build is deterministic. PackagingContractTests holds these.
+  -->
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>

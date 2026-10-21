@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The platform's operator tool (Pkg 5.3, ADR-034): `dotnet platform <command>` runs the platform's scripts against the
+    repo it is run in — the port, the local ports, the browser journeys, the native publish, the emulator, the dev
+    profiles, the telemetry dashboard, the QA generators and their check, and `up` for the local stack. The scripts are
+    not rewritten: tools/*.ps1 and the QA generators in docs/ ride inside the package as they are (linked below, so the
+    platform keeps running them in place), and each takes the repo from PLATFORM_REPO_ROOT, which the tool sets.
+    PowerShell 7 and, for the QA commands, Python with docs/requirements.txt stay prerequisites (D4).
+    An app pins it in .config/dotnet-tools.json (from 1.0.0-alpha.3, #419).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dotnet-platform</ToolCommandName>
+    <PackageId>Perezosoft.Platform.Tool</PackageId>
+    <Description>Perezosoft Platform operator tool: `dotnet platform port | ports | e2e | publish-native | android-emulator | dev-profiles | telemetry | up | qa-guide | qa-runlog | check-qa`, run against the repo you are in.</Description>
+    <!-- NU5111 is about NuGet's old install.ps1/init.ps1 hooks: it flags any .ps1 under tools/. These scripts are the
+         tool's own, run by it, never by NuGet. -->
+    <NoWarn>$(NoWarn);NU5111</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The operator scripts, beside the tool in its package (scripts/), read from where they live in this repo.
+         tools/release/ is the publisher's and stays out. -->
+    <None Include="..\..\tools\*.ps1" Link="scripts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\docs\gen_qa_guide.py;..\..\docs\gen_qa_runlog.py;..\..\docs\check_qa_artifacts.py;..\..\docs\requirements.txt"
+          Link="scripts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

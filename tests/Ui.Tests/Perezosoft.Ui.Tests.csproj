@@ -28,6 +28,8 @@
         <!-- The system under test: the shared RCL. Its ProjectReferences (JWT handler, localization,
              logging abstractions) come transitively, so the doubles need no extra packages. -->
         <ProjectReference Include="..\..\src\Shared.Ui\Perezosoft.Shared.Ui.csproj" />
+        <!-- The packaged component harness (Pkg 5.1c). -->
+        <ProjectReference Include="..\..\src\Testing.Ui\Perezosoft.Testing.Ui.csproj" />
     </ItemGroup>
 
 </Project>

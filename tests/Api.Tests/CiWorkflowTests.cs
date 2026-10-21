@@ -8,10 +8,13 @@ namespace Perezosoft.Api.Tests;
 /// legs and the deploys run only from "Run workflow". These facts hold that shape, so a job that quietly starts
 /// running on every PR again (or a deploy that fires on a push) fails here, naming it. The Forgejo-era parity
 /// checks that also guarded this file (R98, R137, R139, Env L29/L30) live here too since `.forgejo/` was removed.
+/// Since Pkg 5.4 the shape has two halves: ci.yml keeps the triggers and the concurrency, and calls app-ci.yml, the
+/// reusable workflow with every job — the one every app calls too.
 /// </summary>
 public class CiWorkflowTests
 {
     private const string Ci = ".github/workflows/ci.yml";
+    private const string AppCi = ".github/workflows/app-ci.yml";
 
     private static readonly string[] WebGates = ["build-test", "license-scan", "docker-build", "e2e"];
     private static readonly string[] DocsGates = ["secret-scan", "qa-artifacts"];
@@ -37,7 +40,7 @@ public class CiWorkflowTests
     [Fact]
     public void EveryJob_GatesOnTheRunPlan_ForWhatItIs() // ADR-031
     {
-        var jobs = Jobs(Read(Ci));
+        var jobs = Jobs(Read(AppCi));
         foreach (var job in WebGates)
             Assert.Contains("if: needs.changes.outputs.web == 'true'", jobs[job], StringComparison.Ordinal);
         foreach (var job in DocsGates)
@@ -56,7 +59,7 @@ public class CiWorkflowTests
     [Fact]
     public void RunPlan_ChecksEveryPr_WebOnCodeOrDeploy_DevicesOnlyOnDispatch() // ADR-031
     {
-        var changes = Jobs(Read(Ci))["changes"];
+        var changes = Jobs(Read(AppCi))["changes"];
         var plan = changes[changes.IndexOf("# ci-logic begin: run-plan", StringComparison.Ordinal)..];
         // A pull request always gets the docs gates, and the web gates when code changed.
         Assert.Contains("if [ \"$EVENT\" = \"pull_request\" ]; then\n            checks=true; web=\"$CODE\"", plan, StringComparison.Ordinal);
@@ -69,11 +72,14 @@ public class CiWorkflowTests
     [Fact]
     public void Deploys_RunOnlyFromADispatch_BehindEveryWebGate_OnTheirOwnBranch() // ADR-031, ADR-017
     {
-        var jobs = Jobs(Read(Ci));
+        var jobs = Jobs(Read(AppCi));
         foreach (var (job, target, branch) in new[] { ("deploy-staging", "staging", "develop"), ("deploy-prod", "prod", "main") })
         {
             var body = jobs[job];
-            Assert.Contains($"if: github.event_name == 'workflow_dispatch' && inputs.deploy == '{target}'", body, StringComparison.Ordinal);
+            // Behind every web gate that ran: a gate the repo has no input for (no journeys, no Dockerfile) is skipped, not
+            // failed, and a skipped need must not hold a deploy back (Pkg 5.4).
+            Assert.Contains("if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && github.event_name == 'workflow_dispatch' && inputs.deploy == '"
+                + target + "' }}", body, StringComparison.Ordinal);
             Assert.Equal(WebGates.Concat(DocsGates).ToHashSet(), NeedsList(body));
             // The wrong branch fails loudly instead of deploying it.
             Assert.Contains($"if [ \"${{{{ github.ref }}}}\" != \"refs/heads/{branch}\" ]; then", body, StringComparison.Ordinal);
@@ -84,7 +90,7 @@ public class CiWorkflowTests
     [Fact]
     public void EveryJob_HasATimeout() // ADR-031: GitHub's default is six hours, a month of minutes for one hung job
     {
-        var missing = Jobs(Read(Ci)).Where(j => !Regex.IsMatch(j.Value, @"(?m)^    timeout-minutes: \d+")).Select(j => j.Key).ToList();
+        var missing = Jobs(Read(AppCi)).Where(j => !Regex.IsMatch(j.Value, @"(?m)^    timeout-minutes: \d+")).Select(j => j.Key).ToList();
         Assert.True(missing.Count == 0, "jobs without timeout-minutes: " + string.Join(", ", missing));
     }
 
@@ -95,7 +101,7 @@ public class CiWorkflowTests
         // comes out as "src/Api/Features/AÃ±adir.cs". That no longer starts with `src/`, so the classifier
         // calls a code change code=false native=false docs=false and the run skips every gate. Turning
         // core.quotePath off makes git print the name as it is.
-        var yml = Read(Ci);
+        var yml = Read(AppCi);
         Assert.Contains("git -c core.quotePath=false diff --name-only", yml, StringComparison.Ordinal);
         Assert.DoesNotMatch(@"git diff --name-only", yml);
     }
@@ -108,13 +114,14 @@ public class CiWorkflowTests
         // any workflow, keeps it.
         var workflows = Directory.EnumerateFiles(Path.Combine(RepoRoot(), ".github", "workflows"), "*.yml")
             .Select(f => ".github/workflows/" + Path.GetFileName(f)).ToList();
-        if (Architecture.PlatformOwnership.IsThePlatform(RepoRoot())) // release.yml is producer-only (Pkg 2.5): an app has none
+        if (PlatformOwnership.IsThePlatform(RepoRoot())) // release.yml is producer-only (Pkg 2.5): an app has none
             Assert.Contains(".github/workflows/release.yml", workflows); // probe: the walk sees every workflow
         foreach (var file in workflows)
         {
             var lines = Read(file).Split('\n');
             var checkouts = lines.Select((line, i) => (line, i)).Where(x => x.line.Contains("uses: actions/checkout@", StringComparison.Ordinal)).ToList();
-            Assert.NotEmpty(checkouts);
+            if (checkouts.Count == 0) { Assert.Contains("uses: ./.github/workflows/", Read(file), StringComparison.Ordinal); continue; } // a caller only
+
             foreach (var (line, i) in checkouts)
             {
                 // The step runs until the next line indented no deeper than its `- uses:`.
@@ -126,7 +133,7 @@ public class CiWorkflowTests
         }
 
         // The one step that talks to the remote after checkout authenticates for that command only.
-        var qa = Jobs(Read(Ci))["qa-artifacts"];
+        var qa = Jobs(Read(AppCi))["qa-artifacts"];
         Assert.Contains("TOKEN: ${{ github.token }}", qa, StringComparison.Ordinal);
         Assert.Contains("http.extraheader=AUTHORIZATION: basic", qa, StringComparison.Ordinal);
     }
@@ -137,7 +144,7 @@ public class CiWorkflowTests
         // The Windows and Apple smokes decide "the app booted" from a 200 on GET /api/auth/providers in api.log.
         // `.*200` matched a 200 anywhere later on the line, e.g. the elapsed time of a 404 ("200.1234ms"), or a
         // sibling route. Both patterns (bash + PowerShell) must read the status field.
-        var patterns = Regex.Matches(Read(Ci), @"(?:grep -cE|-Pattern) '(Request finished[^']*auth/providers[^']*)'").Select(m => m.Groups[1].Value).ToList();
+        var patterns = Regex.Matches(Read(AppCi), @"(?:grep -cE|-Pattern) '(Request finished[^']*auth/providers[^']*)'").Select(m => m.Groups[1].Value).ToList();
         Assert.Equal(2, patterns.Count);
 
         const string real = "info: Microsoft.AspNetCore.Hosting.Diagnostics[2] Request finished HTTP/1.1 GET http://api.test/api/auth/providers - 200 - application/json;+charset=utf-8 14.2031ms";
@@ -162,7 +169,7 @@ public class CiWorkflowTests
     {
         // A hosted runner starts bare, so e2e installs Chromium's system packages with the browser; the journeys run
         // headless.
-        Assert.Contains("playwright.ps1 install --with-deps chromium", Jobs(Read(Ci))["e2e"], StringComparison.Ordinal);
+        Assert.Contains("playwright.ps1 install --with-deps chromium", Jobs(Read(AppCi))["e2e"], StringComparison.Ordinal);
         Assert.Contains("<Headless>true</Headless>", Read("tests/E2E.Tests/playwright.runsettings"), StringComparison.Ordinal);
     }
 
@@ -171,11 +178,11 @@ public class CiWorkflowTests
     {
         // src/Maui references only src/Shared.Ui, which references only src/Client (Pkg 4.1). Reported by the `changes` job for the
         // record (the device legs run on request since ADR-031), and kept exact so it can gate them again.
-        var m = Regex.Match(Read(Ci), @"maui=\$\(match ""\$nativefiles"" '([^']+)'\)");
+        var m = Regex.Match(Read(AppCi), @"maui=\$\(match ""\$nativefiles"" '([^']+)'\)");
         Assert.True(m.Success, "no `maui=` classifier");
         var maui = new Regex(m.Groups[1].Value);
         foreach (var path in new[] { "src/Maui/MauiProgram.cs", "src/Shared.Ui/Pages/Login.razor", "src/Client/Auth/AuthService.cs", "src/Client.Maui/PlatformMauiHosting.cs", "Directory.Build.props",
-                                     "Directory.Packages.props", "global.json", ".github/workflows/ci.yml",
+                                     "Directory.Packages.props", "global.json", ".github/workflows/ci.yml", ".github/workflows/app-ci.yml",
                                      ".config/dotnet-tools.json", ".github/forbidden-licenses.json" })
             Assert.True(maui.IsMatch(path), $"{path} can break the MAUI build, so it must count as maui");
         foreach (var path in new[] { "src/Host/Program.cs", "src/Core/Entities/Tenant.cs", "src/Infrastructure/Email/BrandedEmail.cs",
@@ -192,13 +199,13 @@ public class CiWorkflowTests
         // the tag is pushed only after the packages are, so a failed push leaves no orphan tag.
         // MinVer gives every packable project its version from the tag; nothing is packable unless it says so. These props
         // travel to every app (an app packs nothing, so they are inert there).
-        var props = Read("Directory.Build.props");
+        var props = Read("build/Packing.props"); // out of Directory.Build.props since Pkg 5.2
         Assert.Contains("<IsPackable Condition=\"'$(IsPackable)' == ''\">false</IsPackable>", props, StringComparison.Ordinal);
         Assert.Contains("<PackageReference Include=\"MinVer\"", props, StringComparison.Ordinal);
         Assert.Contains("<MinVerTagPrefix>v</MinVerTagPrefix>", props, StringComparison.Ordinal);
 
         // The workflow and its note template are producer-only (Pkg 2.5): held here, in the platform; an app has neither.
-        if (!Architecture.PlatformOwnership.IsThePlatform(RepoRoot())) return;
+        if (!PlatformOwnership.IsThePlatform(RepoRoot())) return;
         const string Release = ".github/workflows/release.yml";
         var yml = Read(Release);
         var on = yml[yml.IndexOf("\non:\n", StringComparison.Ordinal)..yml.IndexOf("\njobs:\n", StringComparison.Ordinal)];
@@ -241,7 +248,7 @@ public class CiWorkflowTests
         Assert.DoesNotContain("dotnet nuget push \"artifacts/*.nupkg\"", job, StringComparison.Ordinal);
         var workloads = At("dotnet workload install maui-android maui-ios maui-maccatalyst maui-windows --version ");
         Assert.True(workloads < pack, "the MAUI workloads are installed before anything is packed");
-        var workloadSet = Regex.Match(Read(Ci), @"dotnet workload restore src/Maui/Perezosoft\.Maui\.csproj --version (\S+)").Groups[1].Value;
+        var workloadSet = Regex.Match(Read(AppCi), @"dotnet workload restore ""\$MAUI_PROJ"" --version (\S+)").Groups[1].Value;
         Assert.Contains($"--version {workloadSet}", job, StringComparison.Ordinal); // one workload set across the repo
         var maui = Read("src/Client.Maui/Perezosoft.Client.Maui.csproj");
         Assert.Contains("'$(PlatformMauiAllTargets)' == 'true'\">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst<", maui, StringComparison.Ordinal);
@@ -261,26 +268,66 @@ public class CiWorkflowTests
     }
 
     [Fact]
-    public void EveryProcessCiStopsByName_IsAProjectThatExists() // Pkg 3.2 slip, caught on PR #435
+    public void EveryProcessCiStopsByName_IsTheRepoOwnRunningProject() // Pkg 3.2 slip, caught on PR #435; Pkg 5.4
     {
-        // A step that stops a running app by name (`pkill -f '<name>'`, `Get-Process <name>`) silently stops nothing when
-        // the project behind the name stops being the one that runs: after the host split, `pkill -f 'Perezosoft.Api'` still
-        // named a project — a library now — so it matched no process, left the billing-on API on its port, and the gates-off
-        // lane read the wrong server. Every such name must be a project that RUNS: a web app (Sdk.Web), an Exe, or MAUI.
+        // A step that stops a running app by name silently stops nothing when the name stops being the project that runs:
+        // after the host split, `pkill -f 'Perezosoft.Api'` named a library, left the billing-on API on its port, and the
+        // gates-off lane read the wrong server. Since one workflow serves every app (Pkg 5.4) no name is written down at
+        // all: the host is the repo's src/Host project and the MAUI app its src/Maui project (app-names.sh), and they run.
         var root = RepoRoot();
-        var projects = Directory.EnumerateFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
-            .Where(p => File.ReadAllText(p) is var x && (x.Contains("Microsoft.NET.Sdk.Web", StringComparison.Ordinal)
-                || x.Contains("<OutputType>Exe</OutputType>", StringComparison.Ordinal) || x.Contains("<UseMaui>true</UseMaui>", StringComparison.Ordinal)))
-            .Select(Path.GetFileNameWithoutExtension).ToHashSet(StringComparer.Ordinal);
-        Assert.Contains("Perezosoft.Host", projects);              // probe: the host runs
-        Assert.DoesNotContain("Perezosoft.Api", projects);         // and the Api package does not
-        var names = Regex.Matches(Read(Ci), @"pkill -f '([^']+)'|Get-Process ([A-Za-z][\w.]*)")
-            .Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)
-            .ToList();
+        var app = Read(AppCi);
+        Assert.Contains("pkill -f \"$(basename \"$HOST_PROJ\" .csproj)\"", app, StringComparison.Ordinal);
+        Assert.Contains("Get-Process $env:MAUI_NAME", app, StringComparison.Ordinal);
+        Assert.DoesNotMatch(@"pkill -f '|Get-Process [A-Za-z]", app); // no literal process name left
 
-        Assert.True(names.Count >= 2, $"probe: only {names.Count} process names found in ci.yml");
-        var stale = names.Where(n => !projects.Contains(n)).Distinct().ToList();
-        Assert.True(stale.Count == 0, "ci.yml stops processes by names no project has (renamed or moved?): " + string.Join(", ", stale));
+        var names = Read(".github/scripts/app-names.sh");
+        Assert.Contains("host=$(first 'src/Host/*.csproj')", names, StringComparison.Ordinal);
+        Assert.Contains("maui=$(first 'src/Maui/*.csproj')", names, StringComparison.Ordinal);
+        var host = Directory.EnumerateFiles(Path.Combine(root, "src", "Host"), "*.csproj").Single();
+        Assert.Contains("Microsoft.NET.Sdk.Web", File.ReadAllText(host), StringComparison.Ordinal); // the host runs
+    }
+
+    [Fact]
+    public void Ci_CallsTheReusableWorkflow_WithItsInputsAndSecrets() // Pkg 5.4
+    {
+        // The platform runs exactly what it ships: one job, the reusable workflow, the run's two choices passed through
+        // ("none" for a pull request, which has neither), and the deploy hooks.
+        var ci = Read(Ci);
+        var job = Assert.Single(Jobs(ci)).Value;
+        Assert.Contains("uses: ./.github/workflows/app-ci.yml", job, StringComparison.Ordinal);
+        Assert.Contains("deploy: ${{ inputs.deploy || 'none' }}", job, StringComparison.Ordinal);
+        Assert.Contains("devices: ${{ inputs.devices || 'none' }}", job, StringComparison.Ordinal);
+        Assert.Contains("secrets: inherit", job, StringComparison.Ordinal);
+
+        // app-ci.yml is called, never triggered: its only `on:` is workflow_call, with the two choices and the source switch.
+        var app = Read(AppCi);
+        var on = app[app.IndexOf("\non:\n", StringComparison.Ordinal)..app.IndexOf("\njobs:\n", StringComparison.Ordinal)];
+        Assert.Matches(@"(?m)^  workflow_call:$", on);
+        Assert.DoesNotMatch(@"(?m)^  (push|pull_request|workflow_dispatch|schedule):", on);
+        foreach (var input in new[] { "deploy:", "devices:", "platform-source:" })
+            Assert.Contains("      " + input, on, StringComparison.Ordinal);
+        Assert.Contains("LOCKED: ${{ !inputs.platform-source && '--locked-mode' || '' }}", app, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AppCi_NamesNoProjectNorAppByTheBrand_AndReadsThePlatformFilesFromThePlatform() // Pkg 5.4
+    {
+        // One workflow for every app: a project, an app id or the API-URL variable written with the platform's brand would
+        // be right in the platform and wrong in every app. They come from app-names.sh. And a file the platform owns (a
+        // script, the licence list, the QA checker) is read from the platform checkout, which an app's repo is not.
+        var app = Read(AppCi);
+        var branded = Regex.Matches(app, @".*(Perezosoft\.(Host|Web|Maui|E2E|Api|Core|Ui)|com\.perezosoft|PEREZOSOFT_).*").Select(m => m.Value.Trim()).ToList();
+        Assert.True(branded.Count == 0, "app-ci.yml names the platform's brand:\n  " + string.Join("\n  ", branded));
+        Assert.DoesNotMatch(@"bash \.github/scripts/", app);
+        Assert.DoesNotMatch(@"--forbidden-license-types \.github/", app);
+        Assert.Contains("repository: ${{ job.workflow_repository }}", app, StringComparison.Ordinal);
+        Assert.Contains("ref: ${{ job.workflow_sha }}", app, StringComparison.Ordinal);
+        // Every job that reads $PLATFORM checks the platform out first (on the platform itself the step is skipped).
+        foreach (var (name, body) in Jobs(app).Where(j => j.Value.Contains("$PLATFORM/", StringComparison.Ordinal)))
+        {
+            var checkout = body.IndexOf("path: .platform", StringComparison.Ordinal);
+            Assert.True(checkout >= 0 && checkout < body.IndexOf("$PLATFORM/", StringComparison.Ordinal), $"{name} reads $PLATFORM without checking the platform out first");
+        }
     }
 
     private static string Read(string relative) =>

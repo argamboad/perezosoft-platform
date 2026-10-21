@@ -1,0 +1,11 @@
+exit 0
++HOST_PROJ=src/Host/Perezosoft.Host.csproj
++WEB_PROJ=src/Web/Perezosoft.Web.csproj
++MAUI_PROJ=src/Maui/Perezosoft.Maui.csproj
++E2E_PROJ=tests/E2E.Tests/Perezosoft.E2E.Tests.csproj
++TEST_PROJS=tests/Api.Tests/Perezosoft.Api.Tests.csproj tests/Core.Tests/Perezosoft.Core.Tests.csproj
++MAUI_NAME=Perezosoft.Maui
++APP_ID=com.perezosoft.platform
++API_URL_VAR=PEREZOSOFT_API_BASE_URL
++SMOKE_DIR=tests/native-smoke-android
+-Api.csproj tests/

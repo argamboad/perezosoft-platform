@@ -24,7 +24,7 @@ public class PackagingContractTests
     public void CoreInfrastructureAndApi_ArePackable_UnderTheirPlatformIds_WithADescription()
     {
         var root = RepoRoot();
-        if (!Architecture.PlatformOwnership.IsThePlatform(root)) return; // an app packs nothing
+        if (!PlatformOwnership.IsThePlatform(root)) return; // an app packs nothing
         foreach (var (project, id) in Expected)
         {
             var text = File.ReadAllText(Path.Combine(root, project));
@@ -41,7 +41,7 @@ public class PackagingContractTests
     public void APackableProject_ReferencesOnlyPackableProjects()
     {
         var root = RepoRoot();
-        if (!Architecture.PlatformOwnership.IsThePlatform(root)) return;
+        if (!PlatformOwnership.IsThePlatform(root)) return;
         var packable = Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
             .Select(f => (Full: f, Rel: Path.GetRelativePath(root, f).Replace('\\', '/')))
             .Where(p => !p.Rel.Contains("/obj/", StringComparison.Ordinal) && !p.Rel.StartsWith(".claude/", StringComparison.Ordinal))
@@ -64,7 +64,7 @@ public class PackagingContractTests
         // The package must hold the platform and nothing an app owns: no Program, no app composition, no slice (the Notes
         // sample would otherwise ship to every app), no host configuration. All of that is the host's (src/Host here).
         var root = RepoRoot();
-        if (!Architecture.PlatformOwnership.IsThePlatform(root)) return;
+        if (!PlatformOwnership.IsThePlatform(root)) return;
         var api = Path.Combine(root, "src", "Api");
         var host = Path.Combine(root, "src", "Host");
         Assert.StartsWith("<Project Sdk=\"Microsoft.NET.Sdk\">", File.ReadAllText(Path.Combine(api, "Perezosoft.Api.csproj")).TrimStart('﻿'));
@@ -112,10 +112,12 @@ public class PackagingContractTests
     }
 
     [Fact]
-    public void PackagingSettings_LiveOnceInDirectoryBuildProps()
+    public void PackagingSettings_LiveOnceInThePackingFiles() // build/Packing.props/.targets, out of Directory.Build.* since Pkg 5.2
     {
-        var props = File.ReadAllText(Path.Combine(RepoRoot(), "Directory.Build.props"));
-        var targets = File.ReadAllText(Path.Combine(RepoRoot(), "Directory.Build.targets"));
+        var props = File.ReadAllText(Path.Combine(RepoRoot(), "build", "Packing.props"));
+        var targets = File.ReadAllText(Path.Combine(RepoRoot(), "build", "Packing.targets"));
+        foreach (var root in new[] { "Directory.Build.props", "Directory.Build.targets" })
+            Assert.Contains("build/Packing.", File.ReadAllText(Path.Combine(RepoRoot(), root)), StringComparison.Ordinal);
         // MinVer runs only when packing: a Docker build has no .git (MinVer would warn, and warnings are errors).
         Assert.Contains("<MinVerSkip Condition=\"'$(_IsPacking)' != 'true' and '$(MinVerSkip)' == ''\">true</MinVerSkip>", props, StringComparison.Ordinal);
         // GitHub Packages serves no .snupkg: the symbols travel inside the .nupkg, and SourceLink maps them to GitHub. In the

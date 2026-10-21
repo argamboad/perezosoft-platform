@@ -39,7 +39,7 @@ param(
     [Parameter(Mandatory)][string]$Platform,
     [string]$To = 'develop',
     [switch]$Apply,
-    [string]$Repo = (Split-Path -Parent $PSScriptRoot)
+    [string]$Repo = $(if ($env:PLATFORM_REPO_ROOT) { $env:PLATFORM_REPO_ROOT } else { Split-Path -Parent $PSScriptRoot })
 )
 
 $ErrorActionPreference = 'Stop'

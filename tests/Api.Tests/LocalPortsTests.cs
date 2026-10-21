@@ -143,7 +143,7 @@ public class LocalPortsTests
         // out on "No OTP email" (y-el-vuelto, 2026-09-24).
         var block = Block();
         var failures = new List<string>();
-        foreach (var (file, hostNetworking) in new[] { (".github/workflows/ci.yml", false) })
+        foreach (var (file, hostNetworking) in new[] { (".github/workflows/app-ci.yml", false) })
         {
             var ci = Read(file);
             var services = Regex.Matches(ci, @"image: ghcr\.io/axllent/mailpit[^\n]*\n\s*ports: (\[[^\]]*\])");
@@ -207,7 +207,7 @@ public class LocalPortsTests
         // #379: the MAUI Windows target runs WinUI's XamlPreCompile - its own Csc pass - before CoreCompile, so a
         // target hooked only to the compile left that first pass without LocalPorts.g.cs (CS0103 in MauiProgram).
         // Pull requests build no Windows leg, so this is the check that holds the hook.
-        var target = XDocument.Load(Full("Directory.Build.props")).Descendants("Target")
+        var target = XDocument.Load(Full("src/Build/buildTransitive/Perezosoft.Platform.Build.targets")).Descendants("Target") // Perezosoft.Platform.Build (Pkg 5.2)
             .Single(t => (string?)t.Attribute("Name") == "GenerateLocalPorts");
         var before = ((string?)target.Attribute("BeforeTargets") ?? "").Split(';', StringSplitOptions.TrimEntries);
         Assert.Contains("BeforeCompile", before);

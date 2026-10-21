@@ -32,7 +32,8 @@ GDPR, admin, CI/CD — see `OVERVIEW.md`) never appears on this list: that's the
 - **Docker Desktop** — runs local Postgres + the Mailpit email trap.
 - **Claude** — chat access for Phase 1, Claude Code for Phases 3+.
 - An IDE is optional (Claude Code does the driving); Rider/VS/VS Code all work. For VS and VS Code, run
-  `pwsh tools/dev-profiles.ps1` once per clone: it writes the start profiles into gitignored files (VS: API + Web,
+  `pwsh tools/dev-profiles.ps1` (`dotnet platform dev-profiles`, Pkg 5.3 — every `tools/<x>.ps1` here is also
+  `dotnet platform <x>`; `port-platform.ps1` is `port`) once per clone: it writes the start profiles into gitignored files (VS: API + Web,
   API + app on the toolbar's Debug Target; VS Code: API + Web, Windows desktop, Android phone/tablet on a device or an
   emulator) — `MOBILE_TESTING.md` §3.
 

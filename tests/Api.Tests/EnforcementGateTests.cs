@@ -35,7 +35,7 @@ public class EnforcementGateTests
             $"Dockerfile runtime image (aspnet:{runtimeTag}) != the ASP.NET package line ({aspNetPackage}).");
 
         // CI must read the SDK from global.json, never hardcode one.
-        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Contains("global-json-file: global.json", ci);
         Assert.DoesNotContain("dotnet-version:", ci); // a hardcoded setup-dotnet version would fork the pin
 
@@ -73,6 +73,11 @@ public class EnforcementGateTests
         foreach (var file in needed.ToList())
             foreach (Match m in Regex.Matches(File.ReadAllText(Path.Combine(root, file)), @"<Import\s+Project=""\$\(MSBuildThisFileDirectory\)([^""]+)"""))
                 needed.Add(m.Groups[1].Value.Replace('\\', '/'));
+        // ...and the root files those read by name from above the project (Pkg 5.2: the build package finds local-ports.props
+        // and platform-stamp.json that way, in the image as on a laptop).
+        foreach (var file in needed.Where(f => File.Exists(Path.Combine(root, f))).ToList())
+            foreach (Match m in Regex.Matches(File.ReadAllText(Path.Combine(root, file)), @"GetPathOfFileAbove\('([^']+)'"))
+                needed.Add(m.Groups[1].Value);
 
         var missing = needed.Where(n => !copied.Any(c => n == c || n.StartsWith(c + "/", StringComparison.Ordinal))).ToList();
         Assert.True(missing.Count == 0, "the Dockerfile does not copy, before `dotnet restore`, build files the root props/targets need: " + string.Join(", ", missing));
@@ -95,7 +100,7 @@ public class EnforcementGateTests
         Assert.Matches(@"chown [^\n]*app:app [^\n]*/app/storage", beforeUser);
 
         // CI proves it on the built image.
-        Assert.Contains("/app/storage/.write-probe", File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml")));
+        Assert.Contains("/app/storage/.write-probe", File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "app-ci.yml")));
     }
 
     [Fact]
@@ -139,7 +144,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void EveryCiJob_EitherGatesOnChanges_OrIsOnTheAlwaysRunList(string workflow) // LOCALCI-3
     {
         // The point of the paths gate is that a docs-only push stops billing thirty minutes for
@@ -193,7 +198,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void MarkdownAnywhere_IsNeverCodeOrNative(string workflow) // LOCALCI-3 follow-up
     {
         // A docs-only pull request that touched tests/E2E.Tests/README.md billed the FULL run — build,
@@ -225,7 +230,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void Classifier_CountsEveryFileAGateReads_AsCode(string workflow) // v4 DEP-15 (R97)
     {
         // One positive per file class the old regex missed: a PR touching only one of these skipped build-test (and
@@ -241,17 +246,18 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void NativeClassifier_CoversEveryNativeInput(string workflow) // v4 NAT-16 / S0-G6 (R106)
     {
         var (_, Native, _) = ClassifierOf(workflow);
         foreach (var path in new[] { "Directory.Build.props", "Directory.Packages.props", "global.json", "tools/publish-native.ps1",
-                                     "src/Maui/MauiProgram.cs", ".github/workflows/ci.yml" })
+                                     "src/Build/buildTransitive/Perezosoft.Platform.Build.props", "build/Packing.props",
+                                     "src/Maui/MauiProgram.cs", ".github/workflows/ci.yml", ".github/workflows/app-ci.yml" })
             Assert.True(Native(path), $"{workflow}: {path} can break a native build, so it must run the native legs");
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void Classifier_FailsOpen_OnEveryOutput(string workflow) // v4 LB-DEP-9 (R143)
     {
         // The unknown-diff-base branch exists to run everything; an output it leaves false is a job it quietly skips.
@@ -267,7 +273,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void EveryRepoFileTheTestsRead_ClassifiesAsCode(string workflow) // v4 DEP-15 / TB-DOC-7 (R97)
     {
         // Reflective: every string literal (and every Path.Combine join) in this test project that names an existing
@@ -309,22 +315,25 @@ public class EnforcementGateTests
         // magic-link URL was spent twice — UX-8), and only BlazorBoot knows how. So no journey or page object
         // navigates or reloads an IPage itself: BlazorBoot.cs is the one caller (and BlazorBootCore.cs, whose page
         // is its own IBootPage seam). The Windows native smoke drives a WebView2 through CDP with no Blazor loader
-        // to watch, and is the one deliberate exception.
-        var e2e = Path.Combine(RepoRoot(), "tests", "E2E.Tests");
+        // to watch, and is the one deliberate exception. The journeys and the packaged harness they stand on
+        // (src/Testing.E2E, Pkg 5.1d) are both scanned.
+        var root = RepoRoot();
+        var harness = Path.Combine(root, "src", "Testing.E2E");
         var receiver = new System.Text.RegularExpressions.Regex(@"\b\w*[pP]age\.(GotoAsync|ReloadAsync)\(");
-        var offenders = Directory.EnumerateFiles(e2e, "*.cs", SearchOption.AllDirectories)
+        var offenders = new[] { Path.Combine(root, "tests", "E2E.Tests"), harness }
+            .SelectMany(d => Directory.EnumerateFiles(d, "*.cs", SearchOption.AllDirectories))
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
                      && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
             .Where(f => Path.GetFileName(f) is not ("BlazorBoot.cs" or "BlazorBootCore.cs" or "NativeSmokeTests.cs"))
             .Where(f => receiver.IsMatch(File.ReadAllText(f)))
-            .Select(f => Path.GetRelativePath(e2e, f))
+            .Select(f => Path.GetRelativePath(root, f))
             .ToList();
         Assert.True(offenders.Count == 0, $"IPage.GotoAsync/ReloadAsync outside BlazorBoot.cs (use BlazorBoot.GotoAsync / ReloadAsync): {string.Join(", ", offenders)}");
-        Assert.Matches(receiver, File.ReadAllText(Path.Combine(e2e, "BlazorBoot.cs"))); // probe alive
+        Assert.Matches(receiver, File.ReadAllText(Path.Combine(harness, "BlazorBoot.cs"))); // probe alive
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void BootRetryBudget_IsOneNumber_InTheSuiteAndTheSlowestJourneysStep(string workflow)
     {
         // The suite stops at DeadBootsPerRun dead boots per process; the "Slowest journeys" step reads the same
@@ -332,7 +341,7 @@ public class EnforcementGateTests
         var ci = File.ReadAllText(Path.Combine(RepoRoot(), workflow));
         var step = ci[ci.IndexOf("- name: Slowest journeys", StringComparison.Ordinal)..];
         step = step[..step.IndexOf("- name: ", 10, StringComparison.Ordinal)];
-        Assert.Contains($"budget = {Perezosoft.E2E.Tests.BlazorBootCore.DeadBootsPerRun}  #", step);
+        Assert.Contains($"budget = {Perezosoft.Testing.E2E.BlazorBootCore.DeadBootsPerRun}  #", step);
         Assert.Contains("if len(boots) > budget:", step);
         Assert.Contains("raise SystemExit(1)", step);
         Assert.Contains("sorted({line.strip()", step); // per journey, deduplicated (LB-DEP-6b)
@@ -428,6 +437,23 @@ public class EnforcementGateTests
     }
 
     [Fact]
+    public void WebPackage_CarriesFullGlobalizationData_IntoTheHost() // Pkg 4.5 (#444)
+    {
+        // Found by #413's scratch app: a WebAssembly host on Perezosoft.Platform.Web whose UseStoredCultureAsync() switches
+        // to the saved culture fails at boot unless the HOST loads all the globalization data — a setting the package
+        // depended on but did not carry. It carries it now, as buildTransitive, without overriding a host that chose;
+        // the platform's host, on the project, imports the same file and keeps no line of its own.
+        var props = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Web", "buildTransitive", "Perezosoft.Platform.Web.props"));
+        Assert.Contains("<BlazorWebAssemblyLoadAllGlobalizationData Condition=\"'$(BlazorWebAssemblyLoadAllGlobalizationData)' == ''\">true</BlazorWebAssemblyLoadAllGlobalizationData>", props);
+        var packed = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Client.Web", "Perezosoft.Client.Web.csproj"));
+        Assert.Contains(@"<None Include=""buildTransitive\**"" Pack=""true"" PackagePath=""buildTransitive\"" />", packed);
+
+        var host = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Web", "Perezosoft.Web.csproj"));
+        Assert.Contains(@"<Import Project=""..\Client.Web\buildTransitive\Perezosoft.Platform.Web.props"" />", host);
+        Assert.DoesNotContain("<BlazorWebAssemblyLoadAllGlobalizationData>", host);
+    }
+
+    [Fact]
     public void PublishScript_ThrowsUnlessTheSignatureIsVerified_AndFindsTheSdkThroughAndroidHome()
     {
         var script = File.ReadAllText(Path.Combine(RepoRoot(), "tools", "publish-native.ps1"));
@@ -438,7 +464,7 @@ public class EnforcementGateTests
     }
 
     [Theory]
-    [InlineData(".github/workflows/ci.yml")]
+    [InlineData(".github/workflows/app-ci.yml")]
     public void ReleaseLeg_BuildsRelease_VerifiesV2OrV3_AndProvesTheGuardFires(string workflow)
     {
         // The only MAUI Release build CI runs: a device leg, only when a "Run workflow" asks for android (ADR-031).
@@ -530,7 +556,7 @@ public class EnforcementGateTests
 
         // Workflow services: `image: repo/name:tag`, and `docker run … <image>` steps (the image is the first
         // bare word after the options; `--entrypoint sh` takes a value, so skip an option's argument too).
-        var workflow = Path.Combine(root, ".github", "workflows", "ci.yml");
+        var workflow = Path.Combine(root, ".github", "workflows", "app-ci.yml");
         var workflowText = File.ReadAllText(workflow);
         foreach (Match m in new Regex(@"(?m)^\s*image:\s*([^\s#]+)").Matches(workflowText))
             Check(m.Groups[1].Value, "ci.yml services");
@@ -556,7 +582,10 @@ public class EnforcementGateTests
 
         // Testcontainers builders: new XxxBuilder("image:tag")
         var builderImage = new Regex(@"new\s+\w*Builder\s*\(\s*""([^""]+)""");
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories))
+        // tests/ and the packaged harness (src/Testing, Pkg 5.1a), where the database fixture and integration host now
+        // name their Postgres image.
+        foreach (var file in new[] { "tests", Path.Combine("src", "Testing") }
+                     .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*.cs", SearchOption.AllDirectories)))
         {
             if (file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
                 || file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
@@ -607,14 +636,17 @@ public class EnforcementGateTests
         var offenders = new List<string>();
 
         var image = new Regex(@"(?m)^\s*image:\s*([^\s#]+)");
-        foreach (Match m in image.Matches(File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"))))
+        foreach (Match m in image.Matches(File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"))))
             Check(m.Groups[1].Value, "ci.yml services");
         var compose = Path.Combine(root, "docker-compose.yml");
         if (File.Exists(compose))
             foreach (Match m in image.Matches(File.ReadAllText(compose)))
                 Check(m.Groups[1].Value, "docker-compose.yml");
         var builder = new Regex(@"new\s+\w*Builder\s*\(\s*""([^""]+)""");
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories))
+        // tests/ and the packaged harness (src/Testing, Pkg 5.1a), where the database fixture and integration host now
+        // name their Postgres image.
+        foreach (var file in new[] { "tests", Path.Combine("src", "Testing") }
+                     .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*.cs", SearchOption.AllDirectories)))
         {
             if (file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
                 || file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
@@ -633,14 +665,14 @@ public class EnforcementGateTests
         Assert.DoesNotMatch(@"(?im)^\s*#\s*syntax\s*=", File.ReadAllText(Path.Combine(root, "Dockerfile")));
 
         // Testcontainers' own Ryuk reaper is a Docker Hub image too; CI turns it off (a runner is thrown away anyway).
-        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Matches(@"TESTCONTAINERS_RYUK_DISABLED:\s*""true""", ci);
 
         // And the mirror has a limit of its own: sixty fixtures pulling at once answered `toomanyrequests: Rate
         // exceeded` (2026-10-09). The job pulls each test image once, before the tests, so the fixtures find it
         // locally; the images named here are the ones the fixtures use.
         foreach (var pulled in new[] { "public.ecr.aws/docker/library/postgres:17.11", "ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z" })
-            Assert.Contains(pulled, ci.Split("- name: Test (Core + Api + Ui)")[0]);
+            Assert.Contains(pulled, ci.Split("- name: Test (every tests/ project but the journeys)")[0]);
 
         void Check(string reference, string where)
         {
@@ -659,11 +691,11 @@ public class EnforcementGateTests
         // This holds the reach: the four places an image is named each have at least one image today, and the
         // tag rule refuses exactly the floating shapes.
         var root = RepoRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Matches(@"(?m)^\s*image:\s*\S+", workflow);          // services: at least one
         Assert.Matches(@"docker run\s", workflow);                   // docker run: at least one
         Assert.Matches(@"(?m)^FROM\s+\S+", File.ReadAllText(Path.Combine(root, "Dockerfile")));
-        Assert.Contains("new PostgreSqlBuilder(\"", File.ReadAllText(Path.Combine(root, "tests", "Api.Tests", "Infrastructure", "PostgresFixture.cs")));
+        Assert.Contains("new PostgreSqlBuilder(\"", File.ReadAllText(Path.Combine(root, "src", "Testing", "Harness", "PlatformPostgresFixture.cs")));
 
         static bool Floats(string tag) => tag.Equals("latest", StringComparison.OrdinalIgnoreCase) || Regex.IsMatch(tag, @"^v?\d+$");
         Assert.True(Floats("latest"));
@@ -683,13 +715,13 @@ public class EnforcementGateTests
         // diverged from upstream. Now the sample's unit is its own two migrations (class `sample` in the ownership map),
         // and every other migration is held free of it. The snapshot is the app's (class `adapts`) and is not scanned.
         var root = RepoRoot();
-        var rules = Architecture.PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
+        var rules = PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         // Designer files are the model snapshot at that point in the chain (generated, and the snapshot is the app's), so only
         // the migrations' own operations are read, with comment lines dropped: the question is what the SQL names.
         // Downstream, the platform's migrations are the ones its manifest lists; the app's own may name a Notes column.
         var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
         var platformPaths = File.Exists(manifestPath)
-            ? Architecture.PlatformOwnership.ParseManifest(File.ReadAllText(manifestPath)).Entries.Select(e => e.Path).ToHashSet(StringComparer.Ordinal)
+            ? PlatformOwnership.ParseManifest(File.ReadAllText(manifestPath)).Entries.Select(e => e.Path).ToHashSet(StringComparer.Ordinal)
             : null;
         var migrations = Directory.EnumerateFiles(Path.Combine(root, "src", "Host", "Persistence", "Migrations"), "*.cs")
             .Where(f => !f.EndsWith("ModelSnapshot.cs", StringComparison.Ordinal) && !f.EndsWith(".Designer.cs", StringComparison.Ordinal))
@@ -697,11 +729,11 @@ public class EnforcementGateTests
                           Text: string.Join('\n', File.ReadLines(f).Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)))))
             .Where(m => platformPaths is null || platformPaths.Contains(m.Rel))
             .ToList();
-        var sample = migrations.Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) == Architecture.PlatformOwnership.Class.Sample).Select(m => m.Rel).ToList();
+        var sample = migrations.Where(m => PlatformOwnership.Classify(m.Rel, rules) == PlatformOwnership.Class.Sample).Select(m => m.Rel).ToList();
         if (Directory.Exists(Path.Combine(root, "src", "Host", "Features", "Notes"))) // an app that removed the sample keeps none of its migrations
             Assert.True(sample.Count >= 2, "probe: the sample's own migrations (AddNotesSample, NotesSampleRlsPolicy) are classed `sample`");
         var offenders = migrations
-            .Where(m => Architecture.PlatformOwnership.Classify(m.Rel, rules) != Architecture.PlatformOwnership.Class.Sample)
+            .Where(m => PlatformOwnership.Classify(m.Rel, rules) != PlatformOwnership.Class.Sample)
             .Where(m => Regex.IsMatch(m.Text, @"""\bNotes\b"""))
             .Select(m => m.Rel).ToList();
         Assert.True(offenders.Count == 0, "a platform migration names the sample's table — the sample must stay removable without editing platform history (Arch A6): " + string.Join(", ", offenders));
@@ -720,8 +752,8 @@ public class EnforcementGateTests
         [
             "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Host/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
-            "tests/Api.Tests/Infrastructure/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
-            "tests/Ui.Tests/Infrastructure/TestHttpHandler.cs",
+            "src/Testing/Harness/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
+            "src/Testing.Ui/TestHttpHandler.cs",
         ];
         // How the sample would be named from a composition file; the ban-list literals in ArchitectureTests' Notes-independence
         // gate are strings, not references, and are not among these.
@@ -814,12 +846,12 @@ public class EnforcementGateTests
 
         // Downstream, a target over a producer-only file (the platform's release machinery, Pkg 2.5) has neither its file nor
         // its cases; run.py skips it the same way. In the platform every target must have both.
-        var platform = Architecture.PlatformOwnership.IsThePlatform(root);
-        var rules = Architecture.PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
+        var platform = PlatformOwnership.IsThePlatform(root);
+        var rules = PlatformOwnership.ParseRules(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         foreach (var t in targets)
         {
             if (!platform && t.Skip(2).All(f => !File.Exists(Path.Combine(root, f))
-                    && Architecture.PlatformOwnership.Classify(f, rules) == Architecture.PlatformOwnership.Class.Producer))
+                    && PlatformOwnership.Classify(f, rules) == PlatformOwnership.Class.Producer))
                 continue;
             var cases = Path.Combine(root, "tests", "ci-logic", "cases", t[1]);
             Assert.True(Directory.Exists(cases) && Directory.EnumerateDirectories(cases).Any(), $"target `{t[1]}` has no cases");
@@ -842,7 +874,7 @@ public class EnforcementGateTests
         // literal GateJourneyTests uses, every deployment gate has a tagged journey, and the default lane leaves
         // the gate journeys out (they would fail against billing-on).
         var root = RepoRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         var gates = File.ReadAllText(Path.Combine(root, "tests", "E2E.Tests", "GateJourneyTests.cs"));
         var script = File.ReadAllText(Path.Combine(root, "tools", "e2e.ps1"));
 

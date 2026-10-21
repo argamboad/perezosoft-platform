@@ -345,9 +345,9 @@ public class SignupGateTests(PostgresFixture fixture) : PostgresTestBase(fixture
 
         // Connected as the runtime role, which is subject to RLS (the fixture's own role is exempt).
         await using (var provision = Fixture.CreateTestContext())
-            await Rls.RlsTestSetup.ProvisionAsync(provision);
+            await RlsTestSetup.ProvisionAsync(provision);
         var options = new DbContextOptionsBuilder<TestAppDbContext>()
-            .UseNpgsql(Rls.RlsTestSetup.RuntimeConnectionString(Fixture.ConnectionString)).Options;
+            .UseNpgsql(RlsTestSetup.RuntimeConnectionString(Fixture.ConnectionString)).Options;
         await using var db = new TestAppDbContext(options, new TestCurrentTenant { TenantId = ambient });
         var tagged = await new TenantInvitationRepository(db).GetValidByEmailAcrossTenantsAsync("guest@example.com", DateTimeOffset.UtcNow);
         Assert.Equal(inviting, Assert.Single(tagged).TenantId);

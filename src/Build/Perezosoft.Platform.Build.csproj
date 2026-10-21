@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The solution's build settings as a package (Pkg 5.2, ADR-034): what every project of the platform and of an app builds
+    with — nullable, warnings as errors, implicit usings, the duplicate-resource promotion, the generated LocalPorts from
+    the repo's local-ports.props, the platform stamp beside a *.Host's binaries. No assembly: build files only, under
+    build/ (a direct reference; CPM's GlobalPackageReference asks for Build assets) and buildTransitive/.
+    An app takes it once, for every project, in its Directory.Packages.props:
+      <GlobalPackageReference Include="Perezosoft.Platform.Build" Version="…" />
+    The platform imports the same files from source (Directory.Build.props/.targets). What stays a file in the repo: the
+    restore settings (lockfiles) and the local source switch (build/PlatformSource.*) — a package arrives only after a
+    restore, so it cannot steer the restore that brings it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Build</PackageId>
+    <Description>Perezosoft Platform build settings for every project of an app: nullable, warnings as errors, implicit usings, the generated LocalPorts class, the platform stamp. Reference it once with GlobalPackageReference.</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- No lib/ folder by design: the package is build files only. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="build/*" Pack="true" PackagePath="build/" />
+    <None Include="buildTransitive/*" Pack="true" PackagePath="buildTransitive/" />
+  </ItemGroup>
+
+</Project>

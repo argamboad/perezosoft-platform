@@ -17,7 +17,7 @@
 - **Priority:** 🔴 Smoke (critical path) · 🟠 Core (run every regression) · 🟢 Edge (run on full
   regression or when the area changed).
 - **⚙️ Automated in CI** on a case title means a Playwright journey in `tests/E2E.Tests` now exercises
-  the same path on every push (the `e2e` job in `.github/workflows/ci.yml`). Human QA can **spot-check**
+  the same path on every push (the `e2e` job in `.github/workflows/app-ci.yml`). Human QA can **spot-check**
   these rather than run them in full each cycle; they still need a manual pass on Desktop/Android (the
   E2E job runs Web only) and whenever the area changes. The ⚙️ marker on each case title is authoritative (≈35 cases); §15 maps the major journeys. See §17 for the run
   procedure.
@@ -168,7 +168,7 @@ UI-less (they're for machines) and **config-gated off** — they have **manual c
 (QA-API-01..06), in addition to automated tests.
 
 **Automated in CI (Web):** a Playwright/NUnit E2E suite (`tests/E2E.Tests`, currently 37 journeys)
-runs against the real booted stack on every push — the `e2e` job in `.github/workflows/ci.yml`. Every
+runs against the real booted stack on every push — the `e2e` job in `.github/workflows/app-ci.yml`. Every
 case it covers is marked **⚙️ Automated in CI** on its title (≈35 cases across auth, MFA, i18n,
 household/roster, invitations, notifications, admin, billing, theme, and GDPR — the case titles are
 authoritative; §15 maps the major journeys). Human QA can spot-check those on Web and focus effort on
@@ -1669,7 +1669,7 @@ showing the previous user's screen on a shared computer.*
 `tests/Api.Tests`, not by manual UI steps — record as **covered by automated tests** unless probing
 the API directly:
 - **Tenant write-stamping** — a new tenant-scoped row is stamped with the caller's tenant and a
-  foreign-tenant write is rejected (`TenantStampingInterceptorTests`), so reads *and* writes are
+  foreign-tenant write is rejected (`PlatformTenancySuite`, its stamping cases), so reads *and* writes are
   tenant-isolated.
 - **Refresh-token reuse detection** — replaying an already-rotated refresh token revokes all the
   user's sessions (`RefreshTokenServiceTests`, `RefreshReplayTests`) — unless it arrives within 60 s of
@@ -2604,7 +2604,7 @@ and macCatalyst = MAC-01..03 (first-run smoke — first passed 2026-07-06; needs
 **web-only** by design; the §13c checklist is the per-release native subset.
 
 **Automated (E2E CI ⚙️):** the following manual cases have an equivalent Playwright/NUnit journey in
-`tests/E2E.Tests`, run on every push by the `e2e` job (`.github/workflows/ci.yml`) against a booted
+`tests/E2E.Tests`, run on every push by the `e2e` job (`.github/workflows/app-ci.yml`) against a booted
 Postgres + Mailpit + API + Web stack — so they are continuously regression-guarded on **Web**:
 
 | Manual case | E2E test |
@@ -2835,7 +2835,7 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   That suite now covers the **OTP auth happy-path + guards** (`AuthFlowTests`), the **MFA enroll →
   step-up** journey incl. the wrong-code negative (`MfaJourneyTests`), and the **language switch**
   (`I18nTests`) — all over the page objects in `Pages/`, reading codes from Mailpit via the `Mailpit`
-  REST client, and **run in CI** by the `e2e` job (`.github/workflows/ci.yml`, Web only). See
+  REST client, and **run in CI** by the `e2e` job (`.github/workflows/app-ci.yml`, Web only). See
   `tests/E2E.Tests/README.md` for the run procedure (it documents the same Mailpit SMTP override noted
   in §1.1). The cases these journeys mirror are marked **⚙️ Automated in CI** and listed in §15. The
   Gherkin blocks here are written to be lifted directly into new E2E scenarios — keep the two in sync
@@ -3025,7 +3025,7 @@ Critical/High defects. 🟢 Edge cases triaged (Pass or accepted-known-issue).
   automated tests — the Postman path is one import of `/api/public/openapi.json` away. Referenced from the
   §15 PUBAPI/HOOKS rows and the §2 "no client UI" note.
 - **Updated 2026-07-02** — **E2E-in-CI (v2 audit B8-5/B8-6):** the Playwright suite is now booted and run
-  on every push (the `e2e` job in `.github/workflows/ci.yml` — Postgres + Mailpit + API + Web) and was
+  on every push (the `e2e` job in `.github/workflows/app-ci.yml` — Postgres + Mailpit + API + Web) and was
   expanded beyond the auth happy-path to the **MFA enroll → step-up** journey (`MfaJourneyTests`, incl. a
   wrong-code negative) and the **login-page language switch** (`I18nTests`). Six manual cases now have a
   continuously-run Web equivalent and are marked **⚙️ Automated in CI**: QA-SMK-01, QA-SMK-03, QA-AUTH-09,

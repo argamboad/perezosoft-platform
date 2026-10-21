@@ -434,8 +434,8 @@ app's half of the context in `AppDbContext.App.cs` (partial class, `OnAppModelCr
 `tests/Api.Tests/App/AppAllowlists.cs` for every allowlist the gates read (`EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`,
 `EveryUserKeyedEntity_IsWiredIntoAccountErasure`, the outbound-HTTP, controller, type-name, tenant-id and
 data-protection sets); `AppTestComposition.cs` for the harness's contributors and the integration host's pins;
-`RulesEnforcement.App.cs` for the manifest's per-app `Pending`/`NotHere`; `tests/Ui.Tests/App/TestHttpHandler.App.cs`
-for the UI stub. `Program.cs` calls the two composition methods once and runs the startup tasks; nothing in it
+`RulesEnforcement.App.cs` for the manifest's per-app `Pending`/`NotHere`; the UI stub's app half
+(`TestHttpHandler.App.cs`, retired in Pkg 5.1c: the packaged `TestHttpHandler` is open to subclassing). `Program.cs` calls the two composition methods once and runs the startup tasks; nothing in it
 changes per app. The checklist in `WAYS_OF_WORKING.md` names these files and
 `AddASliceChecklist_NamesEveryArtifactAGateForces` still holds it to the gates (`EveryEntity_IsDocumentedInDataModel`,
 `EveryTenantOwnedEntity_IsWiredIntoTenantDissolution`, `PostmanParityTests`); `CompositionFiles_AreFreeOfTheSampleSlice`
@@ -1811,7 +1811,7 @@ or vanishes in its namespace, and the first port lane shared its Docker daemon w
 Testcontainers' Postgres and `docker-build` start and stop containers all the time. Every dead boot ever
 seen ran on that lane; lanes 2 and 3, with their own daemons, never failed once. CPU only ever governed speed.
 Two fixes, both kept: the first lane got its own daemon (`runner-dind-1`; rule: no port lane shares a
-daemon with anything that creates containers), and `tests/E2E.Tests/BlazorBoot.cs` makes the suite survive
+daemon with anything that creates containers), and `BlazorBoot.cs` (packaged in `src/Testing.E2E` since Pkg 5.1d) makes the suite survive
 the failure anyway — after every full navigation it watches the page and the browser console together (app
 up, Blazor's banner, or a failed framework fetch), reloads on a dead boot (three tries), then fails with the
 console attached; every red journey prints that console. With that, `e2e` needs only `changes` again on both
@@ -1994,8 +1994,17 @@ apps × fixes, and a missed port drifts silently. Delphos and further apps are c
    (the server); `.Client` (the non-visual half of today's Shared.Ui: `AuthService`, the bearer handlers, the session
    and OAuth seams, the persistences, the boot scripts), `.Web` and `.Maui` (the hosts' platform halves:
    `AddPlatformWeb`, `UsePlatformMaui` / `UsePlatformShell`); `.Testing` (the harness, the architecture guards and the
-   inheritable gate suites); `.Build` (the solution's build props as `buildTransitive`). Beside them: a dotnet tool
-   (`dotnet platform <command>`: the port, the QA generators with their Python inside it), a reusable CI workflow
+   inheritable gate suites — *amended 2026-10-19, Pkg 5.1:* three packages by test runner, so an app's backend tests
+   never drag in a browser: `.Testing` on xUnit (the integration host and database fixture, generic over the app's
+   `Program` and context; the guards; the RLS probe; the suites), `.Testing.Ui` on bUnit (the component harness) and
+   `.Testing.E2E` on NUnit + Playwright (the journey base)); `.Build` (the solution's build props as `buildTransitive` —
+   *amended 2026-10-19, Pkg 5.2:* an app takes it once with CPM's `GlobalPackageReference`; what steers a restore stays a
+   file in the repo, because a package arrives only after the restore that brings it: the lockfile setting and the local
+   source switch, `build/PlatformSource.*`, which imports the build package's files from the checkout when on). Beside them: a dotnet tool
+   (`dotnet platform <command>`: the port, the QA generators with their Python inside it — *amended 2026-10-21, Pkg 5.3:*
+   the scripts stay where they are in the platform, `tools/*.ps1` and the QA generators in `docs/`, and the tool packs
+   them as they are; each takes the repo from `PLATFORM_REPO_ROOT`, which the tool sets; `up` starts the repo's db and
+   mail and the telemetry dashboard; an app pins the tool from the first prerelease that carries it), a reusable CI workflow
    (`workflow_call`, the same billed minutes as ADR-031's shape) and `argamboad/.github` for the community files.
    The domains — auth, tenancy, billing, jobs, files, GDPR, MFA, notifications, admin, public API, webhooks,
    observability — are **namespaces inside those packages and options on `AddPlatform(o => …)`**, never packages of
@@ -2062,3 +2071,15 @@ to and never rewrites; `PlatformOwnership.LocalPath` spells paths with the same 
 where a kept token is already the platform's, so the list changes no hash — the tool and the gate agree by construction,
 and the port-tool test proves it on a real port. The ci-logic course cases now declare `requires` the course and skip
 in an app; `no-course-here` runs everywhere.
+
+*Amendment (2026-10-21, Pkg 5.7, #450) — what an app on the packages is held to.* An app made from packages has no port
+and so no manifest; #449's scratch app showed the downstream ownership checks could only fail on it for a missing file.
+It says so in its stamp (`"packages": true`, explicit, so a clone that lost its manifest still fails loudly). What it
+carries from the platform is a short **register** of root files — the local source switch (`build/PlatformSource.*`),
+`global.json`, `nuget.config`, `.config/dotnet-tools.json`, `platform-ownership.json` — and `Perezosoft.Platform.Testing`
+embeds them as they are in each release: the inherited `PlatformOwnershipSuite` holds the app's copies to the package it
+references (`PlatformOwnership.EvaluateRegister`; the brand normalized on each side, the keep-list held, so a copy compares
+equal whether the app's brand was written into it or not), and `PlatformDivergences.json` still allows a reasoned
+difference. The package is the manifest: no file to regenerate, nothing to port. Clone apps keep the manifest path until
+they convert. On the way, the switch's import guards lost the brand (`_PlatformBuildPropsImported`): a rebranded app's
+switch looked for another name than the Build package set.

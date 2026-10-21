@@ -34,9 +34,9 @@
   </ItemGroup>
 
   <!-- The E2E boot helper's decision core (v4 T55): Playwright-free by construction, so it is compiled here
-       too and unit-tested without a browser (E2E/BlazorBootTests.cs). The E2E project stays browser-only. -->
+       too and unit-tested without a browser (E2E/BlazorBootTests.cs). The E2E package (src/Testing.E2E, Pkg 5.1d) stays browser-only. -->
   <ItemGroup>
-    <Compile Include="..\E2E.Tests\BlazorBootCore.cs" Link="E2E\BlazorBootCore.cs" />
+    <Compile Include="..\..\src\Testing.E2E\BlazorBootCore.cs" Link="E2E\BlazorBootCore.cs" />
   </ItemGroup>
 
   <!-- For the rate-limiter integration test: host the real policy in a minimal TestServer. -->
@@ -46,6 +46,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Perezosoft.Core.csproj" />
+    <ProjectReference Include="..\..\src\Testing\Perezosoft.Testing.csproj" />
+    <!-- The operator tool (Pkg 5.3): its command table, and a command run through it (ToolCommandsTests). -->
+    <ProjectReference Include="..\..\src\Tool\Perezosoft.Platform.Tool.csproj" />
     <ProjectReference Include="..\..\src\Api\Perezosoft.Api.csproj" />
     <!-- The reference host (Pkg 3.2): Program (WebApplicationFactory<Program>) and the sample slice. -->
     <ProjectReference Include="..\..\src\Host\Perezosoft.Host.csproj" />
