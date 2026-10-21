@@ -87,7 +87,7 @@ public class ResourceParityTests
     {
         // MSB3568 ("Duplicate resource name ... ignored") is an MSBuild warning, which TreatWarningsAsErrors does not
         // cover. Promote exactly that one: a blanket switch would also fail builds on the MAUI adb-reverse MSB3073.
-        var props = XDocument.Load(Path.Combine(RepoRoot(), "Directory.Build.props"));
+        var props = XDocument.Load(Path.Combine(RepoRoot(), "src", "Build", "buildTransitive", "Perezosoft.Platform.Build.props")); // Perezosoft.Platform.Build (Pkg 5.2)
         var promoted = props.Descendants("MSBuildWarningsAsErrors").SelectMany(e => e.Value.Split(';', StringSplitOptions.TrimEntries)).ToList();
         Assert.Contains("MSB3568", promoted);
         Assert.DoesNotContain("MSB3073", promoted);

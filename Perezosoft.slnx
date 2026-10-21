@@ -6,6 +6,9 @@
   <Folder Name="/src/Host/">
     <Project Path="src/Host/Perezosoft.Host.csproj" />
   </Folder>
+  <Folder Name="/src/Build/">
+    <Project Path="src/Build/Perezosoft.Platform.Build.csproj" />
+  </Folder>
   <Folder Name="/src/Client/">
     <Project Path="src/Client/Perezosoft.Client.csproj" />
   </Folder>

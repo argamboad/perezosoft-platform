@@ -112,10 +112,12 @@ public class PackagingContractTests
     }
 
     [Fact]
-    public void PackagingSettings_LiveOnceInDirectoryBuildProps()
+    public void PackagingSettings_LiveOnceInThePackingFiles() // build/Packing.props/.targets, out of Directory.Build.* since Pkg 5.2
     {
-        var props = File.ReadAllText(Path.Combine(RepoRoot(), "Directory.Build.props"));
-        var targets = File.ReadAllText(Path.Combine(RepoRoot(), "Directory.Build.targets"));
+        var props = File.ReadAllText(Path.Combine(RepoRoot(), "build", "Packing.props"));
+        var targets = File.ReadAllText(Path.Combine(RepoRoot(), "build", "Packing.targets"));
+        foreach (var root in new[] { "Directory.Build.props", "Directory.Build.targets" })
+            Assert.Contains("build/Packing.", File.ReadAllText(Path.Combine(RepoRoot(), root)), StringComparison.Ordinal);
         // MinVer runs only when packing: a Docker build has no .git (MinVer would warn, and warnings are errors).
         Assert.Contains("<MinVerSkip Condition=\"'$(_IsPacking)' != 'true' and '$(MinVerSkip)' == ''\">true</MinVerSkip>", props, StringComparison.Ordinal);
         // GitHub Packages serves no .snupkg: the symbols travel inside the .nupkg, and SourceLink maps them to GitHub. In the

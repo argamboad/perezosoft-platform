@@ -73,6 +73,11 @@ public class EnforcementGateTests
         foreach (var file in needed.ToList())
             foreach (Match m in Regex.Matches(File.ReadAllText(Path.Combine(root, file)), @"<Import\s+Project=""\$\(MSBuildThisFileDirectory\)([^""]+)"""))
                 needed.Add(m.Groups[1].Value.Replace('\\', '/'));
+        // ...and the root files those read by name from above the project (Pkg 5.2: the build package finds local-ports.props
+        // and platform-stamp.json that way, in the image as on a laptop).
+        foreach (var file in needed.Where(f => File.Exists(Path.Combine(root, f))).ToList())
+            foreach (Match m in Regex.Matches(File.ReadAllText(Path.Combine(root, file)), @"GetPathOfFileAbove\('([^']+)'"))
+                needed.Add(m.Groups[1].Value);
 
         var missing = needed.Where(n => !copied.Any(c => n == c || n.StartsWith(c + "/", StringComparison.Ordinal))).ToList();
         Assert.True(missing.Count == 0, "the Dockerfile does not copy, before `dotnet restore`, build files the root props/targets need: " + string.Join(", ", missing));
@@ -246,6 +251,7 @@ public class EnforcementGateTests
     {
         var (_, Native, _) = ClassifierOf(workflow);
         foreach (var path in new[] { "Directory.Build.props", "Directory.Packages.props", "global.json", "tools/publish-native.ps1",
+                                     "src/Build/buildTransitive/Perezosoft.Platform.Build.props", "build/Packing.props",
                                      "src/Maui/MauiProgram.cs", ".github/workflows/ci.yml" })
             Assert.True(Native(path), $"{workflow}: {path} can break a native build, so it must run the native legs");
     }

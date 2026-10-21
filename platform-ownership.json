@@ -53,6 +53,7 @@
     { "glob": "src/Testing/*.csproj", "class": "adapts" },
     { "glob": "src/Testing.Ui/*.csproj", "class": "adapts" },
     { "glob": "src/Testing.E2E/*.csproj", "class": "adapts" },
+    { "glob": "src/Build/*.csproj", "class": "adapts" },
     { "glob": "**/packages.lock.json", "class": "adapts" },
 
     { "glob": "src/Core/**", "class": "platform" },
@@ -64,6 +65,7 @@
     { "glob": "src/Testing/**", "class": "platform" },
     { "glob": "src/Testing.Ui/**", "class": "platform" },
     { "glob": "src/Testing.E2E/**", "class": "platform" },
+    { "glob": "src/Build/**", "class": "platform" },
     { "glob": "src/Host/**", "class": "platform" },
 
     { "glob": "src/Shared.Ui/**", "class": "adapts" },
@@ -107,6 +109,7 @@
     { "glob": "nuget.config", "class": "platform" },
     { "glob": "Directory.Build.targets", "class": "platform" },
     { "glob": "build/PlatformSource.*", "class": "platform" },
+    { "glob": "build/Packing.*", "class": "platform" },
     { "glob": "*.slnx", "class": "adapts" },
     { "glob": "Dockerfile", "class": "adapts" },
     { "glob": ".dockerignore", "class": "platform" },

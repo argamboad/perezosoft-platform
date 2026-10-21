@@ -1,0 +1,31 @@
+<Project>
+
+  <!--
+    Packages (Pkg 2.3, ADR-034). Nothing packs unless its project says <IsPackable>true</IsPackable> (the SDK would pack
+    every class library). A packable project gets its version from the git tag v<version> through MinVer, and points
+    at this repo, which is what lets the release workflow's GITHUB_TOKEN publish it to GitHub Packages. Out of
+    Directory.Build.props since Pkg 5.2; it travels to the apps with it (an app packs nothing, so it is inert there, and
+    the lockfiles of an app's copies of the packable projects record MinVer).
+  -->
+  <PropertyGroup>
+    <IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+    <!--
+      Pkg 3.1. Versions are stamped only when packing: an ordinary build needs none, and a Docker build has no .git, where
+      MinVer would warn (and warnings are errors). `dotnet pack` sets _IsPacking, so the release stamps the tag. (The
+      packable projects' symbol and SourceLink settings are in Packing.targets, where IsPackable is known.)
+      PackagingContractTests holds these.
+    -->
+    <MinVerSkip Condition="'$(_IsPacking)' != 'true' and '$(MinVerSkip)' == ''">true</MinVerSkip>
+    <RepositoryUrl>https://github.com/argamboad/perezosoft-platform</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Authors>Perezosoft</Authors>
+  </PropertyGroup>
+
+  <!-- Items are evaluated after every property, so this sees the project's own IsPackable. -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

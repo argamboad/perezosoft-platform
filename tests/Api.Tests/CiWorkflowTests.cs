@@ -192,7 +192,7 @@ public class CiWorkflowTests
         // the tag is pushed only after the packages are, so a failed push leaves no orphan tag.
         // MinVer gives every packable project its version from the tag; nothing is packable unless it says so. These props
         // travel to every app (an app packs nothing, so they are inert there).
-        var props = Read("Directory.Build.props");
+        var props = Read("build/Packing.props"); // out of Directory.Build.props since Pkg 5.2
         Assert.Contains("<IsPackable Condition=\"'$(IsPackable)' == ''\">false</IsPackable>", props, StringComparison.Ordinal);
         Assert.Contains("<PackageReference Include=\"MinVer\"", props, StringComparison.Ordinal);
         Assert.Contains("<MinVerTagPrefix>v</MinVerTagPrefix>", props, StringComparison.Ordinal);

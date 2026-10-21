@@ -127,8 +127,10 @@ RULES: list[tuple[str, str, str]] = [
 
     # ---- Part 1 ----
     ("Perezosoft.slnx", "1.1", ""),
-    ("Directory.Build.props", "1.1", "warnings-as-errors etc.; MSB3568 (duplicate resx key) promoted (v4 T9)"),
-    ("Directory.Build.targets", "1.1", "imported after every project: the local source switch\x27s second half (Pkg 2.4)"),
+    ("Directory.Build.props", "1.1", "imports the build package from source, the source switch and the packing settings; the lockfiles (Pkg 5.2)"),
+    ("Directory.Build.targets", "1.1", "imported after every project: the build package\x27s targets, the source switch\x27s second half, the packing settings (Pkg 5.2)"),
+    ("src/Build/*", "1.1", "Perezosoft.Platform.Build (Pkg 5.2): warnings-as-errors, nullable, MSB3568 promoted (v4 T9), LocalPorts generated, the stamp beside the host — every project\x27s build settings, as a package"),
+    ("build/Packing.*", "1.1", "what makes a project a package: MinVer from the tag, the pdb and SourceLink (Pkg 2.3, 3.1)"),
     ("build/PlatformSource.*", "1.1", "the local source switch: PLATFORM_SOURCE in .env turns platform packages into project references to a checkout (Pkg 2.4, ADR-034)"),
     ("platform-packages.props", "1.1", "the platform\x27s package map: package id -> the project that packs it, read by an app\x27s source switch (Pkg 2.4)"),
     ("local-ports.props", "0.2", "the one source of this repo's local ports; LocalPorts.* is generated from it (Arch A10)"),

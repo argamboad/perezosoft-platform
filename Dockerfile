@@ -9,12 +9,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.402 AS build
 WORKDIR /src
 
-# Solution-wide build config (warnings-as-error) + Central Package Management + the committed lockfiles.
-# Directory.Build.props imports local-ports.props (Arch A10) and ships platform-stamp.json beside the API (Arch A2);
-# both halves import the local source switch from build/ (Pkg 2.4, off in the image). Held by
-# EnforcementGateTests.Dockerfile_CopiesEveryRootBuildFile_BeforeTheRestore.
+# Solution-wide build config + Central Package Management + the committed lockfiles. Directory.Build.props/.targets import
+# the build package's files from source (src/Build, Pkg 5.2: warnings-as-errors, local-ports.props → LocalPorts, Arch A10,
+# platform-stamp.json beside the API, Arch A2), the local source switch (Pkg 2.4, off in the image) and the packing
+# settings from build/. Held by EnforcementGateTests.Dockerfile_CopiesEveryRootBuildFile_BeforeTheRestore.
 COPY Directory.Build.props Directory.Build.targets Directory.Packages.props local-ports.props platform-stamp.json ./
 COPY build/ build/
+COPY src/Build/buildTransitive/ src/Build/buildTransitive/
 
 # Project manifests + their lockfiles first, so `dotnet restore` caches as its own layer and only re-runs
 # when a dependency actually changes (not on every source edit).

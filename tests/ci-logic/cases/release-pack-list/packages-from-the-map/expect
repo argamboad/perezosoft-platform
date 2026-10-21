@@ -8,5 +8,6 @@ exit 0
 +pack src/Testing/Perezosoft.Testing.csproj
 +pack src/Testing.Ui/Perezosoft.Testing.Ui.csproj
 +pack src/Testing.E2E/Perezosoft.Testing.E2E.csproj
++pack src/Build/Perezosoft.Platform.Build.csproj
 -dry-run
 -slnx

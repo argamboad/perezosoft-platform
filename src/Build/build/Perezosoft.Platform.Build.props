@@ -1,0 +1,4 @@
+<Project>
+  <!-- A direct reference (CPM's GlobalPackageReference asks for Build assets): the same file as buildTransitive/ (Pkg 5.2). -->
+  <Import Project="$(MSBuildThisFileDirectory)../buildTransitive/Perezosoft.Platform.Build.props" Condition="'$(_PerezosoftPlatformBuildProps)' == ''" />
+</Project>
