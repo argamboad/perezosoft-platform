@@ -2071,3 +2071,15 @@ to and never rewrites; `PlatformOwnership.LocalPath` spells paths with the same 
 where a kept token is already the platform's, so the list changes no hash — the tool and the gate agree by construction,
 and the port-tool test proves it on a real port. The ci-logic course cases now declare `requires` the course and skip
 in an app; `no-course-here` runs everywhere.
+
+*Amendment (2026-10-21, Pkg 5.7, #450) — what an app on the packages is held to.* An app made from packages has no port
+and so no manifest; #449's scratch app showed the downstream ownership checks could only fail on it for a missing file.
+It says so in its stamp (`"packages": true`, explicit, so a clone that lost its manifest still fails loudly). What it
+carries from the platform is a short **register** of root files — the local source switch (`build/PlatformSource.*`),
+`global.json`, `nuget.config`, `.config/dotnet-tools.json`, `platform-ownership.json` — and `Perezosoft.Platform.Testing`
+embeds them as they are in each release: the inherited `PlatformOwnershipSuite` holds the app's copies to the package it
+references (`PlatformOwnership.EvaluateRegister`; the brand normalized on each side, the keep-list held, so a copy compares
+equal whether the app's brand was written into it or not), and `PlatformDivergences.json` still allows a reasoned
+difference. The package is the manifest: no file to regenerate, nothing to port. Clone apps keep the manifest path until
+they convert. On the way, the switch's import guards lost the brand (`_PlatformBuildPropsImported`): a rebranded app's
+switch looked for another name than the Build package set.

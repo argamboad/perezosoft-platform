@@ -7,7 +7,7 @@
     Directory.Build.props already made is kept.
   -->
   <PropertyGroup>
-    <_PerezosoftPlatformBuildProps>true</_PerezosoftPlatformBuildProps>
+    <_PlatformBuildPropsImported>true</_PlatformBuildPropsImported>
 
     <!--
       Solution-wide build hygiene (audit B9-2). Nullable reference types on, and warnings are errors so the invariants the

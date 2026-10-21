@@ -164,7 +164,95 @@ public static class PlatformOwnership
         return new Verdict(failures, drift, checked_);
     }
 
+    // ── the register: what an app on the packages carries (Pkg 5.7, #450) ──
+
+    /// <summary>
+    /// The register as this release embeds it: the platform's own files an app on the packages carries at its root (the
+    /// local source switch, the SDK pin, the NuGet sources, the tool manifest, the ownership map), path → bytes.
+    /// </summary>
+    public static IReadOnlyDictionary<string, byte[]> RegisterFiles()
+    {
+        const string prefix = "register/";
+        var assembly = typeof(PlatformOwnership).Assembly;
+        var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        foreach (var name in assembly.GetManifestResourceNames().Where(n => n.StartsWith(prefix, StringComparison.Ordinal)))
+        {
+            using var stream = assembly.GetManifestResourceStream(name)!;
+            using var bytes = new MemoryStream();
+            stream.CopyTo(bytes);
+            files[name[prefix.Length..]] = bytes.ToArray();
+        }
+        return files;
+    }
+
+    /// <summary>
+    /// <see cref="Normalize"/> with the keep-list tokens held as the platform spells them: the brand is normalized on each
+    /// side, and a token the brand map never renames (a package id, the feed key) stays itself, so an app's copy compares
+    /// equal whether its brand was written into the rest of the file or not.
+    /// </summary>
+    public static string NormalizeKeeping(byte[] content, IReadOnlyList<string> brandTokens, IReadOnlyList<string> keep)
+    {
+        var start = content.Length >= 3 && content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF ? 3 : 0;
+        var text = Encoding.UTF8.GetString(content, start, content.Length - start).Replace("\r\n", "\n");
+        var next = 0xE000;
+        var kept = new List<(string Token, string Guard)>();
+        foreach (var k in keep)
+        {
+            while (text.Contains((char)next)) next++;
+            kept.Add((k, ((char)next++).ToString()));
+        }
+        foreach (var (token, guard) in kept) text = text.Replace(token, guard, StringComparison.Ordinal);
+        foreach (var token in brandTokens.OrderByDescending(t => t.Length))
+            text = text.Replace(token, char.IsUpper(token[0]) ? "{BRAND}" : "{brand}", StringComparison.Ordinal);
+        foreach (var (token, guard) in kept) text = text.Replace(guard, token, StringComparison.Ordinal);
+        var lines = text.Split('\n').Select(l => l.TrimEnd(' ', '\t'));
+        return string.Join('\n', lines).TrimEnd('\n', ' ', '\t');
+    }
+
+    /// <summary>
+    /// The downstream gate for an app on the packages (Pkg 5.7): each register file must equal the package's copy (the
+    /// platform's tokens normalized in the package's, the app's in its own, the keep-list held), or be in
+    /// <paramref name="divergences"/> with a reason. As in <see cref="Evaluate"/>, an entry for a file that is equal again
+    /// fails, and so does an entry for a file the register does not hold.
+    /// </summary>
+    public static Verdict EvaluateRegister(
+        IReadOnlyDictionary<string, byte[]> register, IReadOnlyDictionary<string, string> brand,
+        IReadOnlyDictionary<string, string> divergences, Func<string, byte[]?> readLocal, IReadOnlyList<string> keep)
+    {
+        var failures = new List<string>();
+        var platformTokens = brand.Keys.ToList();
+        // The app's side normalizes its own tokens and the platform's: a register file compares equal whether the app's
+        // brand was written into it or it was copied as the package ships it.
+        var appTokens = brand.Values.Concat(brand.Keys).Distinct(StringComparer.Ordinal).ToList();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (path, packaged) in register.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            var local = LocalPath(path, brand, keep);
+            seen.Add(local);
+            var bytes = readLocal(local);
+            var same = bytes is not null && NormalizeKeeping(bytes, appTokens, keep) == NormalizeKeeping(packaged, platformTokens, keep);
+            var allowlisted = divergences.TryGetValue(local, out var reason) && !string.IsNullOrWhiteSpace(reason);
+            if (same && allowlisted)
+                failures.Add($"{local}: listed in PlatformDivergences.json but identical to the package's again — drop the entry");
+            else if (!same && !allowlisted)
+                failures.Add(bytes is null
+                    ? $"{local}: a platform file an app on the packages carries, and this repo does not have — copy it from the package's release, or list it in PlatformDivergences.json with a reason"
+                    : $"{local}: differs from the one the platform package ships — take the package's, or list it in PlatformDivergences.json with a reason");
+        }
+        foreach (var path in divergences.Keys.Where(p => !seen.Contains(p)).Order())
+            failures.Add($"{path}: PlatformDivergences.json lists a file the platform's register does not hold");
+        return new Verdict(failures, [], register.Count);
+    }
+
     // ── file formats ──
+
+    /// <summary>An app on the packages says so in its stamp (<c>"packages": true</c>, Pkg 5.7): the package it references is
+    /// its manifest, and the register is what it is held to.</summary>
+    public static bool IsOnThePackages(string stampJson)
+    {
+        using var doc = JsonDocument.Parse(stampJson, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
+        return doc.RootElement.TryGetProperty("packages", out var p) && p.ValueKind == JsonValueKind.True;
+    }
 
     public static (string Commit, IReadOnlyList<ManifestEntry> Entries) ParseManifest(string json)
     {

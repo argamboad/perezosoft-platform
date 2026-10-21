@@ -39,7 +39,7 @@
     from the checkout here (its props in part 1), unless the project already has them — the platform's own projects do.
   -->
   <Import Project="$(_PlatformSourceDir)src/Build/buildTransitive/Perezosoft.Platform.Build.targets"
-          Condition="'$(PlatformSource)' != '' and '$(_PerezosoftPlatformBuildTargets)' == '' and Exists('$(_PlatformSourceDir)src/Build/buildTransitive/Perezosoft.Platform.Build.targets')" />
+          Condition="'$(PlatformSource)' != '' and '$(_PlatformBuildTargetsImported)' == '' and Exists('$(_PlatformSourceDir)src/Build/buildTransitive/Perezosoft.Platform.Build.targets')" />
 
   <ItemGroup Condition="'$(PlatformSource)' != ''">
     <!-- The intersection of the map and this project's references, keeping the map's Source metadata (not "Project": ProjectReference reserves that name). -->

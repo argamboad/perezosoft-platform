@@ -34,4 +34,18 @@
     <ProjectReference Include="..\Api\Perezosoft.Api.csproj" />
   </ItemGroup>
 
+  <!--
+    The register (Pkg 5.7, #450): the platform's own files an app on the packages carries at its root, embedded as they
+    are in this release, so PlatformOwnershipSuite holds the app's copies to the package it references — no port, no
+    checkout, no manifest file in the app. One list: a file added here is held downstream from the next release.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\build\PlatformSource.props" LogicalName="register/build/PlatformSource.props" />
+    <EmbeddedResource Include="..\..\build\PlatformSource.targets" LogicalName="register/build/PlatformSource.targets" />
+    <EmbeddedResource Include="..\..\global.json" LogicalName="register/global.json" />
+    <EmbeddedResource Include="..\..\nuget.config" LogicalName="register/nuget.config" />
+    <EmbeddedResource Include="..\..\.config\dotnet-tools.json" LogicalName="register/.config/dotnet-tools.json" />
+    <EmbeddedResource Include="..\..\platform-ownership.json" LogicalName="register/platform-ownership.json" />
+  </ItemGroup>
+
 </Project>

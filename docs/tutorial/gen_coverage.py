@@ -143,6 +143,7 @@ RULES: list[tuple[str, str, str]] = [
     ("src/Api/PlatformStamp.cs", "9.1", "reads the stamp beside the binaries for /api/version (Arch A2)"),
     ("tests/Api.Tests/App/PlatformDivergences.json", "9.1", "the app's allowlisted changes to platform files, with reasons (Arch A2)"),
     ("tests/Api.Tests/ToolCommandsTests.cs", "0.2", "every operator script is a `dotnet platform` command, shipped beside the tool; one run through it (Pkg 5.3)"),
+    ("tests/Api.Tests/PlatformRegisterTests.cs", "9.1", "the register an app on the packages is held to: embedded in Platform.Testing, brand-proof, the verdict on fixtures (Pkg 5.7)"),
     ("tests/Api.Tests/PlatformOwnershipTests.cs", "9.1", "the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)"),
     ("src/Testing/Suites/PlatformOwnershipSuite.cs", "9.1", "the map, stamp and manifest checks every app inherits (Pkg 5.1b)"),
     ("src/Testing/Architecture/PlatformOwnership.cs", "9.1", "the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)"),

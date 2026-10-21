@@ -4,7 +4,7 @@
     Perezosoft.Platform.Build, the targets half (Pkg 5.2): imported from the same three places as the props half, once.
   -->
   <PropertyGroup>
-    <_PerezosoftPlatformBuildTargets>true</_PerezosoftPlatformBuildTargets>
+    <_PlatformBuildTargetsImported>true</_PlatformBuildTargetsImported>
   </PropertyGroup>
 
   <!--

@@ -26,5 +26,5 @@
     from the checkout here, unless the project already has them — the platform's own projects import them first.
   -->
   <Import Project="$(_PlatformSourceDir)src/Build/buildTransitive/Perezosoft.Platform.Build.props"
-          Condition="'$(PlatformSource)' != '' and '$(_PerezosoftPlatformBuildProps)' == '' and Exists('$(_PlatformSourceDir)src/Build/buildTransitive/Perezosoft.Platform.Build.props')" />
+          Condition="'$(PlatformSource)' != '' and '$(_PlatformBuildPropsImported)' == '' and Exists('$(_PlatformSourceDir)src/Build/buildTransitive/Perezosoft.Platform.Build.props')" />
 </Project>

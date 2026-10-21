@@ -1032,7 +1032,7 @@
 - `tests/Api.Tests/Rls/RlsPostureGuardTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
 
-## 9.1 — Make it yours (rebrand & de-sample) (17 files)
+## 9.1 — Make it yours (rebrand & de-sample) (18 files)
 
 - `docs/brand/android_adaptive_foreground_432.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/app_store_icon_1024.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
@@ -1049,6 +1049,7 @@
 - `src/Testing/Suites/PlatformSchemaSuite.cs` — the schema parity gate as an inheritable suite (Pkg 5.1b)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
 - `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
+- `tests/Api.Tests/PlatformRegisterTests.cs` — the register an app on the packages is held to: embedded in Platform.Testing, brand-proof, the verdict on fixtures (Pkg 5.7)
 - `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
 - `tools/port-platform.ps1` — ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)
 
@@ -1511,4 +1512,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1344 tracked files · 958 built in lessons · 386 bucketed · 0 unmapped
+**Totals:** 1345 tracked files · 959 built in lessons · 386 bucketed · 0 unmapped

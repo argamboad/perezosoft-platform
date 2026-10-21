@@ -9,7 +9,9 @@ namespace Perezosoft.Testing.Suites;
 /// Arch A2 (#363), R160, as an inheritable suite (Pkg 5.1b): the repo's checks against its ownership map, its stamp and
 /// its manifest — every tracked file classified; downstream, every platform-class file equal to the stamped platform
 /// commit's or listed in <c>PlatformDivergences.json</c> with a reason; the stamp and the manifest naming the same commit.
-/// On the platform the stamp's commit is null and only the map check applies. An app derives it once.
+/// On the platform the stamp's commit is null and only the map check applies. An app on the packages (its stamp says
+/// <c>"packages": true</c>, Pkg 5.7) keeps no manifest: the package it references is one, and its root files are held to the
+/// register the package embeds (<see cref="RegisterFiles"/>). An app derives it once.
 /// </summary>
 public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
 {
@@ -64,8 +66,25 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
     public void PlatformFiles_MatchTheStampedManifest_OrAreAllowlisted()
     {
         var root = RepoRoots.Find();
-        var (stampCommit, brand) = ParseStamp(File.ReadAllText(Path.Combine(root, "platform-stamp.json")));
+        var stamp = File.ReadAllText(Path.Combine(root, "platform-stamp.json"));
+        var (stampCommit, brand) = ParseStamp(stamp);
         var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
+        var keep = ParseKeep(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
+        if (IsOnThePackages(stamp))
+        {
+            // An app on the packages (Pkg 5.7): no port, so no manifest — its root files are held to the register the
+            // platform package it references embeds, the platform's keep-list held as the package spells it.
+            var register = RegisterFiles();
+            Assert.True(register.Count >= 5, $"probe: the package embeds {register.Count} register files");
+            var divergencesPath = Path.Combine(root, "tests", "Api.Tests", "App", "PlatformDivergences.json");
+            var allowed = File.Exists(divergencesPath) ? ParseDivergences(File.ReadAllText(divergencesPath)) : new Dictionary<string, string>();
+            var registerVerdict = EvaluateRegister(register, brand, allowed,
+                local => File.Exists(Path.Combine(root, local)) ? File.ReadAllBytes(Path.Combine(root, local)) : null,
+                ParseKeep(System.Text.Encoding.UTF8.GetString(register["platform-ownership.json"])));
+            output.WriteLine($"on the packages: {registerVerdict.PlatformFilesChecked} register files checked against the package, {allowed.Count} allowlisted divergence(s)");
+            Assert.True(registerVerdict.Failures.Count == 0, "root files out of step with the platform package this app references:\n  " + string.Join("\n  ", registerVerdict.Failures));
+            return;
+        }
         if (stampCommit is null)
         {
             // This IS the platform: nothing to compare against, and a manifest here would be a stale artifact.
@@ -77,7 +96,6 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
         var (manifestCommit, entries) = ParseManifest(File.ReadAllText(manifestPath));
         var divergences = ParseDivergences(File.ReadAllText(Path.Combine(root, "tests", "Api.Tests", "App", "PlatformDivergences.json")));
 
-        var keep = ParseKeep(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         var verdict = Evaluate(entries, manifestCommit, stampCommit, divergences, brand,
             local => File.Exists(Path.Combine(root, local)) ? File.ReadAllBytes(Path.Combine(root, local)) : null, keep);
 
@@ -90,8 +108,15 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
     public void PlatformStamp_MatchesTheManifest()
     {
         var root = RepoRoots.Find();
-        var (stampCommit, _) = ParseStamp(File.ReadAllText(Path.Combine(root, "platform-stamp.json")));
+        var stamp = File.ReadAllText(Path.Combine(root, "platform-stamp.json"));
+        var (stampCommit, _) = ParseStamp(stamp);
         var manifestPath = Path.Combine(root, "tests", "Api.Tests", "App", "platform-manifest.json");
+        if (IsOnThePackages(stamp))
+        {
+            // The package is the manifest (Pkg 5.7): a manifest file here would be a clone's leftover, held to nothing.
+            Assert.False(File.Exists(manifestPath), "an app on the packages keeps no platform-manifest.json — the platform package it references is its manifest");
+            return;
+        }
         if (stampCommit is null) { Assert.False(File.Exists(manifestPath)); return; }
         Assert.True(File.Exists(manifestPath), "platform-stamp.json names a platform commit but tests/Api.Tests/App/platform-manifest.json is missing — run tools/port-platform.ps1");
         var (manifestCommit, _) = ParseManifest(File.ReadAllText(manifestPath));
