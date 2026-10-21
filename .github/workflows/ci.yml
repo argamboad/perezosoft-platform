@@ -26,9 +26,11 @@ on:
         default: none
         options: [none, android, windows, apple, all]
 
-# Least privilege (v3 audit DEP-8); the called workflow can use no more than this.
+# Least privilege (v3 audit DEP-8); the called workflow can use no more than this. packages: read is the platform's
+# feed (the dotnet tool, an app's Perezosoft.Platform.* packages).
 permissions:
   contents: read
+  packages: read
 
 # Env L30: a new push to an open pull request cancels that PR's previous run, so a superseded run stops billing.
 # A dispatched run gets a group of its own - its run id - so it is never cancelled; the deploy jobs keep their own

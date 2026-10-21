@@ -310,6 +310,33 @@ public class CiWorkflowTests
     }
 
     [Fact]
+    public void TheFeed_IsReadWithTheJobToken_OnlyByTheJobsThatRestore() // Pkg 5.6 (#419)
+    {
+        // The dotnet tool (.config/dotnet-tools.json) and an app's Perezosoft.Platform.* packages come from GitHub
+        // Packages, which asks for a token even for a public package. The job token reads them (packages: read, granted by
+        // the caller too, since a called workflow can use no more), as NuGet's per-source variable — never written to a
+        // file — and only on the jobs that restore: a job that runs a downloaded binary and restores nothing (the secret
+        // scan) is not handed it.
+        foreach (var file in new[] { Ci, AppCi })
+        {
+            Assert.Contains("permissions:\n  contents: read\n", Read(file), StringComparison.Ordinal);
+            Assert.Matches(@"(?m)^  packages: read$", Read(file));
+        }
+
+        const string credential = "NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}";
+        var restores = new Regex(@"dotnet (restore|build|test|publish|tool restore|workload restore)\b");
+        foreach (var (name, body) in Jobs(Read(AppCi)))
+        {
+            if (restores.IsMatch(body))
+                Assert.True(body.Contains(credential, StringComparison.Ordinal), $"{name} restores but cannot read the platform's feed");
+            else
+                Assert.DoesNotContain("NuGetPackageSourceCredentials", body, StringComparison.Ordinal);
+        }
+        Assert.Contains("<add key=\"perezosoft\"", Read("nuget.config"), StringComparison.Ordinal); // the key the variable names
+        Assert.DoesNotMatch(@"(?m)^env:\n(?:  .*\n)*  NuGetPackageSourceCredentials", Read(AppCi)); // never workflow-wide
+    }
+
+    [Fact]
     public void AppCi_NamesNoProjectNorAppByTheBrand_AndReadsThePlatformFilesFromThePlatform() // Pkg 5.4
     {
         // One workflow for every app: a project, an app id or the API-URL variable written with the platform's brand would
