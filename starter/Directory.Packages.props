@@ -109,7 +109,9 @@
   <ItemGroup>
     <PackageVersion Include="Perezosoft.Platform.Api" Version="$(PlatformPackagesVersion)" />
     <PackageVersion Include="Perezosoft.Platform.Client" Version="$(PlatformPackagesVersion)" />
+    <PackageVersion Include="Perezosoft.Platform.Maui" Version="$(PlatformPackagesVersion)" />
     <PackageVersion Include="Perezosoft.Platform.Testing" Version="$(PlatformPackagesVersion)" />
+    <PackageVersion Include="Perezosoft.Platform.Testing.E2E" Version="$(PlatformPackagesVersion)" />
     <PackageVersion Include="Perezosoft.Platform.Testing.Ui" Version="$(PlatformPackagesVersion)" />
     <PackageVersion Include="Perezosoft.Platform.Web" Version="$(PlatformPackagesVersion)" />
     <GlobalPackageReference Include="Perezosoft.Platform.Build" Version="$(PlatformPackagesVersion)" />

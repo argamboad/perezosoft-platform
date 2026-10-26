@@ -3,6 +3,9 @@
   <Folder Name="/src/Host/">
     <Project Path="src/Host/AppBrand.Host.csproj" />
   </Folder>
+  <Folder Name="/src/Maui/">
+    <Project Path="src/Maui/AppBrand.Maui.csproj" />
+  </Folder>
   <Folder Name="/src/Shared.Ui/">
     <Project Path="src/Shared.Ui/AppBrand.Shared.Ui.csproj" />
   </Folder>
@@ -12,6 +15,9 @@
   <Folder Name="/tests/" />
   <Folder Name="/tests/Api.Tests/">
     <Project Path="tests/Api.Tests/AppBrand.Api.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/E2E.Tests/">
+    <Project Path="tests/E2E.Tests/AppBrand.E2E.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Ui.Tests/">
     <Project Path="tests/Ui.Tests/AppBrand.Ui.Tests.csproj" />

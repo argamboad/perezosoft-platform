@@ -5,7 +5,7 @@ using static Perezosoft.Testing.Architecture.PlatformOwnership;
 namespace Perezosoft.Api.Tests;
 
 /// <summary>
-/// Pkg 6.1a (#455), 6.1b (#456): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
+/// Pkg 6.1a (#455), 6.1b (#456), 6.1c (#457): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
 /// here and written with its own placeholder brand (AppBrand), which the template renames. What it shares with the
 /// platform must not drift from it: each straight copy is the platform's file, renamed by one rule (<see cref="ToStarter"/>);
 /// its package pins are the platform's; no platform brand is left for the template to miss; and nothing in it is a
@@ -23,27 +23,33 @@ public class StarterTests
         "src/Host/appsettings.Development.json",
     ];
 
-    // The seeded UI (Pkg 6.1b, #456), carried whole: every file of each tree is the platform's, renamed, except its project
-    // file (an app's references the packages) and its lockfile. The pages, the strings, the brand, the web host, the
-    // component tests.
-    private static readonly string[] CopiedTrees = ["src/Shared.Ui", "src/Web", "tests/Ui.Tests"];
+    // The seeded UI (Pkg 6.1b, #456) and the native app and journeys (6.1c, #457), carried whole: every file of each tree
+    // is the platform's, renamed, except its project file (an app's references the packages) and its lockfile. The
+    // pages, the strings, the brand, the web host, the component tests, the MAUI shell, the browser journeys, the
+    // Android smoke spec.
+    private static readonly string[] CopiedTrees =
+        ["src/Shared.Ui", "src/Web", "tests/Ui.Tests", "src/Maui", "tests/E2E.Tests", "tests/native-smoke-android"];
 
     // What the template copies as it is, beside the register: the binaries and the vendored Bootstrap (nothing to rename,
     // and the engine would scan them for its own markers). The gate compares the binaries byte for byte.
-    private static readonly string[] CopiedAsIs = ["**/*.png", "**/*.ico", "src/Web/wwwroot/lib/**"];
+    private static readonly string[] CopiedAsIs = ["**/*.png", "**/*.ico", "**/*.ttf", "src/Web/wwwroot/lib/**", "src/Maui/wwwroot/lib/**"];
+
+    private static bool IsBinary(string rel) =>
+        rel.EndsWith(".png", StringComparison.Ordinal) || rel.EndsWith(".ico", StringComparison.Ordinal) || rel.EndsWith(".ttf", StringComparison.Ordinal);
 
     private static bool IsCopiedAsIs(string rel) =>
-        rel.EndsWith(".png", StringComparison.Ordinal) || rel.EndsWith(".ico", StringComparison.Ordinal)
-        || rel.StartsWith("src/Web/wwwroot/lib/", StringComparison.Ordinal);
+        IsBinary(rel) || rel.StartsWith("src/Web/wwwroot/lib/", StringComparison.Ordinal) || rel.StartsWith("src/Maui/wwwroot/lib/", StringComparison.Ordinal);
 
     /// <summary>
     /// The platform's text as starter/ spells it: the brand becomes the placeholder, except where it names what an app keeps
     /// — the map's keep-list (the package ids, the feed key, also as JSON escapes them), the platform repo, and the
     /// namespaces the packages ship (Perezosoft.Core, .Infrastructure, .Api, .Client, .Testing; the platform's test
-    /// project Perezosoft.Api.Tests is an app's own).
+    /// project Perezosoft.Api.Tests is an app's own). One exception: the native app's id, com.perezosoft.platform, is an
+    /// app's com.appbrand.app, not com.appbrand.platform.
     /// </summary>
     public static string ToStarter(string text, IEnumerable<string> keep)
     {
+        text = text.Replace("com.perezosoft.platform", "com.appbrand.app", StringComparison.Ordinal);
         var tokens = keep.SelectMany(k => new[] { k, k.Replace("\"", "\\\"", StringComparison.Ordinal) }).Distinct()
             .Select(Regex.Escape).Append("perezosoft-platform")
             .Append(@"Perezosoft\.(?:Core|Infrastructure|Client|Testing)\b").Append(@"Perezosoft\.Api\b(?!\.Tests)");
@@ -182,6 +188,28 @@ public class StarterTests
         Assert.True(IsOnThePackages(Text(Path.Combine(root, "starter", "platform-stamp.json"))));
     }
 
+    [Fact]
+    public void EveryPreprocessorDirective_IsFencedFromTheTemplateEngine()
+    {
+        // dotnet new reads a C# #if as its own condition: DEBUG, ANDROID and the rest are no symbols of the template, so
+        // it dropped every such block from the templated MauiProgram (Pkg 6.1c). The engine leaves a region alone between
+        // its two markers, which it does not write out; the platform's file carries them, so its copy here does too.
+        var root = RepoRoot();
+        var open = string.Concat("//-", ":cnd:noEmit");
+        var close = string.Concat("//+", ":cnd:noEmit");
+        var unfenced = StarterFiles(root).Where(f => f.EndsWith(".cs", StringComparison.Ordinal)).SelectMany(f =>
+        {
+            var fenced = false;
+            return Text(f).Split('\n').Select((line, i) => (line: line.Trim(), i)).Where(l =>
+            {
+                if (l.line == open) fenced = true;
+                else if (l.line == close) fenced = false;
+                return !fenced && Regex.IsMatch(l.line, @"^#(if|elif)\b");
+            }).Select(l => $"{Path.GetRelativePath(root, f)}:{l.i + 1}");
+        }).ToList();
+        Assert.True(unfenced.Count == 0, "#if outside the template engine's fence (the two cnd:noEmit marker lines): " + string.Join(", ", unfenced));
+    }
+
     private static IReadOnlyList<string> Keep(string root) => ParseKeep(Text(Path.Combine(root, "platform-ownership.json")));
 
     private static Dictionary<string, string> Pins(string props) =>
@@ -190,20 +218,20 @@ public class StarterTests
 
     private static IEnumerable<string> StarterFiles(string root) =>
         Directory.EnumerateFiles(Path.Combine(root, "starter"), "*", SearchOption.AllDirectories)
-            .Where(f => !Regex.IsMatch(f.Replace('\\', '/'), "/(bin|obj|\\.vs)/") && !f.EndsWith("packages.lock.json", StringComparison.Ordinal)
+            .Where(f => !Regex.IsMatch(f.Replace('\\', '/'), "/(bin|obj|\\.vs|node_modules)/") && !f.EndsWith("packages.lock.json", StringComparison.Ordinal)
                         && Path.GetFileName(f) != ".env");
 
     // A tree's files, repo-relative with forward slashes, without build output.
     private static IEnumerable<string> TreeFiles(string root, string tree) =>
         Directory.EnumerateFiles(Path.Combine(root, tree), "*", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
-            .Where(rel => !Regex.IsMatch(rel, "/(bin|obj|\\.vs|TestResults)/"));
+            .Where(rel => !Regex.IsMatch(rel, "/(bin|obj|\\.vs|TestResults|node_modules)/"));
 
     private static bool SameCopy(string root, string platformRel, string starterRel, IReadOnlyList<string> keep)
     {
         var platform = Path.Combine(root, platformRel);
         var starter = Path.Combine(root, "starter", starterRel);
-        if (starterRel.EndsWith(".png", StringComparison.Ordinal) || starterRel.EndsWith(".ico", StringComparison.Ordinal))
+        if (IsBinary(starterRel))
             return File.ReadAllBytes(platform).AsSpan().SequenceEqual(File.ReadAllBytes(starter));
         // Text, Bootstrap's included: compared as git checks it out (line endings), renamed unless it is copied as it is.
         return Text(starter) == (IsCopiedAsIs(starterRel) ? Text(platform) : ToStarter(Text(platform), keep));

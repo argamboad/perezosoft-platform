@@ -5,7 +5,7 @@
   "identity": "Perezosoft.Platform.Templates.App",
   "groupIdentity": "Perezosoft.Platform.App",
   "name": "Perezosoft platform app",
-  "description": "An app on the Perezosoft platform packages: the host with the platform's API, a DELETE-ME Notes slice, its migrations, the platform's inherited suites, and the seeded UI (the web host, the pages in English and Spanish, their component tests).",
+  "description": "An app on the Perezosoft platform packages: the host with the platform's API, a DELETE-ME Notes slice, its migrations, the platform's inherited suites, and the seeded UI (the web host, the pages in English and Spanish, their component tests), the MAUI app, and the browser journeys.",
   "shortName": "perezosoft-app",
   "tags": { "language": "C#", "type": "solution" },
   "sourceName": "AppBrand",
@@ -20,9 +20,9 @@
   },
   "sources": [
     {
-      "copyOnly": [ "build/PlatformSource.props", "build/PlatformSource.targets", "global.json", "nuget.config", ".config/dotnet-tools.json", "platform-ownership.json", "**/*.png", "**/*.ico", "src/Web/wwwroot/lib/**" ],
+      "copyOnly": [ "build/PlatformSource.props", "build/PlatformSource.targets", "global.json", "nuget.config", ".config/dotnet-tools.json", "platform-ownership.json", "**/*.png", "**/*.ico", "**/*.ttf", "src/Web/wwwroot/lib/**", "src/Maui/wwwroot/lib/**" ],
       "modifiers": [
-        { "exclude": [ "**/bin/**", "**/obj/**", "**/packages.lock.json", "**/.vs/**", ".env" ] }
+        { "exclude": [ "**/bin/**", "**/obj/**", "**/packages.lock.json", "**/.vs/**", "**/node_modules/**", ".env" ] }
       ]
     }
   ]

@@ -10,6 +10,7 @@ namespace Perezosoft.Maui;
 /// </summary>
 public static class MauiProgram
 {
+//-:cnd:noEmit
 	// Base address for the API, per platform.
 	//  - Windows desktop reaches localhost directly over HTTPS (machine-trusted dev cert).
 	//  - Android uses the API's local http port via `adb reverse` (the csproj bridges it), which maps
@@ -83,4 +84,5 @@ public static class MauiProgram
 			.ConfigureFonts(fonts => fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular"));
 		return builder.Build();
 	}
+//+:cnd:noEmit
 }

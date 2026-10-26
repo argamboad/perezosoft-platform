@@ -16,7 +16,8 @@
   inspection and is replaced by the next one.
 
   Ports come from the same sources LocalPortsTests reads - the docker-compose defaults and the launch profiles - so
-  this file is the same in perezosoft-platform, y-el-vuelto and jigger-jot. Local Dev Alignment L12.
+  this file is the same in perezosoft-platform, y-el-vuelto and jigger-jot. Local Dev Alignment L12. A compose port .env
+  moves (DB_PORT, MAIL_SMTP_PORT, MAIL_UI_PORT: two repos' stacks side by side) is read from .env, as compose reads it.
 
 .PARAMETER Filter
   Passed to `dotnet test --filter`, e.g. "FullyQualifiedName~Billing".
@@ -57,9 +58,9 @@ function Get-ComposeDefault([string]$var) {
     if (-not $m.Success) { throw "docker-compose.yml has no `${$($var):-<value>} default" }
     $m.Groups[1].Value
 }
-# DB credentials: .env's value when it sets one (compose reads the same file), else the compose default.
+# A compose setting: .env's value when it sets one (compose reads the same file), else the compose default.
 $dotenv = Join-Path $root '.env'
-function Get-DbSetting([string]$var) {
+function Get-Setting([string]$var) {
     if (Test-Path $dotenv) {
         $line = Select-String -Path $dotenv -Pattern "^$var=(.*)$" | Select-Object -First 1
         if ($line) { return ($line.Matches[0].Groups[1].Value -replace '\s+#.*$', '').Trim().Trim('"') }
@@ -72,11 +73,11 @@ function Get-HttpsUrl([string]$project) {
     if (-not $m.Success) { throw "src/$project launchSettings has no https://localhost:<port> profile" }
     "https://localhost:$($m.Groups[1].Value)"
 }
-$dbPort = Get-DbSetting 'DB_PORT'   # what compose actually publishes
-$dbUser = Get-DbSetting 'DB_USER'
-$dbPassword = Get-DbSetting 'DB_PASSWORD'
-$smtpPort = Get-ComposeDefault 'MAIL_SMTP_PORT'
-$mailUi = "http://localhost:$(Get-ComposeDefault 'MAIL_UI_PORT')"
+$dbPort = Get-Setting 'DB_PORT'   # what compose actually publishes
+$dbUser = Get-Setting 'DB_USER'
+$dbPassword = Get-Setting 'DB_PASSWORD'
+$smtpPort = Get-Setting 'MAIL_SMTP_PORT'
+$mailUi = "http://localhost:$(Get-Setting 'MAIL_UI_PORT')"
 $api = Get-HttpsUrl 'Host'
 $web = Get-HttpsUrl 'Web'
 $repo = Split-Path $root -Leaf

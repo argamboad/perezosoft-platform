@@ -1,0 +1,86 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <!--
+      AppBrand's native app: a MAUI Blazor shell that renders the same pages as the web host (src/Shared.Ui). The
+      platform's MAUI half (the shell, UsePlatformMaui, the device stores) and the release guards of a non-Debug build
+      (the ApiBaseUrl check, Android signing, the HTTPS-only network config) come from Perezosoft.Platform.Maui.
+    -->
+    <PropertyGroup>
+        <!-- Each target is added only on a host OS that can build it: Android anywhere, Windows on Windows, iOS and
+             Mac Catalyst on macOS (they need Xcode). -->
+        <TargetFrameworks>net10.0-android</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <GenerateLocalPorts>true</GenerateLocalPorts>
+
+        <!-- No lockfile: the target list differs per OS, so one committed lockfile could not hold on every runner. The
+             central pins (Directory.Packages.props) pin it. -->
+        <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+
+        <OutputType>Exe</OutputType>
+        <RootNamespace>AppBrand.Maui</RootNamespace>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <EnableDefaultCssItems>false</EnableDefaultCssItems>
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+        <ApplicationTitle>AppBrand</ApplicationTitle>
+        <!-- The store identity: set it before the first release, it cannot change after (Platforms/MacCatalyst/
+             Entitlements.plist names it too). -->
+        <ApplicationId>com.appbrand.app</ApplicationId>
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <!-- Mac Catalyst Debug builds are ad-hoc signed and cannot claim the store entitlements' keychain group (macOS kills
+         the app at launch): Debug uses the unsandboxed ones. -->
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' And '$(Configuration)' == 'Debug'">
+        <CodesignEntitlements>Platforms/MacCatalyst/Entitlements.Debug.plist</CodesignEntitlements>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#6b8a72" />
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#6b8a72" BaseSize="128,128" />
+        <MauiImage Include="Resources\Images\*" />
+        <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
+        <MauiFont Include="Resources\Fonts\*" />
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Perezosoft.Platform.Maui" />
+        <PackageReference Include="Microsoft.Maui.Controls" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shared.Ui\AppBrand.Shared.Ui.csproj" />
+    </ItemGroup>
+
+    <!-- Debug on Android: build on every F5, so the bridge below is re-made after an emulator reboot. -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    </PropertyGroup>
+
+    <!-- Debug on Android: bridge the device to the local API's http port (local-ports.props) on every build, install
+         and run. Never fails the build, never runs in Release. -->
+    <Target Name="AndroidReverseDevApiPort" AfterTargets="Build;Install;_Run"
+            Condition="$(TargetFramework.Contains('-android')) And '$(Configuration)' == 'Debug'">
+        <PropertyGroup>
+            <_AdbExe Condition="'$(AndroidSdkDirectory)' != ''">$([System.IO.Path]::Combine('$(AndroidSdkDirectory)', 'platform-tools', 'adb.exe'))</_AdbExe>
+            <_AdbExe Condition="'$(_AdbExe)' == '' or !Exists('$(_AdbExe)')">adb</_AdbExe>
+        </PropertyGroup>
+        <Message Importance="high" Text="[dev] adb $(AdbTarget) reverse tcp:$(LocalApiHttpPort) tcp:$(LocalApiHttpPort) — bridging the device to the local API" />
+        <Exec Command="&quot;$(_AdbExe)&quot; $(AdbTarget) reverse tcp:$(LocalApiHttpPort) tcp:$(LocalApiHttpPort)" ContinueOnError="true" />
+    </Target>
+
+</Project>

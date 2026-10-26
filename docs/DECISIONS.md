@@ -2111,3 +2111,18 @@ in the same commit; it also holds the web host's pinned WebAssembly SDK packs (`
 binaries and the vendored Bootstrap are copy-only in the template: there is nothing in them to rename, and the engine
 would otherwise scan them for its own markers. The brand images are the platform's, as placeholders; renaming them is
 the rebranding guide's (#424).
+
+*Amendment (2026-10-26, Pkg 6.1c, #457) — the native app and the journeys.* `starter/` also carries `src/Maui` (on
+`Perezosoft.Platform.Maui`, which brings the release guards as buildTransitive), `tests/E2E.Tests` (on
+`Perezosoft.Platform.Testing.E2E`) and `tests/native-smoke-android`, held by the same tree gate. One exception to the
+rename rule: the native app's id `com.perezosoft.platform` becomes `com.appbrand.app`, so an app starts as
+`com.<brand>.app` rather than `com.<brand>.platform`. It is the store identity, which the starter's README says to settle
+before a first release. The proof compares every file `dotnet new` writes to `starter/`, renamed, and that comparison
+caught the engine reading C#'s `#if DEBUG` / `#if ANDROID` as its own conditions: it dropped every such block from the
+templated `MauiProgram.cs` (the dev API base, the Android system bars). The platform's `MauiProgram.cs` now carries the
+engine's fence (a `//-:cnd:noEmit` line before its directives, a `//+:cnd:noEmit` line after): inert comments here, and
+the engine leaves the region alone and drops the two lines. `StarterTests` holds every `#if` in `starter/` inside one.
+A second finding: `tools/e2e.ps1` (`dotnet platform e2e`) read the db port from
+`.env` but the mail ports from compose's defaults. A second repo's stack, which `.env` moves off the first one's ports,
+therefore sent its mail to, and read it from, the first repo's Mailpit. It now reads all three as compose does; apps get
+it with the tool's next release.
