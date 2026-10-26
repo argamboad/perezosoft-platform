@@ -10,7 +10,8 @@ app: its host, its slices, its seeded UI and its tests.
 dotnet tool restore
 dotnet platform up                 # Postgres + Mailpit (docker compose) and the telemetry dashboard
 dotnet run --project src/Host      # migrates on start, serves the API
-dotnet test                        # the platform's inherited suites against this app, and the sample's tests
+dotnet run --project src/Web       # the pages (Blazor WebAssembly), against the API above
+dotnet test                        # the platform's inherited suites, the sample's tests, the pages' tests
 ```
 
 Copy `.env.example` to `.env` first and set `Jwt__Secret`. Restoring needs a token for the platform's feed in your user
@@ -20,5 +21,8 @@ NuGet config (GitHub Packages, `read:packages`).
 
 - A feature is a vertical slice under `src/Host/Features/<Name>/`, registered in `AppComposition.cs`. The DELETE-ME
   `Notes` sample is the reference; remove it when your first slice lands.
+- The pages are the app's own: `src/Shared.Ui` (a Razor class library, so a native app can render the same pages),
+  their strings in `Resources/AppStrings.resx` (English) and `AppStrings.es.resx` (Spanish), their tests in
+  `tests/Ui.Tests`. The brand images in `src/Shared.Ui/wwwroot/brand` and `src/Web/wwwroot` are placeholders.
 - A bump is one line: `PlatformPackagesVersion` in `Directory.Packages.props` (and the tag in `.github/workflows/ci.yml`).
 - To work on the platform and this app together, set `PLATFORM_SOURCE=<a platform checkout>` in `.env`.

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <!--
+    AppBrand's web host: the Blazor WebAssembly app. Its pages are the app's own (src/Shared.Ui); the platform's client
+    for the browser (API clients, session, preferences) and its build settings come from Perezosoft.Platform.Web.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Perezosoft.Platform.Web" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <!-- The WebAssembly SDK's build-time packs, pinned: left to the SDK, their versions follow the machine's latest
+         installed runtime patch, and a locked restore fails (NU1004) wherever that differs. The platform's own web host
+         pins them the same, and bumps them with the SDK. -->
+    <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" VersionOverride="10.0.13" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" VersionOverride="10.0.13" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Sdk.WebAssembly.Pack" VersionOverride="10.0.13" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared.Ui\AppBrand.Shared.Ui.csproj" />
+  </ItemGroup>
+
+</Project>

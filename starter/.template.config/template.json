@@ -5,7 +5,7 @@
   "identity": "Perezosoft.Platform.Templates.App",
   "groupIdentity": "Perezosoft.Platform.App",
   "name": "Perezosoft platform app",
-  "description": "An app on the Perezosoft platform packages: the host with the platform's API, a DELETE-ME Notes slice, its migrations, and the platform's inherited suites.",
+  "description": "An app on the Perezosoft platform packages: the host with the platform's API, a DELETE-ME Notes slice, its migrations, the platform's inherited suites, and the seeded UI (the web host, the pages in English and Spanish, their component tests).",
   "shortName": "perezosoft-app",
   "tags": { "language": "C#", "type": "solution" },
   "sourceName": "AppBrand",
@@ -20,7 +20,7 @@
   },
   "sources": [
     {
-      "copyOnly": [ "build/PlatformSource.props", "build/PlatformSource.targets", "global.json", "nuget.config", ".config/dotnet-tools.json", "platform-ownership.json" ],
+      "copyOnly": [ "build/PlatformSource.props", "build/PlatformSource.targets", "global.json", "nuget.config", ".config/dotnet-tools.json", "platform-ownership.json", "**/*.png", "**/*.ico", "src/Web/wwwroot/lib/**" ],
       "modifiers": [
         { "exclude": [ "**/bin/**", "**/obj/**", "**/packages.lock.json", "**/.vs/**", ".env" ] }
       ]

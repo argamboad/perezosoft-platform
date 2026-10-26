@@ -2101,3 +2101,13 @@ tool's id lower-case, so an app's correct copy failed the register while a renam
 exist, passed it); and a restore that cannot find the requested platform version falls back to the nearest one with only
 a warning (NU1601), which the starter's CI caller and the release order make moot but an app pinning a version not yet
 published would meet.
+
+*Amendment (2026-10-26, Pkg 6.1b, #456) — the seeded UI.* `starter/` carries the platform's UI whole: `src/Shared.Ui` (the
+pages, the components, the strings in English and Spanish, the brand), the WebAssembly host `src/Web` (on
+`Perezosoft.Platform.Web`) and `tests/Ui.Tests` (on `Perezosoft.Platform.Testing.Ui`). Only the three project files are
+the starter's own, referencing the packages where the platform references projects. `StarterTests` holds the trees both
+ways rather than file by file, so a page the platform adds, changes or deletes is added, changed or deleted in `starter/`
+in the same commit; it also holds the web host's pinned WebAssembly SDK packs (`VersionOverride`) to the platform's. The
+binaries and the vendored Bootstrap are copy-only in the template: there is nothing in them to rename, and the engine
+would otherwise scan them for its own markers. The brand images are the platform's, as placeholders; renaming them is
+the rebranding guide's (#424).

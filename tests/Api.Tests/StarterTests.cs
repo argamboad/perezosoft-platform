@@ -5,7 +5,7 @@ using static Perezosoft.Testing.Architecture.PlatformOwnership;
 namespace Perezosoft.Api.Tests;
 
 /// <summary>
-/// Pkg 6.1a (#455): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
+/// Pkg 6.1a (#455), 6.1b (#456): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
 /// here and written with its own placeholder brand (AppBrand), which the template renames. What it shares with the
 /// platform must not drift from it: each straight copy is the platform's file, renamed by one rule (<see cref="ToStarter"/>);
 /// its package pins are the platform's; no platform brand is left for the template to miss; and nothing in it is a
@@ -22,6 +22,19 @@ public class StarterTests
         "src/Host/Perezosoft.Host.http", "src/Host/Properties/launchSettings.json", "src/Host/appsettings.json",
         "src/Host/appsettings.Development.json",
     ];
+
+    // The seeded UI (Pkg 6.1b, #456), carried whole: every file of each tree is the platform's, renamed, except its project
+    // file (an app's references the packages) and its lockfile. The pages, the strings, the brand, the web host, the
+    // component tests.
+    private static readonly string[] CopiedTrees = ["src/Shared.Ui", "src/Web", "tests/Ui.Tests"];
+
+    // What the template copies as it is, beside the register: the binaries and the vendored Bootstrap (nothing to rename,
+    // and the engine would scan them for its own markers). The gate compares the binaries byte for byte.
+    private static readonly string[] CopiedAsIs = ["**/*.png", "**/*.ico", "src/Web/wwwroot/lib/**"];
+
+    private static bool IsCopiedAsIs(string rel) =>
+        rel.EndsWith(".png", StringComparison.Ordinal) || rel.EndsWith(".ico", StringComparison.Ordinal)
+        || rel.StartsWith("src/Web/wwwroot/lib/", StringComparison.Ordinal);
 
     /// <summary>
     /// The platform's text as starter/ spells it: the brand becomes the placeholder, except where it names what an app keeps
@@ -54,6 +67,47 @@ public class StarterTests
         }).ToList();
         Assert.True(drifted.Count == 0,
             "starter/ copies out of step with the platform's file — copy it again, renamed (StarterTests.ToStarter): " + string.Join(", ", drifted));
+    }
+
+    [Fact]
+    public void EveryCopiedTree_IsThePlatformsTree_Renamed()
+    {
+        // Both ways: a file the platform adds, changes or deletes in one of these trees is added, changed or deleted in
+        // starter/ in the same commit.
+        var root = RepoRoot();
+        var keep = Keep(root);
+        var drifted = new List<string>();
+        foreach (var tree in CopiedTrees)
+        {
+            var platform = TreeFiles(root, tree).Where(IsCopied).ToDictionary(rel => ToStarter(rel, keep));
+            var starter = TreeFiles(Path.Combine(root, "starter"), ToStarter(tree, keep)).Where(IsCopied).ToHashSet();
+            drifted.AddRange(starter.Where(rel => !platform.ContainsKey(rel)).Select(rel => $"{rel} (not the platform's)"));
+            drifted.AddRange(platform.Where(p => !starter.Contains(p.Key)).Select(p => $"{p.Key} (missing)"));
+            drifted.AddRange(platform.Where(p => starter.Contains(p.Key) && !SameCopy(root, p.Value, p.Key, keep)).Select(p => p.Key));
+        }
+        Assert.True(drifted.Count == 0,
+            "starter/ UI trees out of step with the platform's — copy the file again, renamed (StarterTests.ToStarter; binaries and " +
+            "src/Web/wwwroot/lib as they are): " + string.Join(", ", drifted));
+
+        // Not the project file, its lockfile, or a developer's own (gitignored) .csproj.user.
+        static bool IsCopied(string rel) => !rel.EndsWith(".csproj", StringComparison.Ordinal) && !rel.EndsWith(".csproj.user", StringComparison.Ordinal)
+                                            && !rel.EndsWith("packages.lock.json", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheWebHost_PinsTheSdkPacks_AsThePlatformDoes()
+    {
+        // The WebAssembly SDK's build-time packs are pinned in the host's project file (VersionOverride), which the trees'
+        // copy leaves to the app: a bump in the platform's web host is a bump in the starter's.
+        var root = RepoRoot();
+        var platform = Overrides(Text(Path.Combine(root, "src", "Web", "Perezosoft.Web.csproj")));
+        var starter = Overrides(Text(Path.Combine(root, "starter", "src", "Web", "AppBrand.Web.csproj")));
+        Assert.NotEmpty(platform);
+        Assert.Equal(platform.OrderBy(p => p.Key), starter.OrderBy(p => p.Key));
+
+        static Dictionary<string, string> Overrides(string csproj) =>
+            Regex.Matches(csproj, "<PackageReference Include=\"([^\"]+)\" VersionOverride=\"([^\"]+)\"")
+                .ToDictionary(m => m.Groups[1].Value, m => m.Groups[2].Value);
     }
 
     [Fact]
@@ -99,11 +153,18 @@ public class StarterTests
         Assert.Equal("AppBrand", template.RootElement.GetProperty("sourceName").GetString());
         Assert.Equal("perezosoft-app", template.RootElement.GetProperty("shortName").GetString());
 
-        // The register is copied as it is (the engine evaluates MSBuild conditions it can, and dropped one of the switch's):
-        // copy-only files are never renamed, so they must not name the placeholder either.
+        // The register is copied as it is (the engine evaluates MSBuild conditions it can, and dropped one of the switch's),
+        // and so are the binaries and the vendored Bootstrap: copy-only files are never renamed, so they must not name the
+        // placeholder either.
         var copyOnly = template.RootElement.GetProperty("sources")[0].GetProperty("copyOnly").EnumerateArray().Select(e => e.GetString()!).ToList();
-        Assert.Equal(StraightCopies[2..8].Order(), copyOnly.Order());
-        Assert.All(copyOnly, f => Assert.DoesNotContain("AppBrand", Text(Path.Combine(root, "starter", f)), StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(StraightCopies[2..8].Concat(CopiedAsIs).Order(), copyOnly.Order());
+        var starterRoot = Path.Combine(root, "starter");
+        Assert.All(StarterFiles(root).Where(f =>
+            {
+                var rel = Path.GetRelativePath(starterRoot, f).Replace('\\', '/');
+                return copyOnly.Contains(rel) || IsCopiedAsIs(rel);
+            }),
+            f => Assert.DoesNotContain("AppBrand", Text(f), StringComparison.OrdinalIgnoreCase));
 
         // Everywhere else, a condition the engine could evaluate is one it may rewrite: each must read a property.
         var constant = StarterFiles(root)
@@ -131,6 +192,22 @@ public class StarterTests
         Directory.EnumerateFiles(Path.Combine(root, "starter"), "*", SearchOption.AllDirectories)
             .Where(f => !Regex.IsMatch(f.Replace('\\', '/'), "/(bin|obj|\\.vs)/") && !f.EndsWith("packages.lock.json", StringComparison.Ordinal)
                         && Path.GetFileName(f) != ".env");
+
+    // A tree's files, repo-relative with forward slashes, without build output.
+    private static IEnumerable<string> TreeFiles(string root, string tree) =>
+        Directory.EnumerateFiles(Path.Combine(root, tree), "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
+            .Where(rel => !Regex.IsMatch(rel, "/(bin|obj|\\.vs|TestResults)/"));
+
+    private static bool SameCopy(string root, string platformRel, string starterRel, IReadOnlyList<string> keep)
+    {
+        var platform = Path.Combine(root, platformRel);
+        var starter = Path.Combine(root, "starter", starterRel);
+        if (starterRel.EndsWith(".png", StringComparison.Ordinal) || starterRel.EndsWith(".ico", StringComparison.Ordinal))
+            return File.ReadAllBytes(platform).AsSpan().SequenceEqual(File.ReadAllBytes(starter));
+        // Text, Bootstrap's included: compared as git checks it out (line endings), renamed unless it is copied as it is.
+        return Text(starter) == (IsCopiedAsIs(starterRel) ? Text(platform) : ToStarter(Text(platform), keep));
+    }
 
     // Line endings are git's (autocrlf on Windows), the same on both sides of any comparison here.
     private static string Text(string path) => File.ReadAllText(path).Replace("\r\n", "\n", StringComparison.Ordinal);
