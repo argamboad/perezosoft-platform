@@ -20,6 +20,8 @@
     <PlatformPackage Include="Perezosoft.Platform.Build" Source="src/Build/Perezosoft.Platform.Build.csproj" />
     <!-- A dotnet tool (`dotnet platform`): an app pins it in .config/dotnet-tools.json, never a PackageReference. -->
     <PlatformPackage Include="Perezosoft.Platform.Tool" Source="src/Tool/Perezosoft.Platform.Tool.csproj" />
+    <!-- A dotnet new template (`dotnet new perezosoft-app`): starter/, packed as content, never a PackageReference. -->
+    <PlatformPackage Include="Perezosoft.Platform.Templates" Source="src/Templates/Perezosoft.Platform.Templates.csproj" />
     <PlatformPackage Include="Perezosoft.Platform.DryRun" Source="tools/release/dry-run/Perezosoft.Platform.DryRun.csproj" />
   </ItemGroup>
 </Project>

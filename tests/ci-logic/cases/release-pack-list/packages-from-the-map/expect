@@ -10,5 +10,6 @@ exit 0
 +pack src/Testing.E2E/Perezosoft.Testing.E2E.csproj
 +pack src/Build/Perezosoft.Platform.Build.csproj
 +pack src/Tool/Perezosoft.Platform.Tool.csproj
++pack src/Templates/Perezosoft.Platform.Templates.csproj
 -dry-run
 -slnx

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AppBrand's backend tests: the platform's inherited suites (Perezosoft.Platform.Testing) run against this app's tree,
+    model and host, beside the app's own tests (the sample's, then each slice's).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateLocalPorts>true</GenerateLocalPorts>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Perezosoft.Platform.Testing" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <!-- Testcontainers pulls a vulnerable SSH.NET transitively; the patched pin. -->
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Host\AppBrand.Host.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The platform's `dotnet new` template (Pkg 6.1, ADR-034): `dotnet new perezosoft-app -n <Brand>` writes a new app on
+    the packages from starter/, the app this repo keeps checked in and gated (StarterTests). No assembly: the package is
+    starter/ under content/, its template.json in starter/.template.config/.
+    starter/ is written with its own placeholder brand (AppBrand, appbrand, APPBRAND), which the template renames; the
+    package ids and the feed key keep their names. It names the platform's release as 0.0.0-platform (its package
+    version, its CI caller's tag, its stamp's commit): the pack bakes the version being packed into those, so an app
+    starts on the release whose template made it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <PackageId>Perezosoft.Platform.Templates</PackageId>
+    <PackageType>Template</PackageType>
+    <Description>Perezosoft Platform app template: `dotnet new perezosoft-app -n &lt;Brand&gt;` makes an app on the Perezosoft.Platform.* packages, with the host, a DELETE-ME sample slice, its migrations and the platform's inherited suites.</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- starter/ has dotfiles (.gitignore, .github/, .config/, .template.config/), which pack would drop by default. -->
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <!-- No lib/ folder by design: the package is the template's content only. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <StarterDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'starter'))</StarterDir>
+  </PropertyGroup>
+
+  <UsingTask TaskName="BakePlatformVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <OutputDirectory Required="true" />
+      <Token Required="true" />
+      <Version Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        // Each file to the same place under OutputDirectory; the ones that name the token get the version instead.
+        foreach (var item in Files)
+        {
+            var source = item.ItemSpec;
+            var target = Path.Combine(OutputDirectory, item.GetMetadata("RecursiveDir"), item.GetMetadata("Filename") + item.GetMetadata("Extension"));
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            var text = File.ReadAllText(source);
+            if (text.Contains(Token))
+                File.WriteAllText(target, text.Replace(Token, Version), new UTF8Encoding(false));
+            else
+                File.Copy(source, target, true);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <!-- At pack time, after MinVer has set the version: starter/ (minus build output) to obj/, baked, then into content/. -->
+  <Target Name="PackStarter" BeforeTargets="_GetPackageFiles" DependsOnTargets="MinVer">
+    <PropertyGroup>
+      <!-- Here, not above: obj/ (IntermediateOutputPath) is the SDK's, defined after this project's own properties. -->
+      <BakedStarterDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'starter'))</BakedStarterDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_StarterFile Include="$(StarterDir)**/*"
+                    Exclude="$(StarterDir)**/bin/**;$(StarterDir)**/obj/**;$(StarterDir)**/packages.lock.json;$(StarterDir)**/.vs/**;$(StarterDir).env" />
+    </ItemGroup>
+    <RemoveDir Directories="$(BakedStarterDir)" />
+    <BakePlatformVersion Files="@(_StarterFile)" OutputDirectory="$(BakedStarterDir)" Token="0.0.0-platform" Version="$(PackageVersion)" />
+    <ItemGroup>
+      <_BakedStarterFile Include="$(BakedStarterDir)**/*" />
+      <None Include="@(_BakedStarterFile)" Pack="true" PackagePath="content/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

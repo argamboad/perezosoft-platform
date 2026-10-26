@@ -30,6 +30,9 @@
   <Folder Name="/src/Shared.Ui/">
     <Project Path="src/Shared.Ui/Perezosoft.Shared.Ui.csproj" />
   </Folder>
+  <Folder Name="/src/Templates/">
+    <Project Path="src/Templates/Perezosoft.Platform.Templates.csproj" />
+  </Folder>
   <Folder Name="/src/Testing/">
     <Project Path="src/Testing/Perezosoft.Testing.csproj" />
   </Folder>

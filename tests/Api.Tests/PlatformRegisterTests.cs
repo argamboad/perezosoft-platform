@@ -28,14 +28,16 @@ public class PlatformRegisterTests
     }
 
     [Fact]
-    public void TheSwitch_NamesTheBrand_OnlyInsideTheKeepList()
+    public void TheRegister_NamesTheBrand_OnlyInsideTheKeepList()
     {
-        // The switch's MSBuild names must mean the same in a rebranded app as in the packages it switches: a name holding
-        // the brand outside a keep-list token (a package id) is rewritten in the app and not in the package. The import
-        // guards were renamed for this (_PlatformBuildPropsImported): a rebranded app's switch looked for another name
-        // than the Build package set, and imported its files twice.
+        // A register file must mean the same in a rebranded app as in the packages: a name holding the brand outside a
+        // keep-list token (a package id) is rewritten in the app and not in the package. The switch's import guards were
+        // renamed for this (_PlatformBuildPropsImported): a rebranded app's switch looked for another name than the Build
+        // package set, and imported its files twice. And the tool's id in .config/dotnet-tools.json is lower-case (#455):
+        // until the keep-list held that spelling, an app's correct copy failed the register and a renamed one, naming a
+        // tool that does not exist, passed it. The map itself is out: it spells its own keep tokens.
         var keep = ParseKeep(File.ReadAllText(Path.Combine(RepoRoot(), "platform-ownership.json")));
-        foreach (var (path, bytes) in RegisterFiles().Where(f => f.Key.StartsWith("build/", StringComparison.Ordinal)))
+        foreach (var (path, bytes) in RegisterFiles().Where(f => f.Key != "platform-ownership.json"))
         {
             var text = NormalizeKeeping(bytes, ["Perezosoft", "perezosoft"], keep);
             Assert.False(text.Contains("{BRAND}", StringComparison.Ordinal) || text.Contains("{brand}", StringComparison.Ordinal),

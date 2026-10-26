@@ -1,0 +1,36 @@
+name: CI
+
+# The platform's gates, run on this app (ADR-031): a pull request runs the web gates; a manual "Run workflow" runs the
+# device legs (devices) and the deploys (deploy). The gates themselves are the platform's reusable workflow, at the
+# release this app is on — bump the tag with Directory.Packages.props.
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy after the web gates are green (staging deploys from develop, prod from main)
+        type: choice
+        default: none
+        options: [none, staging, prod]
+      devices:
+        description: Device legs to run (MAUI builds, Release APK, native smokes)
+        type: choice
+        default: none
+        options: [none, android, windows, apple, all]
+
+permissions:
+  contents: read
+  packages: read # the platform's feed: Perezosoft.Platform.* and the dotnet tool
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-run-{0}', github.run_id) }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: argamboad/perezosoft-platform/.github/workflows/app-ci.yml@v0.0.0-platform
+    with:
+      deploy: ${{ inputs.deploy || 'none' }}
+      devices: ${{ inputs.devices || 'none' }}
+    secrets: inherit

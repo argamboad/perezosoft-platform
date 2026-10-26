@@ -1032,7 +1032,7 @@
 - `tests/Api.Tests/Rls/RlsPostureGuardTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
 
-## 9.1 — Make it yours (rebrand & de-sample) (18 files)
+## 9.1 — Make it yours (rebrand & de-sample) (74 files)
 
 - `docs/brand/android_adaptive_foreground_432.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/app_store_icon_1024.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
@@ -1044,13 +1044,69 @@
 - `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
 - `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
 - `src/Infrastructure/Persistence/platform-schema.json` — embedded in the Infrastructure package (Pkg 3.5): the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
+- `src/Templates/Perezosoft.Platform.Templates.csproj` — Perezosoft.Platform.Templates: starter/ as a dotnet new template, the release's version baked in at pack (Pkg 6.1a)
 - `src/Testing/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
 - `src/Testing/Suites/PlatformOwnershipSuite.cs` — the map, stamp and manifest checks every app inherits (Pkg 5.1b)
 - `src/Testing/Suites/PlatformSchemaSuite.cs` — the schema parity gate as an inheritable suite (Pkg 5.1b)
+- `starter/.config/dotnet-tools.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/.env.example` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/.gitattributes` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/.github/workflows/ci.yml` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/.gitignore` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/.template.config/template.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/AppBrand.slnx` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/Directory.Build.props` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/Directory.Build.targets` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/Directory.Packages.props` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/build/PlatformSource.props` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/build/PlatformSource.targets` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/docker-compose.yml` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/docker/db/provision-rls-runtime-role.sql` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/global.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/local-ports.props` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/nuget.config` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/platform-ownership.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/platform-stamp.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/AppBrand.Host.csproj` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/AppBrand.Host.http` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/AppComposition.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Features/Notes/NotesDataContributor.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Features/Notes/NotesEndpoints.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Features/Notes/NotesHandler.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Features/Notes/NotesModels.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/AppDbContext.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/AppDbContextFactory.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Configurations/NoteConfiguration.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Migrations/20261026203747_InitialCreate.Designer.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Migrations/20261026203747_InitialCreate.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Migrations/20261026203754_RlsTenancyBackstop.Designer.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Migrations/20261026203754_RlsTenancyBackstop.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Migrations/20261026203801_NotesSampleRlsPolicy.Designer.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Migrations/20261026203801_NotesSampleRlsPolicy.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Persistence/Migrations/AppDbContextModelSnapshot.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Program.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/Properties/launchSettings.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/appsettings.Development.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/src/Host/appsettings.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/App/AppAllowlists.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/App/AppTestComposition.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/AppBrand.Api.Tests.csproj` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/ArchitectureTests.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/CompositionSmokeTests.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/Infrastructure/PostgresFixture.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/Infrastructure/PostgresTestBase.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/Infrastructure/TestAppDbContext.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/NotesSliceTests.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/OwnershipTests.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/PlatformSchemaTests.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/PlatformTestingUsings.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
+- `starter/tests/Api.Tests/TenancyTests.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
 - `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
 - `tests/Api.Tests/PlatformRegisterTests.cs` — the register an app on the packages is held to: embedded in Platform.Testing, brand-proof, the verdict on fixtures (Pkg 5.7)
 - `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
+- `tests/Api.Tests/StarterTests.cs` — starter/ held to the platform: its straight copies, its pins, no brand left, no condition the template engine would rewrite (Pkg 6.1a)
 - `tools/port-platform.ps1` — ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)
 
 ## A.1 — Appendix — MAUI shells & parity (43 files)
@@ -1117,7 +1173,7 @@
 - `tests/Api.Tests/NativeRedirectPolicyTests.cs`
 - `tests/Api.Tests/OAuthResumeTests.cs` — marker lifecycle, TTL, MFA handoff, link outcomes (NATIVE-12)
 
-## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (74 files)
+## [GEN] Generated by tooling in the lesson noted (dotnet ef / dotnet restore) — never hand-typed (75 files)
 
 - `src/Api/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Build/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1182,6 +1238,7 @@
 - `src/Host/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Infrastructure/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Shared.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
+- `src/Templates/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Testing.E2E/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Testing.Ui/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
 - `src/Testing/packages.lock.json` — dotnet restore --locked-mode (lesson 1.1)
@@ -1248,7 +1305,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (261 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (262 files)
 
 - `.github/release-note-template.md` — docs
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1485,6 +1542,7 @@
 - `docs/tutorial/lessons/9.1-rebrand-and-de-sample.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.1-maui-shells-and-parity.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
+- `starter/README.md` — docs
 - `tests/E2E.Tests/README.md` — docs
 - `tests/E2E.Tests/journey-seconds.tsv` — CI tuning data: measured seconds per journey so the e2e shards are dealt evenly (Env L28)
 - `tests/ci-logic/cases/changes-classifier/course-added-file/files/docs/tutorial/lessons/1.1-fixture.md` — docs
@@ -1512,4 +1570,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1345 tracked files · 959 built in lessons · 386 bucketed · 0 unmapped
+**Totals:** 1403 tracked files · 1015 built in lessons · 388 bucketed · 0 unmapped

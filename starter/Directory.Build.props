@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    AppBrand's build settings (nullable, warnings as errors, the generated LocalPorts, the stamp beside the host) come from
+    the platform's package Perezosoft.Platform.Build, one GlobalPackageReference in Directory.Packages.props. What steers a
+    restore stays here, because a package arrives only after it: the local source switch and the lockfiles.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)build/PlatformSource.props" />
+  <PropertyGroup>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+</Project>

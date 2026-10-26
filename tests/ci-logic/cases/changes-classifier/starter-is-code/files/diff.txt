@@ -1,0 +1,2 @@
+starter/.template.config/template.json
+starter/platform-stamp.json
