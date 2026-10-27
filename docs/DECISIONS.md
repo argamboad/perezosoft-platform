@@ -2126,3 +2126,16 @@ A second finding: `tools/e2e.ps1` (`dotnet platform e2e`) read the db port from
 `.env` but the mail ports from compose's defaults. A second repo's stack, which `.env` moves off the first one's ports,
 therefore sent its mail to, and read it from, the first repo's Mailpit. It now reads all three as compose does; apps get
 it with the tool's next release.
+
+*Amendment (2026-10-27, Pkg 6.1d, #458) — the proof, which closes #420.* This branch was packed to a local feed standing
+in for GitHub Packages. Then, in an empty folder and with no edit to the app, `dotnet new perezosoft-app -n Lantern` was
+followed the way the starter's README says. Every file written is `starter/`'s, renamed and with the version baked (280
+files). The restore writes its lockfiles, and CI's locked-mode restore and Release build (warnings as errors) pass, as
+does the whole solution with the MAUI app's Android and Windows targets. `dotnet platform up` starts the stack, and the
+host's first start applies the three shipped migrations. CI's drift gate finds no pending model change, and the app's
+own first migration generates. The gates pass: Api.Tests 57/57, Ui.Tests 141/141, the license scan, and the journeys
+(37/37, and 4/4 in the gates-off lane) on the app's own db and Mailpit. Nothing needed fixing: the three findings came
+in 6.1b and 6.1c. The proof's only redirect is the feed key pointing at the local folder for the restore; the .env is
+the README's (the JWT secret, ports moved off another stack running on the same machine). Not covered until the
+template is on the feed (M7): restoring from GitHub Packages itself, and the app's own CI run (`ci.yml` calling
+`app-ci.yml` at the release tag).
