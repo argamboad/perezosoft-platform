@@ -1,6 +1,6 @@
 using Perezosoft.Core.Entities;
 
-namespace Perezosoft.Api.Features.Notes;
+namespace Perezosoft.Host.Features.Notes;
 
 // 🗑️ DELETE-ME: sample feature slice. See the folder's intent in docs/WAYS_OF_WORKING.md.
 // Request/response DTOs live with the feature — not in a shared Models project.

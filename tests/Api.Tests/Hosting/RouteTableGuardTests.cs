@@ -79,10 +79,11 @@ public class RouteTableGuardTests
     [Fact]
     public void Program_RunsTheGuard_OverItsFinalRouteTable_RightBeforeRun()
     {
-        // Any route mapped after the guard would escape it, so the call must be the last thing before app.Run().
+        // Any route mapped after the guard would escape it, so the call must be the last thing before app.Run(); after it,
+        // only the Program declaration the tests reach the host by.
         var program = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Host", "Program.cs")).Replace("\r\n", "\n");
 
-        Assert.Matches(@"RouteTableGuard\.EnsureUnique\([^\n]*\);\s*\n\s*app\.Run\(\);\s*$", program);
+        Assert.Matches(@"RouteTableGuard\.EnsureUnique\([^\n]*\);\s*\n\s*app\.Run\(\);\s*(///[^\n]*\n\s*)*(public partial class Program;\s*)?$", program);
     }
 
     private static string RepoRoot()

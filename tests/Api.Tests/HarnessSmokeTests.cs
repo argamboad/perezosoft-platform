@@ -7,7 +7,7 @@ namespace Perezosoft.Api.Tests;
 
 /// <summary>
 /// Proves the test harness itself works: a real Postgres round-trip through the
-/// production <see cref="Perezosoft.Infrastructure.Persistence.AppDbContext"/>, and a
+/// production <see cref="Perezosoft.Host.Persistence.AppDbContext"/>, and a
 /// controllable clock. These are the two primitives the Phase 2 service tests build on.
 /// </summary>
 [Collection(PostgresCollection.Name)]

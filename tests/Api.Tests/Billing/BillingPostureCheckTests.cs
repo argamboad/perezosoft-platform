@@ -49,8 +49,8 @@ public class BillingPostureCheckTests(PostgresFixture fixture) : PostgresTestBas
     private IServiceScopeFactory Scopes()
     {
         var services = new ServiceCollection();
-        services.AddScoped<Perezosoft.Infrastructure.Persistence.AppDbContext>(_ => Fixture.CreateContext());
-        services.AddScoped<IRepository<Subscription>>(sp => new EfRepository<Subscription>(sp.GetRequiredService<Perezosoft.Infrastructure.Persistence.AppDbContext>()));
+        services.AddScoped<Perezosoft.Host.Persistence.AppDbContext>(_ => Fixture.CreateContext());
+        services.AddScoped<IRepository<Subscription>>(sp => new EfRepository<Subscription>(sp.GetRequiredService<Perezosoft.Host.Persistence.AppDbContext>()));
         return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
     }
 

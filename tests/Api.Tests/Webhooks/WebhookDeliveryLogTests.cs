@@ -338,7 +338,7 @@ public class WebhookDeliveryLogTests(PostgresFixture fixture) : PostgresTestBase
     };
 
     private static WebhookSubscriptionService BuildService(
-        Perezosoft.Infrastructure.Persistence.AppDbContext db, Guid tenant,
+        Perezosoft.Host.Persistence.AppDbContext db, Guid tenant,
         WebhookSecretProtector? protector = null, IWebhookSender? sender = null, Guid? impersonatedBy = null) =>
         new(new EfRepository<WebhookSubscription>(db), new EfRepository<WebhookDelivery>(db),
             new EfOutbox(db, TimeProvider.System), new TestCurrentTenant { TenantId = tenant },

@@ -16,7 +16,7 @@ public class CiWorkflowTests
     private const string Ci = ".github/workflows/ci.yml";
     private const string AppCi = ".github/workflows/app-ci.yml";
 
-    private static readonly string[] WebGates = ["build-test", "license-scan", "docker-build", "e2e"];
+    private static readonly string[] WebGates = ["build-test", "license-scan", "docker-build", "e2e", "starter-smoke"];
     private static readonly string[] DocsGates = ["secret-scan", "qa-artifacts"];
     private static readonly string[] DeviceLegs =
         ["native-build", "native-release-android", "native-build-apple", "native-smoke-apple", "native-smoke-windows", "native-smoke-android"];

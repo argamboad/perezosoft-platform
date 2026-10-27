@@ -150,7 +150,7 @@ and `NotesSampleRlsPolicy`, its RLS policy). No platform migration names it, so 
 
 1. Delete the code: `src/Host/Features/Notes/`, `src/Core/Entities/Note.cs`,
    `src/Host/Persistence/Configurations/NoteConfiguration.cs`, `tests/Api.Tests/NotesSliceTests.cs`; the
-   `Notes` lines in `src/Host/AppComposition.cs`, the `DbSet<Note>` in `AppDbContext.App.cs`, the `nameof(Note)` entry
+   `Notes` lines in `src/Host/AppComposition.cs`, the `DbSet<Note>` in `src/Host/Persistence/AppDbContext.cs`, the `nameof(Note)` entry
    in `tests/Api.Tests/App/AppAllowlists.cs`, the `Notes_*` strings in both resx files, the Notes folder of the Postman
    collection and its `noteId` variable, and the `/notes` page and nav entry in `Shared.Ui`.
 2. Drop the table with an **app migration**: `dotnet ef migrations add RemoveNotesSample --project src/Host

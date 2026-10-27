@@ -75,6 +75,14 @@ public class PlatformRegisterTests
         Assert.Empty(Run(branded).Failures);
         register.Remove("c.json");
 
+        // A brand that is also a word of the file: a faithful copy, as shipped or branded, still compares equal (#421).
+        var smoke = new Dictionary<string, string> { ["Perezosoft"] = "Smoke", ["perezosoft"] = "smoke" };
+        var map = new Dictionary<string, byte[]> { ["m.json"] = Bytes("{ \"glob\": \"tests/native-smoke-android/**\" } // Perezosoft") };
+        Verdict RunSmoke(string text) => EvaluateRegister(map, smoke, new Dictionary<string, string>(), _ => Bytes(text), keep);
+        Assert.Empty(RunSmoke("{ \"glob\": \"tests/native-smoke-android/**\" } // Perezosoft").Failures);
+        Assert.Empty(RunSmoke("{ \"glob\": \"tests/native-smoke-android/**\" } // Smoke").Failures);
+        Assert.NotEmpty(RunSmoke("{ \"glob\": \"tests/native-Smoke-android/**\" } // Smoke").Failures);
+
         var drifted = new Dictionary<string, string>(inStep) { ["global.json"] = "{ \"sdk\": \"10.0.300\" }" };
         Assert.Contains(Run(drifted).Failures, f => f.StartsWith("global.json: differs", StringComparison.Ordinal));
         Assert.Empty(Run(drifted, new() { ["global.json"] = "the app pins an older SDK until its host moves" }).Failures);

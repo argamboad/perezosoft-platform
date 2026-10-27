@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Perezosoft.Core.Entities;
 
-namespace Perezosoft.Infrastructure.Persistence.Configurations;
+namespace Perezosoft.Host.Persistence.Configurations;
 
 // 🗑️ DELETE-ME: sample feature (remove with the Features/Notes slice). Implements
 // ITenantScoped, so the global query filter in AppDbContext covers it automatically.

@@ -103,7 +103,7 @@ public class BillingDissolveTests(PostgresFixture fixture) : PostgresTestBase(fi
 
     // --- helpers ---
 
-    private static BillingDataContributor Build(Perezosoft.Infrastructure.Persistence.AppDbContext db) =>
+    private static BillingDataContributor Build(Perezosoft.Host.Persistence.AppDbContext db) =>
         new(new EfRepository<Subscription>(db), new EfOutbox(db, TimeProvider.System));
 
     private async Task SeedSubscriptionAsync(Guid tenant, string? stripeSubscriptionId)

@@ -190,7 +190,18 @@ public static class PlatformOwnership
     /// side, and a token the brand map never renames (a package id, the feed key) stays itself, so an app's copy compares
     /// equal whether its brand was written into the rest of the file or not.
     /// </summary>
-    public static string NormalizeKeeping(byte[] content, IReadOnlyList<string> brandTokens, IReadOnlyList<string> keep)
+    public static string NormalizeKeeping(byte[] content, IReadOnlyList<string> brandTokens, IReadOnlyList<string> keep) =>
+        RenameKeeping(content, keep, brandTokens.OrderByDescending(t => t.Length)
+            .Select(t => (t, char.IsUpper(t[0]) ? "{BRAND}" : "{brand}")));
+
+    /// <summary>
+    /// The package's copy as an app would write it: each platform token renamed by the app's brand map, the keep-list held,
+    /// whitespace as <see cref="NormalizeKeeping"/> compares it.
+    /// </summary>
+    public static string RebrandKeeping(byte[] content, IReadOnlyDictionary<string, string> brand, IReadOnlyList<string> keep) =>
+        RenameKeeping(content, keep, brand.OrderByDescending(kv => kv.Key.Length).Select(kv => (kv.Key, kv.Value)));
+
+    private static string RenameKeeping(byte[] content, IReadOnlyList<string> keep, IEnumerable<(string Token, string Into)> renames)
     {
         var start = content.Length >= 3 && content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF ? 3 : 0;
         var text = Encoding.UTF8.GetString(content, start, content.Length - start).Replace("\r\n", "\n");
@@ -202,16 +213,15 @@ public static class PlatformOwnership
             kept.Add((k, ((char)next++).ToString()));
         }
         foreach (var (token, guard) in kept) text = text.Replace(token, guard, StringComparison.Ordinal);
-        foreach (var token in brandTokens.OrderByDescending(t => t.Length))
-            text = text.Replace(token, char.IsUpper(token[0]) ? "{BRAND}" : "{brand}", StringComparison.Ordinal);
+        foreach (var (token, into) in renames) text = text.Replace(token, into, StringComparison.Ordinal);
         foreach (var (token, guard) in kept) text = text.Replace(guard, token, StringComparison.Ordinal);
         var lines = text.Split('\n').Select(l => l.TrimEnd(' ', '\t'));
         return string.Join('\n', lines).TrimEnd('\n', ' ', '\t');
     }
 
     /// <summary>
-    /// The downstream gate for an app on the packages (Pkg 5.7): each register file must equal the package's copy (the
-    /// platform's tokens normalized in the package's, the app's in its own, the keep-list held), or be in
+    /// The downstream gate for an app on the packages (Pkg 5.7): each register file must equal the package's copy (as
+    /// shipped, or with the app's brand written in, the keep-list held), or be in
     /// <paramref name="divergences"/> with a reason. As in <see cref="Evaluate"/>, an entry for a file that is equal again
     /// fails, and so does an entry for a file the register does not hold.
     /// </summary>
@@ -220,17 +230,17 @@ public static class PlatformOwnership
         IReadOnlyDictionary<string, string> divergences, Func<string, byte[]?> readLocal, IReadOnlyList<string> keep)
     {
         var failures = new List<string>();
-        var platformTokens = brand.Keys.ToList();
-        // The app's side normalizes its own tokens and the platform's: a register file compares equal whether the app's
-        // brand was written into it or it was copied as the package ships it.
-        var appTokens = brand.Values.Concat(brand.Keys).Distinct(StringComparer.Ordinal).ToList();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (path, packaged) in register.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
             var local = LocalPath(path, brand, keep);
             seen.Add(local);
             var bytes = readLocal(local);
-            var same = bytes is not null && NormalizeKeeping(bytes, appTokens, keep) == NormalizeKeeping(packaged, platformTokens, keep);
+            // Equal as the package ships it, or with the app's brand written in. Not by normalizing the app's brand on its
+            // side: a brand that is also a word of the file (an app called Smoke, and tests/native-smoke-android in the
+            // map) would turn that word into the brand and fail a faithful copy (Pkg 6.2, #421).
+            var app = bytes is null ? null : NormalizeKeeping(bytes, [], keep);
+            var same = app is not null && (app == NormalizeKeeping(packaged, [], keep) || app == RebrandKeeping(packaged, brand, keep));
             var allowlisted = divergences.TryGetValue(local, out var reason) && !string.IsNullOrWhiteSpace(reason);
             if (same && allowlisted)
                 failures.Add($"{local}: listed in PlatformDivergences.json but identical to the package's again — drop the entry");

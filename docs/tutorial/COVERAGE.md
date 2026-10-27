@@ -75,7 +75,7 @@
 - `tests/ci-logic/cases/app-names/the-platform/files/tests/E2E.Tests/Perezosoft.E2E.Tests.csproj` — created here; PackageReferences added as lessons need them
 - `tools/release/dry-run/Perezosoft.Platform.DryRun.csproj` — created here; PackageReferences added as lessons need them
 
-## 1.2 — First endpoint, first test (10 files)
+## 1.2 — First endpoint, first test (11 files)
 
 - `src/Api/PlatformHosting.cs` — AddPlatform / MapPlatformAsync: every registration and the pipeline Program.cs used to spell out (Pkg 3.3)
 - `src/Host/Perezosoft.Host.http` — REST client scratchpad — grows with each endpoint
@@ -84,16 +84,16 @@
 - `src/Testing/Harness/PlatformIntegrationFactory.cs` — the integration host, generic over the app's Program and context (Perezosoft.Platform.Testing, Pkg 5.1a)
 - `src/Testing/Harness/PlatformTestComposition.cs` — what an app's test assembly tells the packaged harness (Pkg 5.1a)
 - `tests/Api.Tests/HarnessSmokeTests.cs`
+- `tests/Api.Tests/HostUsings.cs` — the host under test's namespaces, globally: the starter's host (Pkg 6.2)
 - `tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs`
 - `tests/Api.Tests/Integration/HarnessSmokeTests.cs`
 - `tests/Api.Tests/PlatformTestingUsings.cs` — the packaged harness's namespaces, globally (Pkg 5.1a)
 
-## 1.3 — Database & the test container (21 files)
+## 1.3 — Database & the test container (20 files)
 
 - `src/Api/PlatformDesignTimeDbContextFactory.cs` — the design-time factory every host derives from in one line (Pkg 3.5)
-- `src/Host/AppDbContextFactory.cs` — design-time factory for dotnet ef
-- `src/Host/Persistence/AppDbContext.App.cs` — the app's half of the context: its DbSets and OnAppModelCreating (Arch A1)
 - `src/Host/Persistence/AppDbContext.cs` — the app's context: derives from PlatformDbContext and owns the migrations (Pkg 3.5)
+- `src/Host/Persistence/AppDbContextFactory.cs` — design-time factory for dotnet ef
 - `src/Infrastructure/Persistence/PlatformDbContext.cs` — born here as AppDbContext; filter added 2.6, interceptors 2.7/4.6, DbSets throughout; the packaged base since Pkg 3.5
 - `src/Infrastructure/Persistence/PlatformDbContextFactory.cs` — IDbContextFactory<PlatformDbContext> over the app's own factory (Pkg 3.5)
 - `src/Testing/Harness/CapturingLogger.cs` — the one log double the suite shares

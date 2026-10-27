@@ -119,7 +119,7 @@ built once per host by `AddPlatformOptions`, a bad value stops the host at start
 | Billing-gated controllers | `options.BillingGatedControllers` | `BillingGateConvention` drops them with billing off (404) |
 | Route prefixes | `MapTenantFeatureGroup("/api/x")` (an `AppRouteGroup` per call) | `RouteTableGuard` refuses a shared prefix or one on `PlatformPrefixes` |
 | Authorization policies | `services.AddAppPolicy(name, …)` in `AddAppServices` | refused on a platform name; `EnsurePlatformPoliciesIntact` at boot |
-| Database model | `AppDbContext : PlatformDbContext` + `AppDbContext.App.cs` + its own migrations | `ApplyPlatformStep(name)` for published SQL steps (RLS); `PlatformSchemaTests` vs the embedded `platform-schema.json` |
+| Database model | `AppDbContext : PlatformDbContext` (its sets and model rules) + its own migrations | `ApplyPlatformStep(name)` for published SQL steps (RLS); `PlatformSchemaTests` vs the embedded `platform-schema.json` |
 | Configuration | `src/Host/appsettings*.json`, `.env`, environment | layered over the embedded `platform-defaults.json` (lowest source) |
 
 ## 3. Tenancy — two walls, both directions ([ADR-003](DECISIONS.md), [ADR-020](DECISIONS.md))

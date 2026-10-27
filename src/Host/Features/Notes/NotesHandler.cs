@@ -3,7 +3,7 @@ using Perezosoft.Core.Abstractions;
 using Perezosoft.Core.Entities;
 using Perezosoft.Core.Repositories;
 
-namespace Perezosoft.Api.Features.Notes;
+namespace Perezosoft.Host.Features.Notes;
 
 /// <summary>
 /// 🗑️ DELETE-ME: sample feature handler — the only place this feature's logic lives.

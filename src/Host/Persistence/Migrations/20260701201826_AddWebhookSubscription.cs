@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Perezosoft.Infrastructure.Persistence.Migrations
+namespace Perezosoft.Host.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class AddWebhookSubscription : Migration

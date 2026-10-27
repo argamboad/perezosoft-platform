@@ -68,7 +68,7 @@ public class PackagingContractTests
         var api = Path.Combine(root, "src", "Api");
         var host = Path.Combine(root, "src", "Host");
         Assert.StartsWith("<Project Sdk=\"Microsoft.NET.Sdk\">", File.ReadAllText(Path.Combine(api, "Perezosoft.Api.csproj")).TrimStart('﻿'));
-        foreach (var hostOnly in new[] { "Program.cs", "AppComposition.cs", "AppDbContextFactory.cs", "appsettings.json", "Features", Path.Combine("Properties", "launchSettings.json") })
+        foreach (var hostOnly in new[] { "Program.cs", "AppComposition.cs", Path.Combine("Persistence", "AppDbContextFactory.cs"), "appsettings.json", "Features", Path.Combine("Properties", "launchSettings.json") })
         {
             Assert.False(File.Exists(Path.Combine(api, hostOnly)) || Directory.Exists(Path.Combine(api, hostOnly)), $"src/Api/{hostOnly} belongs to the host, not the package");
             Assert.True(File.Exists(Path.Combine(host, hostOnly)) || Directory.Exists(Path.Combine(host, hostOnly)), $"src/Host/{hostOnly} is missing");

@@ -5,7 +5,7 @@ using static Perezosoft.Testing.Architecture.PlatformOwnership;
 namespace Perezosoft.Api.Tests;
 
 /// <summary>
-/// Pkg 6.1a (#455), 6.1b (#456), 6.1c (#457): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
+/// Pkg 6.1a (#455), 6.1b (#456), 6.1c (#457), 6.2 (#421): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
 /// here and written with its own placeholder brand (AppBrand), which the template renames. What it shares with the
 /// platform must not drift from it: each straight copy is the platform's file, renamed by one rule (<see cref="ToStarter"/>);
 /// its package pins are the platform's; no platform brand is left for the template to miss; and nothing in it is a
@@ -14,21 +14,19 @@ namespace Perezosoft.Api.Tests;
 public class StarterTests
 {
     // The platform's files starter/ carries as they are, renamed. The register is among them (an app on the packages is
-    // held to it, PlatformRegisterTests); the rest are the local stack, the host's settings and launch profiles.
+    // held to it, PlatformRegisterTests); the rest are the local stack.
     private static readonly string[] StraightCopies =
     [
         ".gitignore", ".gitattributes", "global.json", "nuget.config", ".config/dotnet-tools.json", "platform-ownership.json",
         "build/PlatformSource.props", "build/PlatformSource.targets", "local-ports.props", "docker/db/provision-rls-runtime-role.sql",
-        "src/Host/Perezosoft.Host.http", "src/Host/Properties/launchSettings.json", "src/Host/appsettings.json",
-        "src/Host/appsettings.Development.json",
     ];
 
-    // The seeded UI (Pkg 6.1b, #456) and the native app and journeys (6.1c, #457), carried whole: every file of each tree
-    // is the platform's, renamed, except its project file (an app's references the packages) and its lockfile. The
-    // pages, the strings, the brand, the web host, the component tests, the MAUI shell, the browser journeys, the
-    // Android smoke spec.
+    // The app's trees, carried whole: every file of each is the platform's, renamed, except its project file (an app's
+    // references the packages), its lockfile and the host's migrations (the platform's history is its own; an app's starts
+    // from the three the starter ships). The host (Pkg 6.2, #421: the platform's reference host IS the starter's), the
+    // seeded UI (6.1b, #456), the native app, the journeys and the Android smoke spec (6.1c, #457).
     private static readonly string[] CopiedTrees =
-        ["src/Shared.Ui", "src/Web", "tests/Ui.Tests", "src/Maui", "tests/E2E.Tests", "tests/native-smoke-android"];
+        ["src/Host", "src/Shared.Ui", "src/Web", "tests/Ui.Tests", "src/Maui", "tests/E2E.Tests", "tests/native-smoke-android"];
 
     // What the template copies as it is, beside the register: the binaries and the vendored Bootstrap (nothing to rename,
     // and the engine would scan them for its own markers). The gate compares the binaries byte for byte.
@@ -97,7 +95,8 @@ public class StarterTests
 
         // Not the project file, its lockfile, or a developer's own (gitignored) .csproj.user.
         static bool IsCopied(string rel) => !rel.EndsWith(".csproj", StringComparison.Ordinal) && !rel.EndsWith(".csproj.user", StringComparison.Ordinal)
-                                            && !rel.EndsWith("packages.lock.json", StringComparison.Ordinal);
+                                            && !rel.EndsWith("packages.lock.json", StringComparison.Ordinal)
+                                            && !rel.StartsWith("src/Host/Persistence/Migrations/", StringComparison.Ordinal);
     }
 
     [Fact]

@@ -745,12 +745,13 @@ public class EnforcementGateTests
         // The seam, proven on the one app the platform carries: the Notes sample. Before A1 the sample was registered in
         // Program.cs, had its DbSet in AppDbContext and its entity in the canary's handled set — exactly the edits every
         // app made for its own slices, in the same platform-owned files. Now the sample lives in the app-owned halves
-        // (AppComposition.cs, AppDbContext.App.cs, tests/Api.Tests/App/AppAllowlists.cs), and none of the platform's
-        // composition files names it. Downstream, A2's manifest gate holds the same files identical to the platform's.
+        // (AppComposition.cs, the host's AppDbContext — the app's own since the host is the starter's, Pkg 6.2 — and
+        // tests/Api.Tests/App/AppAllowlists.cs), and none of the platform's composition files names it. Downstream, A2's
+        // manifest gate holds the same files identical to the platform's.
         var root = RepoRoot();
         string[] composition =
         [
-            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Host/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
+            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
             "src/Testing/Harness/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
             "src/Testing.Ui/TestHttpHandler.cs",

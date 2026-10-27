@@ -2139,3 +2139,23 @@ in 6.1b and 6.1c. The proof's only redirect is the feed key pointing at the loca
 the README's (the JWT secret, ports moved off another stack running on the same machine). Not covered until the
 template is on the feed (M7): restoring from GitHub Packages itself, and the app's own CI run (`ci.yml` calling
 `app-ci.yml` at the release tag).
+
+*Amendment (2026-10-27, Pkg 6.2, #421) — the reference host is the starter's; a starter smoke on every PR.* The platform's
+`src/Host` is now the starter's host with the brand mapped back, held to it by the same tree gate as the UI (`StarterTests`):
+`Program.cs`, `AppComposition.cs`, the Notes sample, and one `AppDbContext` (the app's sets and model rules) with its
+design-time factory, all in `Perezosoft.Host.*`. The split `AppDbContext.cs` / `AppDbContext.App.cs` is gone: the platform's
+half of the model is `PlatformDbContext`, in the Infrastructure package. Three files are the platform's own: the project file
+(it references the projects), its lockfile, and its migration history. The 55 migrations keep their ids, so no database
+changes, and move to `Perezosoft.Host.Persistence.Migrations`. The tests reach the host through one global-usings file, and
+the architecture suite is told the host's feature namespace. Web and MAUI were already the starter's (6.1b–c). Left to 6.4
+(#423): the ownership map still classes `src/Host/Persistence/AppDbContext.cs` as platform, which the starter's design
+makes the app's own; reclassing it moves the map, the shipped `PlatformOwnershipSuite` and the clone-shaped apps' port
+path together.
+
+`app-ci.yml` gains `starter-smoke`, which runs where a repo has `starter/` (the platform), on every change that runs the web
+gates. It packs this change's template, has `dotnet new` write a scratch app, and builds it on this checkout's projects (the
+source switch, so nothing comes from the feed). It then runs the scratch app's composition smoke, architecture and ownership
+suites. A finding on the way: the register comparison (`EvaluateRegister`, Platform.Testing) normalized the app's brand on
+the app's side, so a brand that is also a word of a register file (the scratch app "Smoke" and `tests/native-smoke-android`
+in the ownership map) failed a faithful copy. It now compares the app's copy with the package's as shipped, or with the
+app's brand written in.

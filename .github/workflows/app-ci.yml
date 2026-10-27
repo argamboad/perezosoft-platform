@@ -326,6 +326,47 @@ jobs:
               --forbidden-license-types "$PLATFORM/.github/forbidden-licenses.json"
           done
 
+  # The starter smoke (Pkg 6.2, #421): the template this change would release, stamped into a scratch app by `dotnet new`,
+  # built on this checkout's projects (the source switch, so no package is needed from the feed) and its composition
+  # smoke and structural suites run: the host starts, reports ready and serves a tenant call; the architecture rules and
+  # the register hold. Only where there is a starter (the platform); an app has none.
+  starter-smoke:
+    needs: changes
+    if: needs.changes.outputs.web == 'true' && needs.changes.outputs.starter == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false # v4 audit DEP-14: never leave the job token in .git/config
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Stamp a scratch app from this change's template
+        run: |
+          dotnet pack src/Templates/Perezosoft.Platform.Templates.csproj -c Release -o "$RUNNER_TEMP/feed" -p:MinVerVersionOverride=0.0.1-smoke
+          dotnet new install "$RUNNER_TEMP/feed/Perezosoft.Platform.Templates.0.0.1-smoke.nupkg"
+          dotnet new perezosoft-app -n Smoke -o "$RUNNER_TEMP/Smoke"
+          # A repo, as every app is: the ownership suite reads what git tracks.
+          cd "$RUNNER_TEMP/Smoke" && git init -q && git add -A
+
+      - name: Build it on this checkout (the source switch)
+        working-directory: ${{ runner.temp }}/Smoke
+        env:
+          PlatformSource: ${{ github.workspace }}
+        run: dotnet build tests/Api.Tests -c Release
+
+      - name: Composition smoke, architecture, ownership
+        working-directory: ${{ runner.temp }}/Smoke
+        env:
+          PlatformSource: ${{ github.workspace }}
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: dotnet test tests/Api.Tests -c Release --no-build --filter "FullyQualifiedName~CompositionSmokeTests|FullyQualifiedName~ArchitectureTests|FullyQualifiedName~OwnershipTests"
+
   # Production image build gate (DEPLOY-2, ADR-017). The multi-stage Dockerfile (publishes Web + Api and
   # serves the WASM single-origin) must keep building. Build-only — no push, and no run here: the
   # compose-parity smoke (boot + migrate + serve) needs a database and is a local/manual step per
@@ -524,6 +565,7 @@ jobs:
       e2e: ${{ steps.has.outputs.e2e }}
       docker: ${{ steps.has.outputs.docker }}
       qa: ${{ steps.has.outputs.qa }}
+      starter: ${{ steps.has.outputs.starter }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -655,12 +697,13 @@ jobs:
           # ci-logic end: run-plan
 
       # What this repo has (Pkg 5.4): a gate whose input is absent does not run here — an app on the packages may keep
-      # no journeys, no Dockerfile, no QA plan. The platform has all three.
+      # no journeys, no Dockerfile, no QA plan, no starter. The platform has all four.
       - id: has
         run: |
           echo "e2e=$([ -d tests/E2E.Tests ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "docker=$([ -f Dockerfile ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "qa=$([ -f docs/QA_TEST_PLAN.md ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "starter=$([ -d starter ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
   # Apple half of the native build (NATIVE-1). A device leg (ADR-031): devices = apple / all only — macOS
@@ -1514,7 +1557,7 @@ jobs:
   # box and a downstream app opts in by adding the secret + variable (see docs/DEPLOYMENT.md). The device
   # legs are not in its needs: a native result must not block a web deploy (ADR-018).
   deploy-staging:
-    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e]
+    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e, starter-smoke]
     if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && github.event_name == 'workflow_dispatch' && inputs.deploy == 'staging' }}
     # Two deploy runs in a row: Render supersedes the older build, so the older run's version-gated smoke
     # could never see its own SHA go live. Cancel the older in-flight deploy job instead — cancelled reads as
@@ -1581,7 +1624,7 @@ jobs:
   # reviewer is needed (a private repo on GitHub Free cannot have one). Skips cleanly until a prod service +
   # its deploy hook exist.
   deploy-prod:
-    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e]
+    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e, starter-smoke]
     if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && github.event_name == 'workflow_dispatch' && inputs.deploy == 'prod' }}
     # Same rationale as deploy-staging (v3 audit DEP-7).
     concurrency:

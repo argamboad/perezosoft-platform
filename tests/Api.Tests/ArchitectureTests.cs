@@ -12,7 +12,8 @@ namespace Perezosoft.Api.Tests;
 /// </summary>
 public class ArchitectureTests : PlatformArchitectureSuite
 {
-    protected override Assembly HostAssembly => typeof(Perezosoft.Api.AppComposition).Assembly;
+    protected override Assembly HostAssembly => typeof(Perezosoft.Host.AppComposition).Assembly;
+    protected override string FeatureNamespace => "Perezosoft.Host.Features";
     protected override PlatformDbContext CreateModelContext() => new AppDbContext(ModelOptions<AppDbContext>(), new TestCurrentTenant());
     protected override PlatformDbContext CreateTestModelContext() => new TestAppDbContext(ModelOptions<TestAppDbContext>(), new TestCurrentTenant());
 

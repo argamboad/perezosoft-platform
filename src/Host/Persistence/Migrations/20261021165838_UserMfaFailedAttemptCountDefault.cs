@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Perezosoft.Infrastructure.Persistence.Migrations
+namespace Perezosoft.Host.Persistence.Migrations
 {
     /// <summary>
     /// Pkg 5.8 (#451): the model now says what MfaLockout's AddColumn(defaultValue: 0) already put in the database — a

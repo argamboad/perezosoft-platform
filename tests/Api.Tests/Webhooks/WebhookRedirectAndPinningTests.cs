@@ -159,7 +159,7 @@ public class WebhookRedirectAndPinningTests(PostgresFixture fixture) : PostgresT
         NextAttemptAt = DateTimeOffset.UtcNow,
     };
 
-    private static WebhookSubscriptionService Service(Perezosoft.Infrastructure.Persistence.AppDbContext db, Guid tenant,
+    private static WebhookSubscriptionService Service(Perezosoft.Host.Persistence.AppDbContext db, Guid tenant,
         WebhookSecretProtector protector, IWebhookSender sender) =>
         new(new EfRepository<WebhookSubscription>(db), new EfRepository<WebhookDelivery>(db),
             new EfOutbox(db, TimeProvider.System), new TestCurrentTenant { TenantId = tenant },

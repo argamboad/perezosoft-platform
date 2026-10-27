@@ -394,7 +394,7 @@ public class SignupGateTests(PostgresFixture fixture) : PostgresTestBase(fixture
         return id;
     }
 
-    private static Task<Guid> AddUserAsync(Perezosoft.Infrastructure.Persistence.AppDbContext db, Guid tenantId, string email, string role)
+    private static Task<Guid> AddUserAsync(Perezosoft.Host.Persistence.AppDbContext db, Guid tenantId, string email, string role)
     {
         var userId = Guid.CreateVersion7();
         db.Users.Add(new User { Id = userId, Email = email, CreatedAt = DateTimeOffset.UtcNow });

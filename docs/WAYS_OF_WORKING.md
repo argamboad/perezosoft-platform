@@ -85,8 +85,8 @@ step here in the same PR.
    — the owner holds it automatically, the roles named hold it too (ADR-009's coarse capabilities, never an ACL); gate
    with `.RequirePermission(...)` or `[RequireTenantPermission("ManageProjects", ...)]`. `PermissionRegistrationGateTests`
    fails if an endpoint requires a name the host never registered. Or reuse a platform one.
-2. **DbSet + config** → add the `DbSet<>` to `src/Host/Persistence/AppDbContext.App.cs` (the app's half of
-   the partial context — `AppDbContext.cs` and the packaged `PlatformDbContext` are the platform's and are not edited; Arch A1) and any
+2. **DbSet + config** → add the `DbSet<>` to `src/Host/Persistence/AppDbContext.cs` (the app's context: its sets and
+   model rules; the packaged `PlatformDbContext` is the platform's half and is not edited; Arch A1, Pkg 6.2) and any
    `IEntityTypeConfiguration` (discovered from the assembly, no registration).
 3. **Migration + RLS policy, one migration** (ADR-020, v3 audit TR-4): `dotnet ef migrations add
    Add<Entity>` scaffolds **no RLS DDL**, so append the new table's policy to the migration it just
