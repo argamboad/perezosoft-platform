@@ -1035,7 +1035,7 @@
 - `tests/Api.Tests/Rls/RlsPostureGuardTests.cs` — backstop + migration-parity + posture-guard tests
 - `tests/Api.Tests/Rls/RlsTagDetectionTests.cs` — backstop + migration-parity + posture-guard tests
 
-## 9.1 — Make it yours (rebrand & de-sample) (299 files)
+## 9.1 — Make it yours (rebrand & de-sample) (307 files)
 
 - `docs/brand/android_adaptive_foreground_432.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/app_store_icon_1024.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
@@ -1047,6 +1047,8 @@
 - `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
 - `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
 - `src/Infrastructure/Persistence/platform-schema.json` — embedded in the Infrastructure package (Pkg 3.5): the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
+- `src/Shared.Ui/Capabilities/PlatformCapabilities.cs` — what the platform gives a new app: every capability, its page, its endpoints (Pkg 6.3)
+- `src/Shared.Ui/Components/CapabilitiesCard.razor` — the seeded Home's list of the platform's capabilities, with the API's own documents linked (Pkg 6.3)
 - `src/Templates/Perezosoft.Platform.Templates.csproj` — Perezosoft.Platform.Templates: starter/ as a dotnet new template, the release's version baked in at pack (Pkg 6.1a)
 - `src/Testing/Architecture/PlatformOwnership.cs` — the boundary as pure functions: globs, the brand-normalised hash, the verdict (Arch A2)
 - `src/Testing/Suites/PlatformOwnershipSuite.cs` — the map, stamp and manifest checks every app inherits (Pkg 5.1b)
@@ -1065,6 +1067,9 @@
 - `starter/build/PlatformSource.targets` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/docker-compose.yml` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/docker/db/provision-rls-runtime-role.sql` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
+- `starter/docs/postman/AppBrand.local.postman_environment.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
+- `starter/docs/postman/AppBrand.postman_collection.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
+- `starter/docs/postman/AppBrand.staging.postman_environment.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/global.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/local-ports.props` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/nuget.config` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
@@ -1170,8 +1175,10 @@
 - `starter/src/Shared.Ui/App.razor` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/src/Shared.Ui/AppBrand.Shared.Ui.csproj` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/src/Shared.Ui/Auth/AuthErrorCopy.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
+- `starter/src/Shared.Ui/Capabilities/PlatformCapabilities.cs` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/src/Shared.Ui/Components/AppHeader.razor` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/src/Shared.Ui/Components/AppHeader.razor.css` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
+- `starter/src/Shared.Ui/Components/CapabilitiesCard.razor` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/src/Shared.Ui/Components/LanguageSwitcher.razor` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/src/Shared.Ui/Components/MfaCard.razor` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/src/Shared.Ui/Components/NotificationBell.razor` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
@@ -1331,6 +1338,7 @@
 - `starter/tests/native-smoke-android/package.json` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `starter/tests/native-smoke-android/smoke.js` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
+- `tests/Api.Tests/PlatformCapabilitiesTests.cs` — the capabilities list held to the API: every controller and endpoint group once, every route and page real (Pkg 6.3)
 - `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
 - `tests/Api.Tests/PlatformRegisterTests.cs` — the register an app on the packages is held to: embedded in Platform.Testing, brand-proof, the verdict on fixtures (Pkg 5.7)
 - `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
@@ -1533,7 +1541,7 @@
 - `src/Maui/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map` — Blazor template's bundled Bootstrap
 - `src/Shared.Ui/wwwroot/js/qrcode-generator.min.js` — QR library for MFA enroll
 
-## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (263 files)
+## [META] Repo meta / docs / authoring tooling — not part of the rebuilt app (264 files)
 
 - `.github/release-note-template.md` — docs
 - `.vscode/tasks.json` — editor run/debug config — not part of the rebuilt app
@@ -1771,6 +1779,7 @@
 - `docs/tutorial/lessons/A.1-maui-shells-and-parity.md` — authoring docs; the course TEACHES writing these in 0.1
 - `docs/tutorial/lessons/A.2-native-auth-bridge.md` — authoring docs; the course TEACHES writing these in 0.1
 - `starter/README.md` — docs
+- `starter/docs/postman/README.md` — docs
 - `starter/tests/E2E.Tests/README.md` — docs
 - `tests/E2E.Tests/README.md` — docs
 - `tests/E2E.Tests/journey-seconds.tsv` — CI tuning data: measured seconds per journey so the e2e shards are dealt evenly (Env L28)
@@ -1799,4 +1808,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1632 tracked files · 1243 built in lessons · 389 bucketed · 0 unmapped
+**Totals:** 1641 tracked files · 1251 built in lessons · 390 bucketed · 0 unmapped

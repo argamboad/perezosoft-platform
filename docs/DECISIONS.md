@@ -2159,3 +2159,16 @@ suites. A finding on the way: the register comparison (`EvaluateRegister`, Platf
 the app's side, so a brand that is also a word of a register file (the scratch app "Smoke" and `tests/native-smoke-android`
 in the ownership map) failed a faithful copy. It now compares the app's copy with the package's as shipped, or with the
 app's brand written in.
+
+*Amendment (2026-10-27, Pkg 6.3, #422) — the capabilities page.* Once someone signs in, the seeded Home lists what the
+platform gives the app (`CapabilitiesCard`): sign-in and sessions, MFA, household and invitations, billing, notifications,
+API keys, webhooks, files, data export and erasure, the admin console, theme, language, and the deployment's own
+endpoints. Each row has the page that uses it, or "API only", and the endpoints that serve it. The list is data
+(`Shared.Ui/Capabilities/PlatformCapabilities.cs`), and `PlatformCapabilitiesTests` holds it to the API. Every controller and
+every endpoint group the platform maps appears exactly once, each by its class name or its prefix (`/api/apikeys`,
+`/api/public`, `/api/webhooks`, `/api/version`, `/health`, the prefixes no controller holds). Every route shown belongs to
+the platform and its group, every page is one the UI routes to, and every capability has its strings. A route can be
+shown without a group, when another capability owns the group: theme, language and erasure live in the account
+controller. The card links `/api/features` and Swagger on the API's origin, and names the Postman collection. The
+collection now ships in `starter/docs/postman`: the collection and its environments are gated copies, and the README is
+the starter's own, since the platform's describes its sync workflow and parity test.

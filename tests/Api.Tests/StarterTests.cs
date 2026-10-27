@@ -5,7 +5,7 @@ using static Perezosoft.Testing.Architecture.PlatformOwnership;
 namespace Perezosoft.Api.Tests;
 
 /// <summary>
-/// Pkg 6.1a (#455), 6.1b (#456), 6.1c (#457), 6.2 (#421): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
+/// Pkg 6.1a (#455), 6.1b (#456), 6.1c (#457), 6.2 (#421), 6.3 (#422): starter/ is the app `dotnet new perezosoft-app` writes (Perezosoft.Platform.Templates), checked in
 /// here and written with its own placeholder brand (AppBrand), which the template renames. What it shares with the
 /// platform must not drift from it: each straight copy is the platform's file, renamed by one rule (<see cref="ToStarter"/>);
 /// its package pins are the platform's; no platform brand is left for the template to miss; and nothing in it is a
@@ -22,11 +22,12 @@ public class StarterTests
     ];
 
     // The app's trees, carried whole: every file of each is the platform's, renamed, except its project file (an app's
-    // references the packages), its lockfile and the host's migrations (the platform's history is its own; an app's starts
-    // from the three the starter ships). The host (Pkg 6.2, #421: the platform's reference host IS the starter's), the
-    // seeded UI (6.1b, #456), the native app, the journeys and the Android smoke spec (6.1c, #457).
+    // references the packages), its lockfile, the host's migrations (the platform's history is its own; an app's starts
+    // from the three the starter ships) and the Postman README (the platform's describes its own sync workflow and gates).
+    // The host (Pkg 6.2, #421: the platform's reference host IS the starter's), the seeded UI (6.1b, #456), the native app,
+    // the journeys and the Android smoke spec (6.1c, #457), the Postman collection the seeded Home names (6.3, #422).
     private static readonly string[] CopiedTrees =
-        ["src/Host", "src/Shared.Ui", "src/Web", "tests/Ui.Tests", "src/Maui", "tests/E2E.Tests", "tests/native-smoke-android"];
+        ["src/Host", "src/Shared.Ui", "src/Web", "tests/Ui.Tests", "src/Maui", "tests/E2E.Tests", "tests/native-smoke-android", "docs/postman"];
 
     // What the template copies as it is, beside the register: the binaries and the vendored Bootstrap (nothing to rename,
     // and the engine would scan them for its own markers). The gate compares the binaries byte for byte.
@@ -96,7 +97,8 @@ public class StarterTests
         // Not the project file, its lockfile, or a developer's own (gitignored) .csproj.user.
         static bool IsCopied(string rel) => !rel.EndsWith(".csproj", StringComparison.Ordinal) && !rel.EndsWith(".csproj.user", StringComparison.Ordinal)
                                             && !rel.EndsWith("packages.lock.json", StringComparison.Ordinal)
-                                            && !rel.StartsWith("src/Host/Persistence/Migrations/", StringComparison.Ordinal);
+                                            && !rel.StartsWith("src/Host/Persistence/Migrations/", StringComparison.Ordinal)
+                                            && rel != "docs/postman/README.md";
     }
 
     [Fact]

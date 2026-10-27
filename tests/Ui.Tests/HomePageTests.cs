@@ -1,5 +1,6 @@
 using Bunit;
 using Xunit;
+using Perezosoft.Shared.Ui.Capabilities;
 using Perezosoft.Shared.Ui.Pages;
 using Perezosoft.Ui.Tests.Infrastructure;
 
@@ -35,6 +36,49 @@ public class HomePageTests : ComponentTestBase
         Assert.Contains("Home_WelcomeBack[Ada Lovelace]", cut.Markup);
         Assert.Contains("Home_SignedInTo[Test Household]", cut.Markup);
         Assert.DoesNotContain("Home_SignInCta", cut.Markup);
+    }
+
+    [Fact]
+    public void Anonymous_DoesNotListTheCapabilities()
+    {
+        var cut = Render<Home>();
+
+        Assert.Empty(cut.FindAll("[data-testid=capabilities]"));
+    }
+
+    [Fact]
+    public async Task SignedIn_ListsEveryCapability_WithItsPagesAndEndpoints()
+    {
+        // Pkg 6.3: what the platform gives the app, one row per capability (PlatformCapabilities; the platform's
+        // PlatformCapabilitiesTests holds the list to the API).
+        await SignInAsync();
+
+        var cut = Render<Home>();
+
+        var rows = cut.FindAll("[data-testid=capabilities] tbody tr");
+        Assert.Equal(PlatformCapabilities.All.Count, rows.Count);
+        foreach (var capability in PlatformCapabilities.All)
+        {
+            var row = cut.Find($"[data-capability={capability.Key}]");
+            Assert.Contains($"Capability_{capability.Key}_Name", row.TextContent);
+            Assert.Contains($"Capability_{capability.Key}_What", row.TextContent);
+            Assert.Equal(capability.Pages, row.QuerySelectorAll("a").Select(a => a.GetAttribute("href")!));
+            Assert.Equal(capability.Endpoints.Select(e => e.Route), row.QuerySelectorAll("code").Select(c => c.TextContent));
+            Assert.Equal(capability.Pages.Count == 0, row.TextContent.Contains("Home_CapabilityApiOnly", StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
+    public async Task SignedIn_LinksTheApisOwnDocuments_OnTheApiOrigin()
+    {
+        // /api/features and Swagger live on the API, not the web host: the links take the API client's base address.
+        await SignInAsync();
+
+        var cut = Render<Home>();
+
+        Assert.Equal("http://localhost/api/features", cut.Find("[data-testid=capabilities-features]").GetAttribute("href"));
+        Assert.Equal("http://localhost/swagger", cut.Find("[data-testid=capabilities-swagger]").GetAttribute("href"));
+        Assert.Contains("Home_CapabilitiesPostman", cut.Find("[data-testid=capabilities]").TextContent);
     }
 
     [Fact]
