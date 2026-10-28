@@ -173,9 +173,11 @@ Goal · Concepts · Maps-to (ADR / Rule / story / repo files — see COVERAGE.md
   + fail-closed posture guard that gates prod activation.
 
 ## Part 9 — Make it yours
-- **9.1 Rebrand & de-sample.** The full REBRANDING checklist (including the inline email
-  logo everyone forgets), delete the Notes sample, rename the tenant term — turning the
-  rebuilt platform into *their* product.
+- **9.1 Rebrand & de-sample.** A product is a new app the template writes, not a copy of the
+  platform (ADR-034): `dotnet new perezosoft-app`, then the REBRANDING checklist of what no rename
+  reaches (the brand assets, the email brand as options — the inline email logo everyone forgets —
+  the app identity), delete the Notes sample with an honest migration, rename the tenant term in
+  the pages (the API keeps `household`) — turning the rebuilt platform into *their* product.
 
 ## Appendix (optional)
 - **A.1 MAUI shells & parity.** Desktop + Android hosts of the same RCL; the parity-audit

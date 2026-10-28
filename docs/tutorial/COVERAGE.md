@@ -1043,7 +1043,7 @@
 - `docs/brand/linkedin_banner_1128x191.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/linkedin_logo_300.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
 - `docs/brand/play_store_icon_512.png` — brand asset masters (web/store icons) — regenerated with the learner's brand
-- `platform-ownership.json` — which files are the platform's, which an app adapts, which are the app's (Arch A2)
+- `platform-ownership.json` — who owns each file: the packaged source, the register held in step, the seed an app owns, the app's own (Arch A2, Pkg 6.4)
 - `platform-stamp.json` — the platform commit this repo is synced to; null on the platform (Arch A2)
 - `src/Api/PlatformStamp.cs` — reads the stamp beside the binaries for /api/version (Arch A2)
 - `src/Infrastructure/Persistence/platform-schema.json` — embedded in the Infrastructure package (Pkg 3.5): the shape the platform's migrations build for its tables, as Postgres reports it (Arch A5)
@@ -1339,11 +1339,11 @@
 - `starter/tests/native-smoke-android/smoke.js` — the app `dotnet new perezosoft-app` writes, checked in and gated: an app on the packages, with the host, the DELETE-ME sample, its migrations and the inherited suites (Pkg 6.1a), the seeded UI: the pages, the web host, their component tests (Pkg 6.1b), and the MAUI app, the journeys, the Android smoke (Pkg 6.1c)
 - `tests/Api.Tests/App/PlatformDivergences.json` — the app's allowlisted changes to platform files, with reasons (Arch A2)
 - `tests/Api.Tests/PlatformCapabilitiesTests.cs` — the capabilities list held to the API: every controller and endpoint group once, every route and page real (Pkg 6.3)
-- `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real (Arch A2)
-- `tests/Api.Tests/PlatformRegisterTests.cs` — the register an app on the packages is held to: embedded in Platform.Testing, brand-proof, the verdict on fixtures (Pkg 5.7)
+- `tests/Api.Tests/PlatformOwnershipTests.cs` — the ownership map, manifest and stamp gates; the port tool run for real, on the packages and on a clone (Arch A2, Pkg 6.4)
+- `tests/Api.Tests/PlatformRegisterTests.cs` — the register an app on the packages is held to: starter/'s register files embedded in Platform.Testing, the placeholder renamed, the verdict on fixtures (Pkg 5.7, 6.4)
 - `tests/Api.Tests/PlatformSchemaTests.cs` — the schema parity gate: every repo's migrated database matches platform-schema.json (Arch A5)
 - `tests/Api.Tests/StarterTests.cs` — starter/ held to the platform: its straight copies and UI trees, its pins and the web host's SDK packs, no brand left, no condition the template engine would rewrite (Pkg 6.1a–c)
-- `tools/port-platform.ps1` — ports the platform's changes into an app: three-way merge per file, then the manifest and the stamp (Arch A2)
+- `tools/port-platform.ps1` — ports a release into an app: the register merged from starter/ three ways, the seed's changes listed, the version stamped (a clone: the manifest) (Arch A2, Pkg 6.4)
 
 ## A.1 — Appendix — MAUI shells & parity (43 files)
 

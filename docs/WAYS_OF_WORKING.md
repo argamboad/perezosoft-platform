@@ -65,8 +65,10 @@ tenancy, the global tenant query filter, email, persistence); features bolt on a
   tenant export **and** dissolve (registered in DI; no central wipe method to edit). It **requires
   four members**: `HasDataAsync`, `WipeAsync`, **`ExportKey`** (the section name in a tenant export),
   and **`ExportAsync`** (GDPR-1, ADR-011). A slice built from the old two-method recipe won't compile.
-- The **entity** lives in `src/Core/Entities/` (it's the EF model + migration source) and implements
-  **`ITenantScoped`** so the global query filter scopes it automatically.
+- The **entity** lives in `src/Host/Entities/` in an app (in the platform repo, the sample's `Note` is in
+  `src/Core/Entities/`, so it ships in the Core package) and implements **`ITenantScoped`** so the global query filter
+  scopes it automatically. Not in the feature folder: another slice reads it, and feature folders never reference each
+  other's namespaces.
 
 **A feature must NOT** reach into another feature's folder, edit a central "has data / wipe data"
 method, author a bespoke per-entity repository (use `IRepository<T>`), use `IgnoreQueryFilters()`
@@ -76,8 +78,12 @@ app (UI components go in the Shared.Ui RCL).
 **Add-a-slice mechanical checklist** — measured, not estimated: the v4 audit built a real slice by this
 recipe and logged every existing file it had to touch (ADV-P4-17). Each step names the gate that fails
 CI when it is skipped (R158). The list is kept by hand (ADR-033): when a new gate forces an edit, add its
-step here in the same PR.
-1. **Entity** → `src/Core/Entities/<Entity>.cs`, implementing `ITenantScoped` — or `ISharedOrTenantScoped` when
+step here in the same PR. The paths are an app's (`dotnet new perezosoft-app`; the platform's own tree has the same
+host). **Where the gate runs:** an app inherits the platform's suites — architecture, tenancy, schema, ownership, the
+composition smoke (`src/Testing/Suites`) — so the gates of steps 1, 5, 6 and 7 fail an app's CI. The gates of steps 3,
+4, 9, 10 and 11 (and the permission gate of step 1) are the platform repo's own tests and do not run in an app yet: an
+app keeps those steps by this checklist and its review.
+1. **Entity** → `src/Host/Entities/<Entity>.cs`, implementing `ITenantScoped` — or `ISharedOrTenantScoped` when
    its rows are either shared (`TenantId` null) or one tenant's (Arch A4; then step 3 uses
    `RlsDdl.SharedOrTenantStatementsFor`, and the four `<Entity>_SharedOrTenant_*` facet tests replace the canary
    entry of step 5). A slice that needs **its own `Permission`** registers it in the host's options
@@ -89,9 +95,9 @@ step here in the same PR.
    model rules; the packaged `PlatformDbContext` is the platform's half and is not edited; Arch A1, Pkg 6.2) and any
    `IEntityTypeConfiguration` (discovered from the assembly, no registration).
 3. **Migration + RLS policy, one migration** (ADR-020, v3 audit TR-4): `dotnet ef migrations add
-   Add<Entity>` scaffolds **no RLS DDL**, so append the new table's policy to the migration it just
+   Add<Entity> --project src/Host` scaffolds **no RLS DDL**, so append the new table's policy to the migration it just
    created — `migrationBuilder.Sql(...)` with the statements from `RlsDdl.StatementsFor` (copy the shape
-   from the platform's RLS migration; `Down` drops the policy + disables RLS). Gate:
+   from the sample's `NotesSampleRlsPolicy`; `Down` drops the policy + disables RLS). Gate (the platform's):
    `RlsMigrationGateTests` fails on any `ITenantScoped` table whose policy did not arrive by migration.
 4. **`docs/DATA_MODEL.md`** → an entry for the entity (fields, relationships, derived rules). Gate:
    `EveryEntity_IsDocumentedInDataModel`.
@@ -113,7 +119,7 @@ step here in the same PR.
    add it to `AppTestComposition.Contributors` (`tests/Api.Tests/App/`) so the accept-and-dissolve tests consult
    it as production does. Work that must run after migrations (a catalog seed) is an `IStartupTask`, registered
    there too; `Program.cs` runs every registered task after `Migrate()`.
-9. **Postman** → a numbered folder in `docs/postman/Perezosoft.postman_collection.json` with one request
+9. **Postman** → a numbered folder in `docs/postman/<Brand>.postman_collection.json` with one request
    per endpoint (ADR-023). Gate: `PostmanParityTests` — it sees the slice's routes only while the slice is
    switched ON in the harness, so turn it on there before trusting a green run.
 10. **`.env.example`** → the slice's `<Feature>__Enabled=false` line (and any other key it reads) in the

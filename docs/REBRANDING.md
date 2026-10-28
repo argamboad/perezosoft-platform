@@ -1,125 +1,28 @@
 # Rebranding checklist
 
-When you stand up a new app from this platform, replace every Perezosoft brand touchpoint
-below.
+`dotnet new perezosoft-app -n <Brand>` already wrote your name into every identifier: the solution, the projects and
+namespaces, the native app's id (`com.<brand>.app`) and OAuth callback scheme (`<brand>`), the email sender name, the
+email brand's name, the Postman files, the CI identifiers (NEW_APP_GUIDE Phase 2). What is left is what no rename can
+do: **your brand assets, the brand options, and your tenant noun.** The packages keep their names
+(`Perezosoft.Platform.*`, `using Perezosoft.Infrastructure…`) in every app, by design (ADR-034) — they are not brand
+copy, and nothing here touches them.
 
-> **Don't stop at the UI.** The transactional **email templates** carry their own copy of the
-> name, logo, colours, and tagline — they're inline (email HTML can't share the app's CSS or
-> static assets), so they're the most commonly missed spot. Every rebranding task **must**
-> include the `Infrastructure/Email/` items flagged below.
+> **Don't stop at the UI.** The transactional emails (sign-in code, magic link, invitation, notifications) are
+> rendered by the platform package, with their own copy of the name, logo, colours and tagline: email HTML can't share
+> the app's CSS or static assets. You brand them in one block of options (§2) — skip it and every mail your users get
+> still wears the platform's logo and palette.
 
-Backstop after working through the list: `git grep -i perezosoft` and a search for the tagline
-`Lazy reputation. Efficient engineering.` should both return nothing (outside this doc).
+(A clone of the platform — vuelto, jigger-jot — converts to the packages instead of rebranding again. The clone-era
+checklist, with its mechanical rename of 545 files, is in this file's history before Pkg 6.5.)
 
-## 0. Solution, projects, namespaces — `Perezosoft.*` → `<Brand>.*` (do this FIRST, as one commit)
+## 1. Brand assets — replace the files (keep the filenames to avoid touching references)
 
-§1–§5 list the *strings*; the verify at the end demands more. The solution file, every `*.csproj`,
-the root namespaces, the RCL static-asset path (`_content/Perezosoft.Shared.Ui/…` in **both** hosts'
-`index.html`), the CI smoke identifiers (`Perezosoft.Maui.app`, the `PEREZOSOFT_API_BASE_URL` env
-prefix), the Docker tag (`perezosoft-app:ci`), the Postman file names, the test issuer strings and the
-project names inside every `packages.lock.json` all carry the brand. The first downstream app
-(JiggerJot, 2026-09-08) measured **545 text files rewritten and 15 files renamed** — do it
-mechanically, case-preserving, over `git ls-files` only, then run restore/build/tests exactly as
-`ci.yml` does before touching anything else.
-
-1. Remove the template-only material first (§6): `git rm -r docs/tutorial _PLATFORM_PRIMER.md`.
-2. Rename the brand-named files: `git ls-files | grep -i perezosoft` → `git mv` each
-   (`Perezosoft.slnx`, `src/*/Perezosoft.*.csproj`, `tests/*/Perezosoft.*.csproj`,
-   `src/Host/Perezosoft.Host.http`, `docs/postman/Perezosoft.*.json`).
-3. Rewrite the text of every tracked, non-binary file **except this doc**. Special cases go first:
-   `com.perezosoft.platform` → your `ApplicationId` (e.g. `com.<brand>.app`),
-   `Perezosoft Platform` → `<Brand>`, `template-staging` → `<brand>-staging`, the tagline; then the
-   three case variants `Perezosoft` / `perezosoft` / `PEREZOSOFT` → `<Brand>` / `<brand>` / `<BRAND>`.
-   **Keep the upstream slug `perezosoft-platform`** where it names this repo as provenance (ADRs, the
-   brief, `STATUS.md`, the gitleaks title); it is the one sanctioned survivor of the verify grep.
-4. Detect binaries by content (a NUL byte in the first 8 KB), not only by extension. Lockfiles are
-   text and **must** be rewritten — the project-reference names live in them — and locked-mode
-   restore then passes without `--force-evaluate`.
-5. Set the email brand in `AppComposition.ConfigurePlatform` (§4a): the mails are the package's, configured, never edited.
-6. **Regenerate the GENERATED binaries** — step 4 skips binaries, but two of them are built from
-   files the rename just rewrote, and CI compares them against a fresh generation:
-   - `docs/QA_TEST_GUIDE.pdf` + `docs/QA_RUN_LOG.pdf` are generated from `docs/QA_TEST_PLAN.md`.
-     Run `pip install -r docs/requirements.txt` then `cd docs && python gen_qa_guide.py &&
-     python gen_qa_runlog.py && python check_qa_artifacts.py`. Skip this and the **`qa-artifacts`**
-     job fails on the first push — the committed PDFs still say the old brand (JiggerJot hit exactly
-     this, 2026-09-09).
-   - The brand rasters — see **Rasters** below; they come from the SVGs, not from the rename.
-
-```python
-# rename.py — run from the repo root after steps 1–2; adjust BRAND / APP_ID / STAGING / TAGLINE.
-import os, re, subprocess
-BRAND, APP_ID, STAGING, TAGLINE = "JiggerJot", "com.jiggerjot.app", "jiggerjot-staging", "Mix what you have."
-special = [("com.perezosoft.platform", APP_ID), ("Perezosoft Platform", BRAND), ("template-staging", STAGING),
-           ("Lazy reputation. Efficient engineering.", TAGLINE)]
-generic = [("Perezosoft", BRAND), ("perezosoft", BRAND.lower()), ("PEREZOSOFT", BRAND.upper())]
-for f in filter(None, subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")):
-    if f == "docs/REBRANDING.md": continue
-    raw = open(f, "rb").read()
-    if b"\0" in raw[:8192]: continue
-    s = o = raw.decode("utf-8")
-    s = s.replace("perezosoft-platform", "\0SLUG\0")
-    for a, b in special + generic: s = s.replace(a, b)
-    s = s.replace("\0SLUG\0", "perezosoft-platform")
-    if s != o: open(f, "wb").write(s.encode("utf-8"))
-```
-
-## 1. Name & wordmark — "Perezosoft" → your brand
-- `src/Shared.Ui/Components/AppHeader.razor` — header wordmark
-- `src/Shared.Ui/Pages/Login.razor`, `Home.razor` — logo alt text + headings
-- `src/Web/wwwroot/index.html` — `<title>` + `og:title`
-- `src/Maui/wwwroot/index.html` — `<title>`
-- `src/Client.Maui/Auth/LoopbackOAuthInitiator.cs` — the "you can close this tab" page title
-- **The email wordmark + tagline** — `options.Brand.Name` / `options.Brand.Tagline` in
-  `AppComposition.ConfigurePlatform` (§4a; brand, not localized)
-- **Localization resources (every language!)** — the brand name + product copy live in
-  `src/Shared.Ui/Resources/AppStrings.*.resx`: update "Perezosoft" in each `.resx` you have (en, es, …). The
-  email copy (`EmailStrings`, in the package) mentions the platform's name in a few keys: override those keys in
-  your own resx and add it to `options.Brand.Strings` (§4a). See `docs/LOCALIZATION.md`.
-- **Email sender name** — `Email:Smtp:FromName`. The committed runtime default lives in
-  `src/Host/appsettings*.json` (currently "Perezosoft"); `Email__Smtp__FromName` in `.env` (dev) or
-  env vars (prod) only *overrides* it. Update the appsettings default and any env override together.
-- **The MFA issuer, the OpenAPI title and the telemetry service name** — all follow `options.Brand.Name` (§4a, Pkg 3.9b):
-  the issuer is what authenticator apps display for enrolled accounts (and the letter-monogram they draw), easy to miss
-  because users only ever see it inside Google Authenticator & co.; the OpenAPI document is titled "<Brand> API"; traces
-  are filed under `options.Brand.ServiceName` (the name without spaces + `.Api` unless you set it). Nothing to edit in
-  the package — set the name and all three follow. Changing the issuer does not touch already-enrolled authenticators:
-  they keep the old label until the user re-enrolls.
-- **`docs/postman/`** — the collection's `info.name` ("Perezosoft Platform API"), both environment
-  `name`s, and the `Perezosoft.*.json` **file names**. If you rename the files, update the hardcoded
-  collection path in `.github/workflows/postman-sync.yml` in the same commit; and since the sync
-  matches workspace items **by name**, delete the old-brand copies in the Postman workspace once
-  after the first post-rename sync.
-- **`render.yaml`** (v3 audit DEP-12) — two spots: the blueprint's `Email__Smtp__FromName` value
-  (currently "Perezosoft"; pairs with the appsettings default above), and the **service `name`**
-  (`template-staging`) — it becomes your public `*.onrender.com` URL, and that URL is what you put in
-  the `STAGING_BASE_URL` repo variable and register with OAuth providers/Stripe, so rename it **before**
-  the first deploy, not after.
-- **`src/Maui/Perezosoft.Maui.csproj` — `<ApplicationTitle>`** ("Perezosoft Platform"): the installed
-  app's display name on every native platform (launcher label, window title, app switcher). It sits
-  right next to `ApplicationId` (§5) — change them together.
-
-**The tenant's name is "household" (ADR-032).** Routes (`api/household`, `/household`), `HouseholdController`,
-`HouseholdInvitationsController`, `Household.razor`, the `Household_*` resource keys in both languages, the
-`nav-household` test id and the QA cases all use it, by design. If your tenant is a team, a company or a
-classroom, rename the word in this same pass with a second find/replace pair (`Household` → `Team`,
-`household` → `team`), then run `TestIdContractTests` and `ResourceParityTests`: both fail on a half-done rename.
-If your tenant *is* a household, there is nothing to do.
-
-## 2. Tagline — "Lazy reputation. Efficient engineering." → yours
-- `src/Shared.Ui/wwwroot/brand/lockup_light.svg` — the wordmark-lockup text
-- **The email footer tagline** — `options.Brand.Tagline` (§4a)
-
-## 3. Logos & images — replace the files (keep the filenames to avoid touching references)
-In-app UI (shared RCL — used by web + desktop + mobile):
-- `src/Shared.Ui/wwwroot/brand/{icon_light.svg, icon_light_1024.png, lockup_light.svg, lockup_light_1520.png, lockup_dark.svg, lockup_dark_1520.png}`
+**Logos & images.** In-app UI (the Shared.Ui Razor class library — used by web + desktop + mobile):
+- `src/Shared.Ui/wwwroot/brand/{icon_light.svg, icon_light_1024.png, lockup_light.svg, lockup_light_1520.png, lockup_dark.svg, lockup_dark_1520.png}` —
+  the lockup SVGs also carry the **tagline** ("Lazy reputation. Efficient engineering." until you change it).
 - **The UI references the PNG lockups, not the SVGs.** Webfonts don't load inside an `<img>`-embedded
   SVG, so an SVG lockup's wordmark silently falls back to Helvetica/Arial. Keep the SVGs as the
   editable source, render the PNGs from them, and point `Login.razor`/`Home.razor` at the PNGs.
-
-**Email logo (CID-embedded — shown in every transactional email):**
-- **`options.Brand.Logo`** (§4a) — your logo's bytes; keep it a **PNG** (email clients strip SVG and block
-  data-URIs, and the host refuses anything else at startup); a ~128px square is plenty. Ship it as an embedded resource
-  of your host. `src/Infrastructure/Email/Assets/logo.png` is the platform's default, inside the package.
 
 Web host chrome:
 - `src/Web/wwwroot/{favicon.ico, favicon.svg, favicon.png, apple_touch_180.png, og_image_1200x630.png}`
@@ -129,44 +32,49 @@ Native launcher icon + splash (MAUI):
 - `src/Maui/Resources/AppIcon/{appicon.svg, appiconfg.svg}` — background layer + foreground mark
   (foreground sized to the Android adaptive-icon safe zone, ~61% of canvas)
 - `src/Maui/Resources/Splash/splash.svg` + the `Color` attrs on `MauiIcon`/`MauiSplashScreen` in
-  `src/Maui/Perezosoft.Maui.csproj` (brand background colour behind icon + splash)
+  `src/Maui/<Brand>.Maui.csproj` (brand background colour behind icon + splash)
 
-Marketing & store submission (not shipped in the app):
-- `docs/brand/{linkedin_banner_1128x191.png, linkedin_logo_300.png}`
-- `docs/brand/{app_store_icon_1024.png, play_store_icon_512.png, android_adaptive_foreground_432.png}` — store assets for the downstream release checklist (`NEW_APP_GUIDE.md` Phase 9; ADR-024)
+**Rasters are generated, never hand-exported.** The platform's `docs/brand/build_assets.py` regenerates every PNG
+above, `favicon.ico` and the store/marketing set from the SVG sources with a headless Chromium (so lockup wordmarks
+carry the real webfonts) + Pillow. The starter does not ship it: copy it into your `docs/brand/`, set the ground colours
+in its config block, swap the SVGs, run it. It also writes the email logo to the platform's path
+(`src/Infrastructure/Email/Assets/logo.png`); in an app, take that PNG into your host as an embedded resource for
+`options.Brand.Logo` (§2).
 
-## 4. Colour palette — derive from your logo
-The palette is semantic tokens, single-sourced for web **and** all native shells:
+**Colour palette — derive it from your logo.** The palette is semantic tokens, single-sourced for web **and** all
+native shells:
 - **`src/Shared.Ui/wwwroot/css/app.css`** — the `:root` vars (`--bs-primary`/`--bs-primary-rgb`,
   `--brand-accent`, `--brand-dark`, `--brand-accent-light`, `--bs-link-color`/`--bs-link-hover-color`,
   `--app-bg`, `--app-border`). One file; both hosts load it via
-  `_content/Perezosoft.Shared.Ui/css/app.css`. Typical derivation from a logo: primary = the logo's
+  `_content/<Brand>.Shared.Ui/css/app.css`. Typical derivation from a logo: primary = the logo's
   dominant mid tone, dark = its darkest shade (hover/active), accent(-light) = supporting tones,
   bg/border = a near-white and a soft border tinted toward the primary. Check WCAG contrast for
   white text on `--bs-primary`.
-- **The email palette** — `options.Brand.Colors` (§4a): `Primary`, `PrimaryDark`, `Accent`, `AccentLight`,
-  `Surface`, `Border`, `Ink`, `Muted`, as `#rrggbb`. Email HTML can't use CSS variables, so the mails take the values
-  directly; anything but a hex colour stops the host at startup.
 - **The Android system bars** — `src/Maui/Platforms/Android/Resources/values/colors.xml` (the theme's
   `colorPrimary`/`colorAccent` = `--bs-primary`, `colorPrimaryDark` = `--brand-dark`) and
   `SystemBarColors` in `src/Maui/Platforms/Android/SystemBarColors.cs`, whose `Light`/`Dark` must
   equal the header's background in each theme (here `--bs-primary` in both; if your header takes a
   different surface per theme, use those) and `LightGround`/`DarkGround` app.css's `--app-bg` in each
   theme. The status bar is drawn by the OS above the header (or above the bare page on the sign-in
-  screens), and the page paints it through `SystemBarThemeSync`. `NativeChromeGateTests` fails while
-  these disagree with app.css. Before 2026-09-16 the template hard-coded its sage in `MainActivity` in
-  every theme and no rebrand step named it, so downstream Android apps (JiggerJot, y-el-vuelto) wore it.
+  screens), and the page paints it through `SystemBarThemeSync`. Before 2026-09-16 the template hard-coded its sage
+  in `MainActivity` in every theme and no rebrand step named it, so downstream Android apps (JiggerJot, y-el-vuelto)
+  wore it.
+- **The email palette** — `options.Brand.Colors` (§2).
 
-## 4a. The transactional emails — one block in `AppComposition.ConfigurePlatform`
-The sign-in code, magic link, invitation and notification mails are rendered by the platform package
-(`BrandedEmail`, Pkg 3.9); an app brands them through `PlatformOptions.Brand` and never edits the package's files.
-Everything the mails show of the brand is here, so a rebrand that skips this block still sends the platform's:
+**Marketing & store submission** (not shipped in the app): LinkedIn banner and logo, `app_store_icon_1024.png`,
+`play_store_icon_512.png`, `android_adaptive_foreground_432.png` — `build_assets.py` writes them into `docs/brand/`
+for the release checklist (`NEW_APP_GUIDE.md` Phase 9; ADR-024).
+
+## 2. The brand options — one block in `AppComposition.ConfigurePlatform`
+
+The mails are the package's (`BrandedEmail`, Pkg 3.9); an app brands them through `PlatformOptions.Brand` and never
+edits the package. The template already set the name; the rest is yours:
 
 ```csharp
 // src/Host/AppComposition.cs
 public static void ConfigurePlatform(PlatformOptions options)
 {
-    options.Brand.Name = "<Brand>";                      // title, logo alt, header, footer
+    options.Brand.Name = "<Brand>";                      // title, logo alt, header, footer — the template set it
     options.Brand.Tagline = "<your tagline>";
     options.Brand.Colors.Primary = "#1f6f8b";            // and PrimaryDark, Accent, AccentLight, Surface, Border, Ink, Muted
     options.Brand.Logo = EmbeddedPng("Email.logo.png");  // PNG bytes, ~128px square
@@ -174,62 +82,56 @@ public static void ConfigurePlatform(PlatformOptions options)
 }
 ```
 
-`Brand.Strings` takes your own resx holding only the keys you change (the platform's mention its name in the
-preheaders and the invitation body); they win over the platform's one culture at a time, so a key you override in
-English only still reaches a Spanish reader in the platform's Spanish. Override each key in every language you ship.
-The sender's display name is configuration, not brand: `Email:Smtp:FromName` (§1).
+- **The logo is a PNG**, CID-embedded: mail clients strip SVG and block data-URIs, and the host refuses anything else
+  at startup. Ship it as an embedded resource of your host.
+- **The colours are `#rrggbb`**: email HTML can't use CSS variables, so the mails take the values directly; anything
+  but a hex colour stops the host at startup.
+- **`Brand.Strings`** takes your own resx holding only the keys you change (the platform's mention its name in the
+  preheaders and the invitation body); they win over the platform's one culture at a time, so a key you override in
+  English only still reaches a Spanish reader in the platform's Spanish. Override each key in every language you ship.
+- **The name follows everywhere else on its own:** the MFA issuer (what authenticator apps display for enrolled
+  accounts), the OpenAPI title ("<Brand> API") and the telemetry service name (`options.Brand.ServiceName`, the name
+  without spaces + `.Api` unless you set it). Changing the issuer does not touch already-enrolled authenticators:
+  they keep the old label until the user re-enrolls.
+- **The sender's display name is configuration, not brand:** `Email:Smtp:FromName` in `src/Host/appsettings.json`
+  (the template set it to your name), overridden by `Email__Smtp__FromName` in `.env` or the host's environment.
 
-## 5. App identifier & OAuth callback scheme — "perezosoft" / app id
-These must all match each other **and** your OAuth provider registration:
-- `src/Maui/MauiProgram.cs` — `CallbackScheme`
-- `src/Maui/Platforms/Android/WebAuthenticatorCallbackActivity.cs` — `CallbackScheme` const + intent-filter `DataScheme`
-- `src/Maui/Platforms/iOS/Info.plist` + `src/Maui/Platforms/MacCatalyst/Info.plist` — `CFBundleURLSchemes` entry
-- `src/Host/appsettings.json` — `Auth:Native:CallbackScheme`
-- `src/Maui/Perezosoft.Maui.csproj` — `ApplicationId` (`com.perezosoft.…`)
-- Provider consoles — register `{scheme}://auth` and your `signin-*` redirect URIs
+**Product copy.** The brand name and the product's words live in `src/Shared.Ui/Resources/AppStrings.resx` (English)
+and `AppStrings.es.resx` (Spanish): read both for copy that describes the platform rather than your product (the
+Home page's hero, the sign-in page), in every language you ship. See `docs/LOCALIZATION.md`.
 
-**…and everything that hardcodes the OLD `ApplicationId` (v3 audit DEP-12/TR-7).** Renaming
-`ApplicationId` per the list above and stopping there **breaks the native CI smokes and Catalyst
-SecureStorage** — these four reference `com.perezosoft.platform` directly and must move in the same
-commit:
-- **The CI native smokes no longer name the app** (Pkg 5.4): the reusable `app-ci.yml` launches, installs and finds the
-  app by the `<ApplicationId>` in `src/Maui/*.csproj`, its API-URL variable by the brand in `platform-stamp.json`
-  (`.github/scripts/app-names.sh`) — rename the `ApplicationId` and CI follows.
-- **`tests/native-smoke-android/smoke.js`** — the `PKG` fallback (`process.env.NATIVE_SMOKE_PKG ||
-  'com.perezosoft.platform'`). The env override exists, but CI doesn't set it — update the committed
-  default.
-- **`src/Maui/Platforms/MacCatalyst/Entitlements.plist`** — `keychain-access-groups` entry
-  `$(AppIdentifierPrefix)com.perezosoft.platform`. Under real signing (a downstream app's Release/store build — ADR-024) a
-  keychain group that doesn't match the new bundle id means **SecureStorage silently fails on Catalyst**
-  — sessions won't persist. Debug builds won't catch it (they run unsandboxed via
-  `Entitlements.Debug.plist` — see the comment there).
+## 3. Your tenant noun
 
-## 6. Template-only material — remove or rewrite
-These describe the *platform*, not your app, and carry the old brand in ways a text rename can't fix:
-- **`_PLATFORM_PRIMER.md`** — delete. It is the primer for conceptualizing the *next* app and lives here.
-- **`docs/tutorial/`** — delete. The platform course, including a binary `PEREZOSOFT_COURSE.pdf` that
-  `git grep` cannot see (the file-name check below catches it).
-- **`README.md`** — rewrite for the app (what it is, how to run it, where things are, provenance).
-- `docs/OVERVIEW.md`, `docs/STATUS.md`, `docs/ROADMAP.md`, `docs/PLATFORM_BACKLOG.md`, `docs/stories/*`,
-  `docs/audits/*` — platform history; they rename mechanically and may stay as reference.
-- The **`Notes` sample slice** goes when the first real feature lands — `NEW_APP_GUIDE.md`, "Removing the Notes
-  sample": its code and an app migration that drops the table; its two migrations stay as history, no platform
-  migration is edited (Arch A6).
+**The tenant's name is "household" (ADR-032), and the API keeps it** (ADR-034 point 6): the packaged routes
+(`api/household`), `HouseholdController` and `HouseholdInvitationsController` say household in every app. If your
+tenant is a team, a company or a classroom, rename **the seed** — the word your users see — and never the packaged API:
 
-## Rasters
-`docs/brand/build_assets.py` regenerates **every** PNG in §3, `favicon.ico` and the store/marketing set
-from the SVG sources with a headless Chromium (so lockup wordmarks carry the real webfonts) + Pillow.
-Swap the SVGs, set the ground colours in its config block, run it — don't hand-export twenty files.
+- the `Household_*` resource keys and their copy in both `.resx` files,
+- the page (`src/Shared.Ui/Pages/Household.razor`, its route `/household`) and the header's link,
+- the `nav-household` test id and the journeys that use it (`tests/E2E.Tests`), and the page's component tests.
 
-## Verify the rebrand
-- `git grep -i perezosoft -- . ':!docs/REBRANDING.md' | grep -v perezosoft-platform` returns nothing —
-  the upstream slug is the one sanctioned survivor (§0); everything else is a leak.
-- `git ls-files | grep -i perezosoft` returns nothing (file names and binaries).
-- The generated binaries were regenerated, not just skipped: `cd docs && python check_qa_artifacts.py`
-  passes (§0 step 6), and the brand rasters came from `docs/brand/build_assets.py`.
-- A search for the old tagline and for the platform's palette constants (`#465d4d`, `#6b8a72`) returns
-  nothing outside this doc.
-- Restore (locked mode), build and the test projects pass exactly as `ci.yml` runs them — the rename
-  touches lockfiles, namespaces and CI identifiers, and the tests (Postman parity, RLS gate) are what
-  prove the mechanical pass didn't miss one.
-- Web and desktop show the new brand, **and** a test email (trigger an OTP or invite) arrives with the new logo, colours, name, and tagline.
+A rename pair (`Household` → `Team`, `household` → `team`) over `src/Shared.Ui`, `tests/Ui.Tests` and `tests/E2E.Tests`
+does it; leave `src/Host` and the Postman collection alone (they call the API). If your tenant *is* a household, there
+is nothing to do.
+
+## 4. The native app's identity
+
+- **`ApplicationId`** — `com.<brand>.app` in `src/Maui/<Brand>.Maui.csproj`. It is the store identity: settle it
+  before the first release, because it can never change after. If you change it, move the two places that name it
+  with it: the `PKG` fallback in `tests/native-smoke-android/smoke.js` and the keychain group in
+  `src/Maui/Platforms/MacCatalyst/Entitlements.plist` (a group that doesn't match the bundle id means SecureStorage
+  silently fails on Catalyst under real signing). CI finds the app by the `ApplicationId` itself.
+- **`<ApplicationTitle>`** next to it — the installed app's display name on every native platform.
+- **The OAuth callback scheme** (`<brand>`) agrees in `src/Maui/MauiProgram.cs`, the Android callback activity, both
+  Apple `Info.plist` files and `Auth:Native:CallbackScheme` in `src/Host/appsettings.json`; register
+  `{scheme}://auth` and your `signin-*` redirect URIs with the provider consoles.
+
+## Verify the brand
+
+- No placeholder survived the template: `git grep -i appbrand` returns nothing.
+- No platform brand copy is left: a search for the old tagline (`Lazy reputation. Efficient engineering.`) and for
+  the platform's palette constants (`#465d4d`, `#6b8a72`) returns nothing.
+- The rasters came from your SVGs through `build_assets.py`, not from a hand export.
+- The build and the tests pass exactly as `ci.yml` runs them.
+- Web and desktop show the new brand, **and** a test email (trigger an OTP or invite) arrives with the new logo,
+  colours, name, and tagline.
