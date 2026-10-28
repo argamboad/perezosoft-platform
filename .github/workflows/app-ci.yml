@@ -102,7 +102,7 @@ jobs:
       # asked. Three attempts, so a registry hiccup does not fail the job before a test has run.
       - name: Pull the test images once
         run: |
-          for image in public.ecr.aws/docker/library/postgres:17.11 ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z; do
+          for image in ghcr.io/argamboad/postgres:17.11 ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z; do
             for attempt in 1 2 3; do
               docker pull --quiet "$image" && break
               [ "$attempt" = 3 ] && { echo "::error::could not pull $image"; exit 1; }
@@ -1084,7 +1084,7 @@ jobs:
       NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     services:
       db:
-        image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
+        image: ghcr.io/argamboad/postgres:17.11  # our copy of the official image (same digest): Docker Hub and Amazon's mirror both limit anonymous pulls
         env:
           POSTGRES_DB: smoke
           POSTGRES_USER: smoke
@@ -1275,7 +1275,7 @@ jobs:
       NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     services:
       db:
-        image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
+        image: ghcr.io/argamboad/postgres:17.11  # our copy of the official image (same digest): Docker Hub and Amazon's mirror both limit anonymous pulls
         env:
           POSTGRES_DB: e2e
           POSTGRES_USER: e2e
