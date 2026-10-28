@@ -22,7 +22,7 @@ public static class ToolCommands
     /// <summary>Every script command, in the order the help lists them.</summary>
     public static IReadOnlyList<Command> Scripts { get; } =
     [
-        new("port", Runner.Pwsh, "port-platform.ps1", "port the platform's changes into this repo (-Platform <checkout> [-To <commit>] [-Apply])"),
+        new("port", Runner.Pwsh, "port-platform.ps1", "merge the platform's register into this repo from a release (-Platform <checkout> [-To <version>] [-From <ref>] [-Apply]); a clone: from a commit"),
         new("ports", Runner.Pwsh, "ports.ps1", "hold every file that states a local port to local-ports.props (reports; -Apply rewrites)"),
         new("e2e", Runner.Pwsh, "e2e.ps1", "run the browser journeys against a local stack ([-Filter <f>] [-Gates] [-NoBuild] [-KeepRunning])"),
         new("publish-native", Runner.Pwsh, "publish-native.ps1", "publish the native apps (-ApiBaseUrl <url> [-Android] [-Windows] [-KeyStore <path> -KeyAlias <alias>])"),

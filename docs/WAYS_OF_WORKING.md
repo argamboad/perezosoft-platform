@@ -277,7 +277,7 @@ arguments after the command go to the script.
 | `dotnet platform up` | the repo's compose `db` + `mail`, and the machine's telemetry dashboard (started or reused, never stopped) |
 | `dotnet platform e2e [-Filter …] [-Gates]` | the browser journeys against a local stack (`tests/E2E.Tests/README.md`) |
 | `dotnet platform ports [-Apply]` | hold every file that states a local port to `local-ports.props` |
-| `dotnet platform port -Platform <checkout> [-To <commit>] [-Apply]` | port the platform's changes into a clone-made app |
+| `dotnet platform port -Platform <checkout> [-To <version>] [-From <ref>] [-Apply]` | merge the register from `starter/` at the app's release to the next, list the seed's changes, stamp the version (a clone: `-To <commit>`, merges register and seed, writes the manifest) |
 | `dotnet platform publish-native -ApiBaseUrl <url> [-Android] [-Windows]` | the native apps, signature verified (`docs/DEPLOYMENT.md` §9) |
 | `dotnet platform android-emulator -Avd <name> -Port <port>` / `dev-profiles` | the emulator and the editor's start profiles (`docs/MOBILE_TESTING.md`) |
 | `dotnet platform telemetry` | the shared Aspire dashboard |

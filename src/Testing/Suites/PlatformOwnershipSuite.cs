@@ -6,12 +6,12 @@ using static Perezosoft.Testing.Architecture.PlatformOwnership;
 namespace Perezosoft.Testing.Suites;
 
 /// <summary>
-/// Arch A2 (#363), R160, as an inheritable suite (Pkg 5.1b): the repo's checks against its ownership map, its stamp and
-/// its manifest — every tracked file classified; downstream, every platform-class file equal to the stamped platform
-/// commit's or listed in <c>PlatformDivergences.json</c> with a reason; the stamp and the manifest naming the same commit.
-/// On the platform the stamp's commit is null and only the map check applies. An app on the packages (its stamp says
-/// <c>"packages": true</c>, Pkg 5.7) keeps no manifest: the package it references is one, and its root files are held to the
-/// register the package embeds (<see cref="RegisterFiles"/>). An app derives it once.
+/// Arch A2 (#363), R160, as an inheritable suite (Pkg 5.1b): the repo's checks against its ownership map and its stamp —
+/// every tracked file classified. An app on the packages (its stamp says <c>"packages": true</c>, Pkg 5.7) keeps no
+/// manifest: the package it references is one, and its register-class files are held to the copies the package embeds
+/// (<see cref="RegisterFiles"/>, Pkg 6.4) or listed in <c>PlatformDivergences.json</c> with a reason. A clone is held to the
+/// manifest its last port wrote, the stamp naming the same commit. On the platform the stamp's commit is null and only the
+/// map check applies. An app derives it once.
 /// </summary>
 public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
 {
@@ -32,25 +32,29 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
         var unclassified = tracked.Where(p => Classify(p, rules) is null).Order().ToList();
         Assert.True(unclassified.Count == 0, "tracked files with no ownership class — add a rule to platform-ownership.json (an app: platform-ownership.App.json): " + string.Join(", ", unclassified));
 
-        // The decisions of the Architecture milestone, pinned: the A1 seams are the app's, the composition files the platform's,
-        // the UI the app's (#368), the rules file the platform's.
+        // The decisions, pinned. The A1 seams are the app's, and so are its context and every migration (ADR-034, Pkg 6.4);
+        // the host's entry point, its design-time factory, the test host and the one-line suites are held in step (the
+        // register); the packaged source is the platform's alone; the UI (#368), the journeys and the CI caller are the app's
+        // after dotnet new (seed).
         Assert.Equal(Class.App, Classify("src/Host/AppComposition.cs", rules));
-        Assert.Equal(Class.App, Classify("src/Host/Persistence/AppDbContext.App.cs", rules));
+        Assert.Equal(Class.App, Classify("src/Host/Persistence/AppDbContext.cs", rules));
+        Assert.Equal(Class.App, Classify("src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs", rules));
         Assert.Equal(Class.App, Classify("tests/Api.Tests/App/AppAllowlists.cs", rules));
+        Assert.Equal(Class.App, Classify("tests/Api.Tests/ArchitectureTests.cs", rules));
         Assert.Equal(Class.App, Classify("src/Host/Features/Budget/BudgetHandler.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Host/Program.cs", rules));
+        foreach (var held in new[] { "src/Host/Program.cs", "src/Host/Persistence/AppDbContextFactory.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
+                                     "tests/Api.Tests/OwnershipTests.cs", "global.json", "build/PlatformSource.props", "platform-ownership.json" })
+            Assert.Equal(Class.Register, Classify(held, rules));
         Assert.Equal(Class.Platform, Classify("src/Infrastructure/Persistence/PlatformDbContext.cs", rules));
-        Assert.Equal(Class.Platform, Classify("src/Host/Persistence/AppDbContext.cs", rules));
         // Pkg 3.9: the mails are the package's, branded through PlatformOptions.Brand — no longer a file an app edits.
         Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/BrandedEmail.cs", rules));
         Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/Assets/logo.png", rules));
         Assert.Equal(Class.Platform, Classify("src/Infrastructure/Email/EmailStrings.es.resx", rules));
-        Assert.Equal(Class.Adapts, Classify("src/Host/Persistence/Migrations/20260617235537_InitialCreate.cs", rules));
-        Assert.Equal(Class.Platform, Classify("tests/Api.Tests/ArchitectureTests.cs", rules));
         Assert.Equal(Class.Platform, Classify("docs/audits/v4-2026-09/FOUNDATION_RULES_v3.md", rules));
-        Assert.Equal(Class.Adapts, Classify("src/Shared.Ui/Pages/Household.razor", rules));
-        Assert.Equal(Class.Adapts, Classify("tests/E2E.Tests/SessionJourneyTests.cs", rules));
-        Assert.Equal(Class.Adapts, Classify(".github/workflows/ci.yml", rules));
+        Assert.Equal(Class.Seed, Classify("src/Shared.Ui/Pages/Household.razor", rules));
+        Assert.Equal(Class.Seed, Classify("tests/E2E.Tests/SessionJourneyTests.cs", rules));
+        Assert.Equal(Class.Seed, Classify(".github/workflows/ci.yml", rules));
+        Assert.Equal(Class.Seed, Classify("Directory.Packages.props", rules));
         Assert.Equal(Class.Sample, Classify("src/Host/Features/Notes/NotesHandler.cs", rules));
         // Pkg 2.5: the release machinery is the publisher's alone — never ported, never demanded downstream.
         foreach (var producer in new[] { ".github/workflows/release.yml", ".github/release-note-template.md", "tools/release/dry-run/DryRun.cs",
@@ -72,17 +76,18 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
         var keep = ParseKeep(File.ReadAllText(Path.Combine(root, "platform-ownership.json")));
         if (IsOnThePackages(stamp))
         {
-            // An app on the packages (Pkg 5.7): no port, so no manifest — its root files are held to the register the
-            // platform package it references embeds, the platform's keep-list held as the package spells it.
+            // An app on the packages (Pkg 5.7): no manifest — its register-class files are held to the copies the platform
+            // package it references embeds (the starter's, the placeholder renamed to this app's brand), the platform's
+            // keep-list held as the package spells it.
             var register = RegisterFiles();
-            Assert.True(register.Count >= 5, $"probe: the package embeds {register.Count} register files");
+            Assert.True(register.Count >= 20, $"probe: the package embeds {register.Count} register files");
             var divergencesPath = Path.Combine(root, "tests", "Api.Tests", "App", "PlatformDivergences.json");
             var allowed = File.Exists(divergencesPath) ? ParseDivergences(File.ReadAllText(divergencesPath)) : new Dictionary<string, string>();
             var registerVerdict = EvaluateRegister(register, brand, allowed,
                 local => File.Exists(Path.Combine(root, local)) ? File.ReadAllBytes(Path.Combine(root, local)) : null,
                 ParseKeep(System.Text.Encoding.UTF8.GetString(register["platform-ownership.json"])));
-            output.WriteLine($"on the packages: {registerVerdict.PlatformFilesChecked} register files checked against the package, {allowed.Count} allowlisted divergence(s)");
-            Assert.True(registerVerdict.Failures.Count == 0, "root files out of step with the platform package this app references:\n  " + string.Join("\n  ", registerVerdict.Failures));
+            output.WriteLine($"on the packages: {registerVerdict.RegisterFilesChecked} register files checked against the package, {allowed.Count} allowlisted divergence(s)");
+            Assert.True(registerVerdict.Failures.Count == 0, "register files out of step with the platform package this app references (dotnet platform port merges them):\n  " + string.Join("\n  ", registerVerdict.Failures));
             return;
         }
         if (stampCommit is null)
@@ -99,9 +104,9 @@ public abstract class PlatformOwnershipSuite(ITestOutputHelper output)
         var verdict = Evaluate(entries, manifestCommit, stampCommit, divergences, brand,
             local => File.Exists(Path.Combine(root, local)) ? File.ReadAllBytes(Path.Combine(root, local)) : null, keep);
 
-        output.WriteLine($"platform {manifestCommit[..7]}: {verdict.PlatformFilesChecked} platform files checked, {divergences.Count} allowlisted divergence(s), {verdict.AdaptsDrift.Count} adapts file(s) differ:");
-        foreach (var d in verdict.AdaptsDrift) output.WriteLine("  adapts: " + d);
-        Assert.True(verdict.Failures.Count == 0, "platform files out of step with the stamped platform commit:\n  " + string.Join("\n  ", verdict.Failures));
+        output.WriteLine($"platform {manifestCommit[..7]}: {verdict.RegisterFilesChecked} register files checked, {divergences.Count} allowlisted divergence(s), {verdict.SeedDrift.Count} seed file(s) differ:");
+        foreach (var d in verdict.SeedDrift) output.WriteLine("  seed: " + d);
+        Assert.True(verdict.Failures.Count == 0, "register files out of step with the stamped platform commit:\n  " + string.Join("\n  ", verdict.Failures));
     }
 
     [Fact]

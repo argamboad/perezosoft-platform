@@ -2172,3 +2172,41 @@ shown without a group, when another capability owns the group: theme, language a
 controller. The card links `/api/features` and Swagger on the API's origin, and names the Postman collection. The
 collection now ships in `starter/docs/postman`: the collection and its environments are gated copies, and the README is
 the starter's own, since the platform's describes its sync workflow and parity test.
+
+*Amendment (2026-10-28, Pkg 6.4, #423) — the ownership map and the port tool for the new tree.* The map's classes are
+now six. `platform` is the source the packages ship and its tests, never in an app on the packages. `register` is held
+in step: it replaces the old `platform` class. `seed` is the app's after `dotnet new`, with drift only reported: it
+replaces `adapts`. `app`, `sample` and `producer` stay. Point 5 is applied: the app's `AppDbContext.cs` and every
+migration are `app`, and the rule for `AppDbContext.App.cs`, a file that no longer exists since #421, is gone. The
+register, as it is held, is every register-class file of `starter/`, 21 of them:
+- the source switch (`build/PlatformSource.*`), the SDK pin, `nuget.config`, the tool manifest, the map itself,
+  `Directory.Build.props`/`.targets`, `.gitattributes` and the RLS role script;
+- the host's `Program.cs` and its design-time `AppDbContextFactory.cs`;
+- the test host and fixtures (`tests/Api.Tests/Infrastructure/**`) and the platform's global usings;
+- the four one-line suites (composition smoke, ownership, schema, tenancy).
+
+Point 2's list named more. `AppComposition.cs` is the app's seam, so it is `app`. Project files, the CI caller,
+`render.yaml` and the hosts' UI halves (`MauiProgram`, the `index.html` pages) carry the app's own references, so they
+are `seed`. src/Testing embeds the 21 as the starter spells them, with its placeholder brand. `PlatformRegisterTests`
+holds the embedded list equal to the map's register over `starter/`. It also checks that every register-class file of the
+platform is in it and that `starter/` carries no `platform` or `producer` file. An app's copy is compared after the
+placeholder is renamed to the app's brand (`AppBrand`/`appbrand`/`APPBRAND`, from its stamp), as `dotnet new` did, or as
+the package ships it. Renaming the platform's brand instead would rewrite `Perezosoft.Infrastructure` and fail every
+faithful copy. The stamp's `commit` carries the package version on the packages (`0.0.0-platform` at `dotnet new`, then
+every port); the field keeps its name, and `/api/version` reports it.
+
+The port tool has a packages mode, chosen by the stamp's `"packages": true`:
+- It reads `starter/` at the release tag of the app's version (`-From <ref>` when there is none, as for
+  `0.0.0-platform`) and at the target (`-To`, by default the `PlatformPackagesVersion` the app pins).
+- It three-way merges the register with the placeholder renamed.
+- It never writes a seed file. It lists the ones the platform added, changed or deleted in between, and lists any
+  packaged source, release machinery or clone manifest in the repo for removal: a clone's conversion checklist.
+- It writes no manifest (the package is one, #450), and stamps the version and the date.
+
+A clone's run still merges `register` and `seed` from platform commits and writes the manifest, but no longer ports
+packaged source. A map or a manifest from before this amendment reads `platform` as `register` and `adapts` as `seed`.
+vuelto and jigger-jot, both stamped e7a2962, convert on beta.1 or 1.0 rather than port. A clone that ran the new tool
+against the new map would stop receiving packaged fixes: accepted, since conversion replaces porting for both.
+`PortTool_OnThePackages_MergesTheRegisterFromTheStarter_AndListsWhatChangedInTheSeed` runs the tool for real on two
+scratch repos: a platform whose `starter/` has two tagged releases, and an app made from the first as `dotnet new` makes
+it. Its clone-mode twin stays.

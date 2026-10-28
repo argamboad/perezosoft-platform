@@ -123,11 +123,13 @@ the `db_data` volume by folder name, so no rename is needed there.
 
 Your repo is a clone of a platform commit, and it should say so. `platform-stamp.json` names that commit and the
 brand map (`Perezosoft` → your brand, `perezosoft` → its lowercase); `platform-ownership.json` says which files are
-the platform's (`platform`: keep them identical, or list a divergence with a reason in
-`tests/Api.Tests/App/PlatformDivergences.json`), which you are expected to edit (`adapts`: the UI, the journeys, the
-config, the docs) and which are yours (`app`: `src/Host/Features/**`, `AppComposition.cs`, `AppDbContext.App.cs`,
-`tests/Api.Tests/App/**`). Two more: `producer` files (the platform's release machinery and package map) never reach
-your repo, and the map's `keep` list (the package ids `Perezosoft.Platform.*`, the feed key `perezosoft`) is never
+held in step with the platform (`register`: keep them identical, or list a divergence with a reason in
+`tests/Api.Tests/App/PlatformDivergences.json`), which are yours once seeded (`seed`: the UI, the journeys, the
+config, the project files, the docs; the port only reports what the platform changed in them), which are yours alone
+(`app`: `src/Host/Features/**`, `AppComposition.cs`, `AppDbContext.cs`, every migration, `tests/Api.Tests/App/**`), and
+which are the source the packages ship (`platform`, Pkg 6.4: a clone keeps its copy until it converts to the packages,
+and the port no longer brings changes to it). Two more: `producer` files (the platform's release machinery and package
+map) never reach your repo, and the map's `keep` list (the package ids `Perezosoft.Platform.*`, the feed key `perezosoft`) is never
 renamed by the brand map — the platform's packages keep their names in every app (ADR-034, Pkg 2.5). A folder of your own at the top of the repo (jigger-jot's `seed/`)
 is classed in `platform-ownership.App.json`, same shape, applied after the platform's rules. After the rebrand, run the port once against the platform
 checkout you cloned from, at that same commit, to write the manifest and the stamp:
