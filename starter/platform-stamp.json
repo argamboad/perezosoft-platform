@@ -1,0 +1,12 @@
+{
+  "$comment": [
+    "Which platform this app runs on (Pkg 5.7). \"packages\": true — the app takes the platform as packages: the version is",
+    "\"commit\" (the release `dotnet new` wrote, and every bump after), and PlatformOwnershipSuite holds the register files to",
+    "the ones that package ships. \"brand\" maps the platform's tokens to this app's, so a register file compares equal",
+    "whether its brand was written into it or not."
+  ],
+  "platform": "argamboad/perezosoft-platform",
+  "commit": "0.0.0-platform",
+  "packages": true,
+  "brand": { "Perezosoft": "AppBrand", "perezosoft": "appbrand" }
+}

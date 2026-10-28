@@ -27,31 +27,34 @@ Start a new chat and paste `_PLATFORM_PRIMER.md`. Describe your app. Claude runs
 conceptualization session — clarifying questions, recommendations, ADRs, scope discipline — and
 fills in the doc skeletons. The stack is already decided, so the conversation is about the app.
 
-**Step 2 — Create the repo (when the thinking layer is done).**
-Once concept + features + data model + decisions are settled, clone this platform tree as
-your new repo (it already has `CLAUDE.md` at root, `docs/`, and the `src/`+`tests/` layout).
+**Step 2 — Create the app (when the thinking layer is done).**
+Once concept + features + data model + decisions are settled, write the app from the template —
+`dotnet new install Perezosoft.Platform.Templates::<version>`, then `dotnet new perezosoft-app -n <AppName>`
+(ADR-034: an app is not a copy of this repo; the platform comes as the `Perezosoft.Platform.*` packages). Make it a
+repo and add the conceptualization docs to its `docs/`. The feed token, the CI access and the rest are
+`docs/NEW_APP_GUIDE.md` Phases 0 and 2.
 
-**Step 3 — Rebrand + build (in Claude Code).**
-Point Claude Code at the repo. The platform (auth, tenancy, billing, jobs, notifications, GDPR,
-admin, deploy pipeline, …) is already built — the first session rebrands it and fills in the
-app-specific docs; after that it's your feature slices, with per-epic user stories written into
+**Step 3 — Brand + build (in Claude Code).**
+Point Claude Code at the app. The platform (auth, tenancy, billing, jobs, notifications, GDPR,
+admin, deploy pipeline, …) is already built — the first session brands the app and writes its own
+docs; after that it's your feature slices, with per-epic user stories written into
 `docs/stories/` as they're built.
 
 **The expected first Claude Code prompt** (copy, fill the brackets, attach the logo):
 
-> We're starting a new app on this platform, from the conceptualization docs already in `docs/`.
+> We're starting a new app on the Perezosoft platform, from the conceptualization docs already in `docs/`.
 > The app is **[AppName]**; the tenant's app-facing label is **[Team / Workspace / Household / …]**.
 > Here is the logo: **[file]**.
 >
-> 1. **Rebrand end to end per `docs/REBRANDING.md`** — every section: name/wordmark, tagline,
->    logo assets (derive the resized icons/favicon/OG image from this logo), the **colour palette
->    derived from the logo** (the `:root` tokens in `src/Shared.Ui/wwwroot/css/app.css` **and**
->    the email colours in `src/Infrastructure/Email/BrandedEmail.cs` — don't skip the email
->    templates), the OAuth callback scheme + `ApplicationId`, and the brand strings in every
->    localization `.resx`.
-> 2. **Fill the app-specific placeholders** — `CLAUDE.md` TODOs (golden rules, conventions) and
->    any remaining `docs/` placeholders — from the conceptualization docs.
-> 3. **Verify** per the checklist: `git grep -i perezosoft` returns nothing, the app builds and
+> 1. **Brand it end to end per the platform's `docs/REBRANDING.md`** — the brand assets (derive the
+>    icons/favicon/OG image from this logo), the **colour palette derived from the logo** (the `:root`
+>    tokens in `src/Shared.Ui/wwwroot/css/app.css`, the Android system bars), the **email brand** in
+>    `AppComposition.ConfigurePlatform` (`options.Brand`: tagline, colours, PNG logo — don't skip the
+>    mails), the product copy in every `.resx`, and the tenant label in the pages (the API keeps
+>    `household`).
+> 2. **Write the app's own docs** — `CLAUDE.md` (golden rules, conventions) and the `docs/` from the
+>    conceptualization docs.
+> 3. **Verify** per the checklist: `git grep -i appbrand` returns nothing, the app builds and
 >    runs with the new brand, and a test OTP email arrives with the new logo/colours/name.
 >
 > Then propose the first feature epic from `docs/FEATURES.md` (the `Notes` sample slice gets

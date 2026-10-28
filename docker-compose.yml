@@ -1,6 +1,6 @@
 services:
   db:
-    image: public.ecr.aws/docker/library/postgres:17.11
+    image: ghcr.io/argamboad/postgres:17.11
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-dev_db}

@@ -324,7 +324,7 @@ public class QuotaServiceTests(PostgresFixture fixture) : PostgresTestBase(fixtu
 
     // --- helpers ---
 
-    private static QuotaService BuildQuota(Perezosoft.Infrastructure.Persistence.AppDbContext db, Guid tenant, TimeProvider? clock = null) =>
+    private static QuotaService BuildQuota(Perezosoft.Host.Persistence.AppDbContext db, Guid tenant, TimeProvider? clock = null) =>
         new(new EfRepository<Subscription>(db), new TenantRepository(db), new TenantInvitationRepository(db),
             new EfRepository<UsageCounter>(db), new TestCurrentTenant { TenantId = tenant }, TestPlans.Default, clock ?? TimeProvider.System);
 

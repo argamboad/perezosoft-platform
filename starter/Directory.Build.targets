@@ -1,0 +1,4 @@
+<Project>
+  <!-- The local source switch's second half: with PLATFORM_SOURCE set, Perezosoft.Platform.* become a checkout's projects. -->
+  <Import Project="$(MSBuildThisFileDirectory)build/PlatformSource.targets" />
+</Project>

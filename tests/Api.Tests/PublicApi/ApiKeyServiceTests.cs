@@ -161,6 +161,6 @@ public class ApiKeyServiceTests(PostgresFixture fixture) : PostgresTestBase(fixt
         Assert.Equal(pair.MineSeed, Assert.Single(keys).Id);
     }
 
-    private static ApiKeyService Build(Perezosoft.Infrastructure.Persistence.AppDbContext db, TimeProvider? clock = null) =>
+    private static ApiKeyService Build(Perezosoft.Host.Persistence.AppDbContext db, TimeProvider? clock = null) =>
         new(new EfRepository<ApiKey>(db), new TokenGenerator(), new TokenHasher(), new TestCurrentTenant(), clock ?? TimeProvider.System);
 }

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
-using Perezosoft.Api.Features.Notes;
+using Perezosoft.Host.Features.Notes;
 using Perezosoft.Api.Tests.Infrastructure;
 using Perezosoft.Core.Entities;
 using Perezosoft.Infrastructure.Repositories;
@@ -16,7 +16,7 @@ namespace Perezosoft.Api.Tests;
 [Collection(PostgresCollection.Name)]
 public class NotesSliceTests(PostgresFixture fixture) : PostgresTestBase(fixture)
 {
-    private static NotesHandler Handler(Perezosoft.Infrastructure.Persistence.AppDbContext db, Guid tenantId, TimeProvider? clock = null) =>
+    private static NotesHandler Handler(Perezosoft.Host.Persistence.AppDbContext db, Guid tenantId, TimeProvider? clock = null) =>
         new(new EfRepository<Note>(db), new TestCurrentTenant { TenantId = tenantId }, clock ?? TimeProvider.System);
 
     [Fact]

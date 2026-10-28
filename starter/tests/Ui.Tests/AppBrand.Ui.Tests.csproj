@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    AppBrand's component tests: bUnit renders the real pages (src/Shared.Ui) against the platform's test doubles for
+    every seam (Perezosoft.Platform.Testing.Ui: the session store, the HTTP handler, localization, the persistences).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Perezosoft.Platform.Testing.Ui" />
+    <PackageReference Include="bunit" />
+    <!-- bUnit brings a vulnerable AngleSharp transitively (GHSA-pgww-w46g-26qg); the patched pin. -->
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shared.Ui\AppBrand.Shared.Ui.csproj" />
+  </ItemGroup>
+
+</Project>

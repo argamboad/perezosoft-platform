@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Perezosoft.Infrastructure.Persistence.Migrations
+namespace Perezosoft.Host.Persistence.Migrations
 {
     /// <summary>
     /// 🗑️ DELETE-ME with the Notes sample. The sample's RLS policy, in the sample's own migration (Arch A6, #366): until

@@ -14,12 +14,16 @@ namespace Perezosoft.Testing.Architecture;
 /// </summary>
 public static class PlatformOwnership
 {
-    /// <summary><c>Producer</c> (Pkg 2.5): the publisher's alone — the release machinery. Never ported, never in a manifest.</summary>
-    public enum Class { Platform, Adapts, App, Sample, Producer }
+    /// <summary>
+    /// The classes of Pkg 6.4 (#423): <c>Platform</c>, the source the packages ship, never in an app on the packages;
+    /// <c>Register</c>, held in step with the platform's copy; <c>Seed</c>, the app's after <c>dotnet new</c>, drift only
+    /// reported; <c>App</c>, the app's own; <c>Sample</c>, the Notes slice; <c>Producer</c> (Pkg 2.5), the publisher's alone.
+    /// </summary>
+    public enum Class { Platform, Register, Seed, App, Sample, Producer }
 
     public sealed record Rule(string Glob, Class Class, Regex Pattern);
 
-    /// <summary>Parses the map's rules in order. A class outside the four is a malformed map.</summary>
+    /// <summary>Parses the map's rules in order. A class outside the six is a malformed map.</summary>
     public static IReadOnlyList<Rule> ParseRules(string json)
     {
         using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
@@ -29,8 +33,8 @@ public static class PlatformOwnership
                 var glob = r.GetProperty("glob").GetString()!;
                 var cls = r.GetProperty("class").GetString() switch
                 {
-                    "platform" => Class.Platform, "adapts" => Class.Adapts, "app" => Class.App, "sample" => Class.Sample,
-                    "producer" => Class.Producer,
+                    "platform" => Class.Platform, "register" => Class.Register, "seed" => Class.Seed, "app" => Class.App,
+                    "sample" => Class.Sample, "producer" => Class.Producer,
                     var other => throw new InvalidOperationException($"platform-ownership.json: rule '{glob}' has unknown class '{other}'"),
                 };
                 return new Rule(glob, cls, GlobToRegex(glob));
@@ -116,14 +120,15 @@ public static class PlatformOwnership
 
     public sealed record ManifestEntry(string Path, Class Class, string Hash);
 
-    public sealed record Verdict(IReadOnlyList<string> Failures, IReadOnlyList<string> AdaptsDrift, int PlatformFilesChecked);
+    public sealed record Verdict(IReadOnlyList<string> Failures, IReadOnlyList<string> SeedDrift, int RegisterFilesChecked);
 
     /// <summary>
-    /// The downstream gate as a function. <paramref name="readLocal"/> returns the repo's bytes for a local path, or null
-    /// when the file is absent. Platform-class entries must hash equal, or be in <paramref name="divergences"/> with a
-    /// reason (an entry whose file is equal again is itself a failure: the list cannot rot; an entry for a file the
-    /// manifest does not know is a failure too). Adapts-class drift is only reported. Sample, app and producer entries are
-    /// ignored (a producer file is the publisher's alone: an app never has it, and the tool never writes one to a manifest).
+    /// A clone's gate as a function, over the manifest the port tool wrote from platform commits. <paramref name="readLocal"/>
+    /// returns the repo's bytes for a local path, or null when the file is absent. Register-class entries must hash equal,
+    /// or be in <paramref name="divergences"/> with a reason (an entry whose file is equal again is itself a failure: the
+    /// list cannot rot; an entry for a file the manifest does not know is a failure too). Seed-class drift is only
+    /// reported. Other entries are ignored (a producer file is the publisher's alone: an app never has it, and the tool
+    /// never writes one to a manifest).
     /// The hash is computed over the repo's own text (the app form, where a keep-list token is already the platform's), so
     /// the keep-list changes no hash; it only spells the path (<see cref="LocalPath"/>).
     /// </summary>
@@ -139,13 +144,13 @@ public static class PlatformOwnership
         var appTokens = brand.Values.ToList();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var checked_ = 0;
-        foreach (var entry in manifest.Where(e => e.Class is Class.Platform or Class.Adapts))
+        foreach (var entry in manifest.Where(e => e.Class is Class.Register or Class.Seed))
         {
             var local = LocalPath(entry.Path, brand, keep);
             seen.Add(local);
             var bytes = readLocal(local);
             var same = bytes is not null && NormalizedHash(bytes, appTokens) == entry.Hash;
-            if (entry.Class == Class.Adapts)
+            if (entry.Class == Class.Seed)
             {
                 if (!same) drift.Add(bytes is null ? $"{local} (absent)" : local);
                 continue;
@@ -156,7 +161,7 @@ public static class PlatformOwnership
                 failures.Add($"{local}: listed in PlatformDivergences.json but identical to the platform again — drop the entry");
             else if (!same && !allowlisted)
                 failures.Add(bytes is null
-                    ? $"{local}: a platform file this repo does not have — port it, or list it in PlatformDivergences.json with a reason"
+                    ? $"{local}: a register file this repo does not have — port it, or list it in PlatformDivergences.json with a reason"
                     : $"{local}: differs from the platform at {manifestCommit} — port the platform's change, or list it in PlatformDivergences.json with a reason");
         }
         foreach (var path in divergences.Keys.Where(p => !seen.Contains(p)).Order())
@@ -164,11 +169,12 @@ public static class PlatformOwnership
         return new Verdict(failures, drift, checked_);
     }
 
-    // ── the register: what an app on the packages carries (Pkg 5.7, #450) ──
+    // ── the register: what an app on the packages carries (Pkg 5.7, #450; 6.4, #423) ──
 
     /// <summary>
-    /// The register as this release embeds it: the platform's own files an app on the packages carries at its root (the
-    /// local source switch, the SDK pin, the NuGet sources, the tool manifest, the ownership map), path → bytes.
+    /// The register as this release embeds it: every register-class file of starter/ (the source switch, the SDK pin, the
+    /// feed, the tool manifest, the ownership map, the host's entry point and design-time factory, the test host and
+    /// fixtures, the one-line suites), path → bytes, spelled as the starter spells them: with the placeholder brand.
     /// </summary>
     public static IReadOnlyDictionary<string, byte[]> RegisterFiles()
     {
@@ -190,7 +196,18 @@ public static class PlatformOwnership
     /// side, and a token the brand map never renames (a package id, the feed key) stays itself, so an app's copy compares
     /// equal whether its brand was written into the rest of the file or not.
     /// </summary>
-    public static string NormalizeKeeping(byte[] content, IReadOnlyList<string> brandTokens, IReadOnlyList<string> keep)
+    public static string NormalizeKeeping(byte[] content, IReadOnlyList<string> brandTokens, IReadOnlyList<string> keep) =>
+        RenameKeeping(content, keep, brandTokens.OrderByDescending(t => t.Length)
+            .Select(t => (t, char.IsUpper(t[0]) ? "{BRAND}" : "{brand}")));
+
+    /// <summary>
+    /// A copy as an app would write it: each token of <paramref name="brand"/> renamed (longest first), the keep-list held,
+    /// whitespace as <see cref="NormalizeKeeping"/> compares it.
+    /// </summary>
+    public static string RebrandKeeping(byte[] content, IReadOnlyDictionary<string, string> brand, IReadOnlyList<string> keep) =>
+        RenameKeeping(content, keep, brand.OrderByDescending(kv => kv.Key.Length).Select(kv => (kv.Key, kv.Value)));
+
+    private static string RenameKeeping(byte[] content, IReadOnlyList<string> keep, IEnumerable<(string Token, string Into)> renames)
     {
         var start = content.Length >= 3 && content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF ? 3 : 0;
         var text = Encoding.UTF8.GetString(content, start, content.Length - start).Replace("\r\n", "\n");
@@ -202,41 +219,64 @@ public static class PlatformOwnership
             kept.Add((k, ((char)next++).ToString()));
         }
         foreach (var (token, guard) in kept) text = text.Replace(token, guard, StringComparison.Ordinal);
-        foreach (var token in brandTokens.OrderByDescending(t => t.Length))
-            text = text.Replace(token, char.IsUpper(token[0]) ? "{BRAND}" : "{brand}", StringComparison.Ordinal);
+        foreach (var (token, into) in renames) text = text.Replace(token, into, StringComparison.Ordinal);
         foreach (var (token, guard) in kept) text = text.Replace(guard, token, StringComparison.Ordinal);
         var lines = text.Split('\n').Select(l => l.TrimEnd(' ', '\t'));
         return string.Join('\n', lines).TrimEnd('\n', ' ', '\t');
     }
 
+    /// <summary>The starter's own brand (<c>sourceName</c> in its template.json), which <c>dotnet new</c> renames.</summary>
+    public const string Placeholder = "AppBrand";
+
     /// <summary>
-    /// The downstream gate for an app on the packages (Pkg 5.7): each register file must equal the package's copy (the
-    /// platform's tokens normalized in the package's, the app's in its own, the keep-list held), or be in
-    /// <paramref name="divergences"/> with a reason. As in <see cref="Evaluate"/>, an entry for a file that is equal again
-    /// fails, and so does an entry for a file the register does not hold.
+    /// What <c>dotnet new</c> renamed, from the app's stamp: the stamp maps the platform's tokens to the app's
+    /// (<c>Perezosoft</c> → <c>Acme</c>, <c>perezosoft</c> → <c>acme</c>), and the template wrote the app's into the
+    /// placeholder's forms — <c>AppBrand</c> → <c>Acme</c>, <c>appbrand</c> → <c>acme</c>, <c>APPBRAND</c> → <c>ACME</c>
+    /// (its brandUpper symbol).
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> PlaceholderBrand(IReadOnlyDictionary<string, string> brand)
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (token, into) in brand)
+        {
+            if (char.IsUpper(token[0])) { map[Placeholder] = into; map[Placeholder.ToUpperInvariant()] = into.ToUpperInvariant(); }
+            else map[Placeholder.ToLowerInvariant()] = into;
+        }
+        return map;
+    }
+
+    /// <summary>
+    /// The downstream gate for an app on the packages (Pkg 5.7, 6.4): each register file must equal the package's copy (as
+    /// shipped, or with the placeholder renamed to the app's brand, <see cref="PlaceholderBrand"/>, the keep-list held), or
+    /// be in <paramref name="divergences"/> with a reason. <paramref name="brand"/> is the stamp's map. As in
+    /// <see cref="Evaluate"/>, an entry for a file that is equal again fails, and so does an entry for a file the register
+    /// does not hold.
     /// </summary>
     public static Verdict EvaluateRegister(
         IReadOnlyDictionary<string, byte[]> register, IReadOnlyDictionary<string, string> brand,
         IReadOnlyDictionary<string, string> divergences, Func<string, byte[]?> readLocal, IReadOnlyList<string> keep)
     {
         var failures = new List<string>();
-        var platformTokens = brand.Keys.ToList();
-        // The app's side normalizes its own tokens and the platform's: a register file compares equal whether the app's
-        // brand was written into it or it was copied as the package ships it.
-        var appTokens = brand.Values.Concat(brand.Keys).Distinct(StringComparer.Ordinal).ToList();
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var renamed = PlaceholderBrand(brand);
         foreach (var (path, packaged) in register.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            var local = LocalPath(path, brand, keep);
+            var local = LocalPath(path, renamed, keep);
             seen.Add(local);
             var bytes = readLocal(local);
-            var same = bytes is not null && NormalizeKeeping(bytes, appTokens, keep) == NormalizeKeeping(packaged, platformTokens, keep);
+            // Equal as the package ships it, or as dotnet new wrote it (the placeholder renamed). Not by normalizing the
+            // app's brand on its side: a brand that is also a word of the file (an app called Smoke, and
+            // tests/native-smoke-android in the map) would turn that word into the brand and fail a faithful copy (#421).
+            // Nor by renaming the platform's brand: the starter names the packages' namespaces (Perezosoft.Infrastructure),
+            // which every app keeps (#423).
+            var app = bytes is null ? null : NormalizeKeeping(bytes, [], keep);
+            var same = app is not null && (app == NormalizeKeeping(packaged, [], keep) || app == RebrandKeeping(packaged, renamed, keep));
             var allowlisted = divergences.TryGetValue(local, out var reason) && !string.IsNullOrWhiteSpace(reason);
             if (same && allowlisted)
                 failures.Add($"{local}: listed in PlatformDivergences.json but identical to the package's again — drop the entry");
             else if (!same && !allowlisted)
                 failures.Add(bytes is null
-                    ? $"{local}: a platform file an app on the packages carries, and this repo does not have — copy it from the package's release, or list it in PlatformDivergences.json with a reason"
+                    ? $"{local}: a register file an app on the packages carries, and this repo does not have — dotnet platform port brings it, or list it in PlatformDivergences.json with a reason"
                     : $"{local}: differs from the one the platform package ships — take the package's, or list it in PlatformDivergences.json with a reason");
         }
         foreach (var path in divergences.Keys.Where(p => !seen.Contains(p)).Order())
@@ -254,13 +294,22 @@ public static class PlatformOwnership
         return doc.RootElement.TryGetProperty("packages", out var p) && p.ValueKind == JsonValueKind.True;
     }
 
+    /// <summary>
+    /// A clone's manifest. One written before Pkg 6.4 says <c>platform</c> for what was held and <c>adapts</c> for what was
+    /// only reported: read as <c>register</c> and <c>seed</c>, what they meant then (a manifest never lists packaged source now).
+    /// </summary>
     public static (string Commit, IReadOnlyList<ManifestEntry> Entries) ParseManifest(string json)
     {
         using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
         var commit = doc.RootElement.GetProperty("commit").GetString()!;
         var entries = doc.RootElement.GetProperty("files").EnumerateArray()
             .Select(e => new ManifestEntry(e.GetProperty("path").GetString()!,
-                Enum.Parse<Class>(e.GetProperty("class").GetString()!, ignoreCase: true), e.GetProperty("hash").GetString()!))
+                e.GetProperty("class").GetString() switch
+                {
+                    "platform" => Class.Register,
+                    "adapts" => Class.Seed,
+                    var name => Enum.Parse<Class>(name!, ignoreCase: true),
+                }, e.GetProperty("hash").GetString()!))
             .ToList();
         return (commit, entries);
     }

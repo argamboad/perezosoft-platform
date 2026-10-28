@@ -626,9 +626,11 @@ public class EnforcementGateTests
     {
         // A hosted runner pulls anonymously, and Docker Hub caps anonymous pulls per IP — shared by every job on that
         // runner pool. On 2026-10-09 `docker pull postgres:17.11` answered `toomanyrequests` three times and the e2e
-        // job died before checkout, with nothing in the change to blame. Every image a job PULLS therefore names a
-        // registry that does not rate-limit it: Postgres from Amazon's mirror of the official images
-        // (public.ecr.aws/docker/library), Mailpit from its own GitHub registry, MinIO from our copy on ghcr.io.
+        // job died before checkout, with nothing in the change to blame. Amazon's mirror of the official images
+        // (public.ecr.aws/docker/library), which replaced it, has a limit of its own: on 2026-10-16 and again on
+        // 2026-10-28 it answered `Data limit exceeded` and the e2e job died at its service container, twice running.
+        // Every image a job PULLS therefore names a registry that does not cap anonymous pulls: Postgres and MinIO from
+        // our own copies on ghcr.io/argamboad (public, the official image's digest), Mailpit from its own GitHub registry.
         // A Docker Hub reference is one with no registry host: `postgres:17.11`, `axllent/mailpit:v1`. Dockerfile
         // stages (mcr.microsoft.com, and their own stage names) and `docker run` of the image the job just built
         // are not pulls from a registry, so only the three pulled surfaces are read.
@@ -656,8 +658,8 @@ public class EnforcementGateTests
         }
 
         Assert.True(offenders.Count == 0,
-            "Pull every image from a registry that does not rate-limit anonymous pulls — public.ecr.aws/docker/library/… "
-            + $"for an official image, the project's own registry otherwise: {string.Join(", ", offenders)}");
+            "Pull every image from a registry that does not cap anonymous pulls — our copy on ghcr.io/argamboad/… for an "
+            + $"official image, the project's own registry otherwise: {string.Join(", ", offenders)}");
 
         // A Dockerfile `# syntax=docker/dockerfile:…` line makes BuildKit fetch its frontend from Docker Hub before the
         // first FROM — the docker-build job died on Docker Hub's 504 that way (jigger-jot, 2026-10-09). The frontend
@@ -668,10 +670,10 @@ public class EnforcementGateTests
         var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Matches(@"TESTCONTAINERS_RYUK_DISABLED:\s*""true""", ci);
 
-        // And the mirror has a limit of its own: sixty fixtures pulling at once answered `toomanyrequests: Rate
-        // exceeded` (2026-10-09). The job pulls each test image once, before the tests, so the fixtures find it
+        // And any registry answers a burst badly: sixty fixtures pulling at once from Amazon's mirror answered
+        // `toomanyrequests: Rate exceeded` (2026-10-09). The job pulls each test image once, before the tests, so the fixtures find it
         // locally; the images named here are the ones the fixtures use.
-        foreach (var pulled in new[] { "public.ecr.aws/docker/library/postgres:17.11", "ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z" })
+        foreach (var pulled in new[] { "ghcr.io/argamboad/postgres:17.11", "ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z" })
             Assert.Contains(pulled, ci.Split("- name: Test (every tests/ project but the journeys)")[0]);
 
         void Check(string reference, string where)
@@ -681,6 +683,8 @@ public class EnforcementGateTests
             var namesARegistry = reference.Contains('/') && (first.Contains('.') || first.Contains(':') || first == "localhost");
             if (!namesARegistry || first is "docker.io" or "index.docker.io" or "registry-1.docker.io")
                 offenders.Add($"{where}: '{reference}' comes from Docker Hub");
+            else if (first == "public.ecr.aws")
+                offenders.Add($"{where}: '{reference}' comes from Amazon's mirror, which caps anonymous pulls");
         }
     }
 
@@ -745,12 +749,13 @@ public class EnforcementGateTests
         // The seam, proven on the one app the platform carries: the Notes sample. Before A1 the sample was registered in
         // Program.cs, had its DbSet in AppDbContext and its entity in the canary's handled set — exactly the edits every
         // app made for its own slices, in the same platform-owned files. Now the sample lives in the app-owned halves
-        // (AppComposition.cs, AppDbContext.App.cs, tests/Api.Tests/App/AppAllowlists.cs), and none of the platform's
-        // composition files names it. Downstream, A2's manifest gate holds the same files identical to the platform's.
+        // (AppComposition.cs, the host's AppDbContext — the app's own since the host is the starter's, Pkg 6.2 — and
+        // tests/Api.Tests/App/AppAllowlists.cs), and none of the platform's composition files names it. Downstream, A2's
+        // manifest gate holds the same files identical to the platform's.
         var root = RepoRoot();
         string[] composition =
         [
-            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Host/Persistence/AppDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
+            "src/Host/Program.cs", "src/Api/PlatformHosting.cs", "src/Infrastructure/Persistence/PlatformDbContext.cs", "src/Infrastructure/ServiceCollectionExtensions.cs",
             "tests/Api.Tests/ArchitectureTests.cs", "tests/Api.Tests/DataProtectionIdentityTests.cs",
             "src/Testing/Harness/ServiceHarness.cs", "tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs",
             "src/Testing.Ui/TestHttpHandler.cs",

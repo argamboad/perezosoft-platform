@@ -35,17 +35,33 @@
   </ItemGroup>
 
   <!--
-    The register (Pkg 5.7, #450): the platform's own files an app on the packages carries at its root, embedded as they
-    are in this release, so PlatformOwnershipSuite holds the app's copies to the package it references — no port, no
-    checkout, no manifest file in the app. One list: a file added here is held downstream from the next release.
+    The register (Pkg 5.7, #450; 6.4, #423): every file of starter/ the ownership map classes `register`, embedded as the
+    starter spells it (the placeholder brand AppBrand), so PlatformOwnershipSuite holds an app's copies to the package it
+    references (the placeholder renamed to the app's brand) — no port, no checkout, no manifest file in the app.
+    PlatformRegisterTests holds this list to the map: a file classed register in starter/ is embedded here, and nothing else.
   -->
   <ItemGroup>
-    <EmbeddedResource Include="..\..\build\PlatformSource.props" LogicalName="register/build/PlatformSource.props" />
-    <EmbeddedResource Include="..\..\build\PlatformSource.targets" LogicalName="register/build/PlatformSource.targets" />
-    <EmbeddedResource Include="..\..\global.json" LogicalName="register/global.json" />
-    <EmbeddedResource Include="..\..\nuget.config" LogicalName="register/nuget.config" />
-    <EmbeddedResource Include="..\..\.config\dotnet-tools.json" LogicalName="register/.config/dotnet-tools.json" />
-    <EmbeddedResource Include="..\..\platform-ownership.json" LogicalName="register/platform-ownership.json" />
+    <EmbeddedResource Include="..\..\starter\.config\dotnet-tools.json" LogicalName="register/.config/dotnet-tools.json" />
+    <EmbeddedResource Include="..\..\starter\.gitattributes" LogicalName="register/.gitattributes" />
+    <EmbeddedResource Include="..\..\starter\Directory.Build.props" LogicalName="register/Directory.Build.props" />
+    <EmbeddedResource Include="..\..\starter\Directory.Build.targets" LogicalName="register/Directory.Build.targets" />
+    <EmbeddedResource Include="..\..\starter\build\PlatformSource.props" LogicalName="register/build/PlatformSource.props" />
+    <EmbeddedResource Include="..\..\starter\build\PlatformSource.targets" LogicalName="register/build/PlatformSource.targets" />
+    <EmbeddedResource Include="..\..\starter\docker\db\provision-rls-runtime-role.sql" LogicalName="register/docker/db/provision-rls-runtime-role.sql" />
+    <EmbeddedResource Include="..\..\starter\global.json" LogicalName="register/global.json" />
+    <EmbeddedResource Include="..\..\starter\nuget.config" LogicalName="register/nuget.config" />
+    <EmbeddedResource Include="..\..\starter\platform-ownership.json" LogicalName="register/platform-ownership.json" />
+    <EmbeddedResource Include="..\..\starter\src\Host\Program.cs" LogicalName="register/src/Host/Program.cs" />
+    <EmbeddedResource Include="..\..\starter\src\Host\Persistence\AppDbContextFactory.cs" LogicalName="register/src/Host/Persistence/AppDbContextFactory.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\CompositionSmokeTests.cs" LogicalName="register/tests/Api.Tests/CompositionSmokeTests.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\Infrastructure\IntegrationTestFactory.cs" LogicalName="register/tests/Api.Tests/Infrastructure/IntegrationTestFactory.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\Infrastructure\PostgresFixture.cs" LogicalName="register/tests/Api.Tests/Infrastructure/PostgresFixture.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\Infrastructure\PostgresTestBase.cs" LogicalName="register/tests/Api.Tests/Infrastructure/PostgresTestBase.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\Infrastructure\TestAppDbContext.cs" LogicalName="register/tests/Api.Tests/Infrastructure/TestAppDbContext.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\OwnershipTests.cs" LogicalName="register/tests/Api.Tests/OwnershipTests.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\PlatformSchemaTests.cs" LogicalName="register/tests/Api.Tests/PlatformSchemaTests.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\PlatformTestingUsings.cs" LogicalName="register/tests/Api.Tests/PlatformTestingUsings.cs" />
+    <EmbeddedResource Include="..\..\starter\tests\Api.Tests\TenancyTests.cs" LogicalName="register/tests/Api.Tests/TenancyTests.cs" />
   </ItemGroup>
 
 </Project>

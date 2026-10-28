@@ -42,7 +42,7 @@ public class PlatformIntegrationFactory<TProgram, TContext> : WebApplicationFact
     // Long enough for HMAC-SHA256 (JwtSettings requires ≥32 chars); value is irrelevant, only length + validity.
     private const string TestJwtSecret = "integration-test-jwt-secret-key-0123456789";
 
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("public.ecr.aws/docker/library/postgres:17.11").Build();
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("ghcr.io/argamboad/postgres:17.11").Build();
 
     /// <summary>Superuser connection string of the throwaway container (for catalog-level asserts).</summary>
     public string DatabaseConnectionString => _container.GetConnectionString();

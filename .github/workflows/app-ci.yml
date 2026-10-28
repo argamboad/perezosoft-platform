@@ -102,7 +102,7 @@ jobs:
       # asked. Three attempts, so a registry hiccup does not fail the job before a test has run.
       - name: Pull the test images once
         run: |
-          for image in public.ecr.aws/docker/library/postgres:17.11 ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z; do
+          for image in ghcr.io/argamboad/postgres:17.11 ghcr.io/argamboad/minio:RELEASE.2025-09-07T16-13-09Z; do
             for attempt in 1 2 3; do
               docker pull --quiet "$image" && break
               [ "$attempt" = 3 ] && { echo "::error::could not pull $image"; exit 1; }
@@ -326,6 +326,47 @@ jobs:
               --forbidden-license-types "$PLATFORM/.github/forbidden-licenses.json"
           done
 
+  # The starter smoke (Pkg 6.2, #421): the template this change would release, stamped into a scratch app by `dotnet new`,
+  # built on this checkout's projects (the source switch, so no package is needed from the feed) and its composition
+  # smoke and structural suites run: the host starts, reports ready and serves a tenant call; the architecture rules and
+  # the register hold. Only where there is a starter (the platform); an app has none.
+  starter-smoke:
+    needs: changes
+    if: needs.changes.outputs.web == 'true' && needs.changes.outputs.starter == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false # v4 audit DEP-14: never leave the job token in .git/config
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Stamp a scratch app from this change's template
+        run: |
+          dotnet pack src/Templates/Perezosoft.Platform.Templates.csproj -c Release -o "$RUNNER_TEMP/feed" -p:MinVerVersionOverride=0.0.1-smoke
+          dotnet new install "$RUNNER_TEMP/feed/Perezosoft.Platform.Templates.0.0.1-smoke.nupkg"
+          dotnet new perezosoft-app -n Smoke -o "$RUNNER_TEMP/Smoke"
+          # A repo, as every app is: the ownership suite reads what git tracks.
+          cd "$RUNNER_TEMP/Smoke" && git init -q && git add -A
+
+      - name: Build it on this checkout (the source switch)
+        working-directory: ${{ runner.temp }}/Smoke
+        env:
+          PlatformSource: ${{ github.workspace }}
+        run: dotnet build tests/Api.Tests -c Release
+
+      - name: Composition smoke, architecture, ownership
+        working-directory: ${{ runner.temp }}/Smoke
+        env:
+          PlatformSource: ${{ github.workspace }}
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: dotnet test tests/Api.Tests -c Release --no-build --filter "FullyQualifiedName~CompositionSmokeTests|FullyQualifiedName~ArchitectureTests|FullyQualifiedName~OwnershipTests"
+
   # Production image build gate (DEPLOY-2, ADR-017). The multi-stage Dockerfile (publishes Web + Api and
   # serves the WASM single-origin) must keep building. Build-only — no push, and no run here: the
   # compose-parity smoke (boot + migrate + serve) needs a database and is a local/manual step per
@@ -524,6 +565,7 @@ jobs:
       e2e: ${{ steps.has.outputs.e2e }}
       docker: ${{ steps.has.outputs.docker }}
       qa: ${{ steps.has.outputs.qa }}
+      starter: ${{ steps.has.outputs.starter }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -573,9 +615,9 @@ jobs:
 
           # Anything that can change what the code DOES or how it is built, and every file a test or gate
           # reads: lockfiles, the workflows and scripts, the license list, .dockerignore, the config catalog,
-          # tools/ (less devtools), the Postman collection and the markdown in testdocs. A path counts as code if
-          # in doubt; skipping a gate is the expensive mistake.
-          code=$(match "$codefiles" '^(src/|tests/|tools/|local-ports\.props$|platform-ownership(\.App)?\.json$|platform-stamp\.json$|[^/]+\.slnx?$|Directory\.Packages\.props|Directory\.Build\.props|Directory\.Build\.targets|build/|platform-packages\.props$|global\.json|nuget\.config$|Dockerfile|\.dockerignore|\.gitignore|docker-compose\.yml|\.env\.example|\.config/dotnet-tools\.json|\.github/(workflows/|scripts/|forbidden-licenses\.json)|.*packages\.lock\.json|docs/postman/|docs/tutorial/gen_coverage\.py$|docs/brand/build_assets\.py$|README\.md$|CLAUDE\.md$|CONTRIBUTING\.md$|\.github/pull_request_template\.md$|\.github/release-note-template\.md$|docs/(DEPLOYMENT|DATA_MODEL|QA_TEST_PLAN|REBRANDING|DECISIONS|WAYS_OF_WORKING|TECH_STACK|NEW_APP_GUIDE|ARCHITECTURE|FLOWS)\.md$|docs/audits/v4-2026-09/FOUNDATION_RULES_v3\.md$|docs/stories/e2e\.md$)')
+          # tools/ (less devtools), the Postman collection, the markdown in testdocs, and starter/ (the
+          # template, Pkg 6.1a). A path counts as code if in doubt; skipping a gate is the expensive mistake.
+          code=$(match "$codefiles" '^(src/|tests/|tools/|starter/|local-ports\.props$|platform-ownership(\.App)?\.json$|platform-stamp\.json$|[^/]+\.slnx?$|Directory\.Packages\.props|Directory\.Build\.props|Directory\.Build\.targets|build/|platform-packages\.props$|global\.json|nuget\.config$|Dockerfile|\.dockerignore|\.gitignore|\.gitattributes$|docker-compose\.yml|docker/db/|\.env\.example|\.config/dotnet-tools\.json|\.github/(workflows/|scripts/|forbidden-licenses\.json)|.*packages\.lock\.json|docs/postman/|docs/tutorial/gen_coverage\.py$|docs/brand/build_assets\.py$|README\.md$|CLAUDE\.md$|CONTRIBUTING\.md$|\.github/pull_request_template\.md$|\.github/release-note-template\.md$|docs/(DEPLOYMENT|DATA_MODEL|QA_TEST_PLAN|REBRANDING|DECISIONS|WAYS_OF_WORKING|TECH_STACK|NEW_APP_GUIDE|ARCHITECTURE|FLOWS)\.md$|docs/audits/v4-2026-09/FOUNDATION_RULES_v3\.md$|docs/stories/e2e\.md$)')
 
           # Narrower: what the native legs can actually be broken by, incl. the solution-wide build props and the
           # native publish script (v4 NAT-16). Reported for the record; the device legs run on request (ADR-031).
@@ -655,12 +697,13 @@ jobs:
           # ci-logic end: run-plan
 
       # What this repo has (Pkg 5.4): a gate whose input is absent does not run here — an app on the packages may keep
-      # no journeys, no Dockerfile, no QA plan. The platform has all three.
+      # no journeys, no Dockerfile, no QA plan, no starter. The platform has all four.
       - id: has
         run: |
           echo "e2e=$([ -d tests/E2E.Tests ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "docker=$([ -f Dockerfile ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "qa=$([ -f docs/QA_TEST_PLAN.md ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "starter=$([ -d starter ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
   # Apple half of the native build (NATIVE-1). A device leg (ADR-031): devices = apple / all only — macOS
@@ -1041,7 +1084,7 @@ jobs:
       NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     services:
       db:
-        image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
+        image: ghcr.io/argamboad/postgres:17.11  # our copy of the official image (same digest): Docker Hub and Amazon's mirror both limit anonymous pulls
         env:
           POSTGRES_DB: smoke
           POSTGRES_USER: smoke
@@ -1224,7 +1267,10 @@ jobs:
         # repeated setup costs more than the wall-clock it saves (three shards: ~8 more minutes per run). The
         # dealing below is general — list more shard numbers here to split the journeys again.
         shard: [1]
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: by 2026-10-28 ubuntu-latest was Ubuntu 26.04, and Playwright 1.60 refuses to install
+    # its browsers there ("Playwright does not support chromium on ubuntu26.04-x64"). Move back to ubuntu-latest with the
+    # Playwright release that supports 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
@@ -1232,7 +1278,7 @@ jobs:
       NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
     services:
       db:
-        image: public.ecr.aws/docker/library/postgres:17.11  # Amazon's mirror of the official image: Docker Hub rate-limits anonymous pulls
+        image: ghcr.io/argamboad/postgres:17.11  # our copy of the official image (same digest): Docker Hub and Amazon's mirror both limit anonymous pulls
         env:
           POSTGRES_DB: e2e
           POSTGRES_USER: e2e
@@ -1514,7 +1560,7 @@ jobs:
   # box and a downstream app opts in by adding the secret + variable (see docs/DEPLOYMENT.md). The device
   # legs are not in its needs: a native result must not block a web deploy (ADR-018).
   deploy-staging:
-    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e]
+    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e, starter-smoke]
     if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && github.event_name == 'workflow_dispatch' && inputs.deploy == 'staging' }}
     # Two deploy runs in a row: Render supersedes the older build, so the older run's version-gated smoke
     # could never see its own SHA go live. Cancel the older in-flight deploy job instead — cancelled reads as
@@ -1581,7 +1627,7 @@ jobs:
   # reviewer is needed (a private repo on GitHub Free cannot have one). Skips cleanly until a prod service +
   # its deploy hook exist.
   deploy-prod:
-    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e]
+    needs: [build-test, secret-scan, qa-artifacts, license-scan, docker-build, e2e, starter-smoke]
     if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && github.event_name == 'workflow_dispatch' && inputs.deploy == 'prod' }}
     # Same rationale as deploy-staging (v3 audit DEP-7).
     concurrency:

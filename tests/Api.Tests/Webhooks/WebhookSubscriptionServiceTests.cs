@@ -121,7 +121,7 @@ public class WebhookSubscriptionServiceTests(PostgresFixture fixture) : Postgres
 
     private static WebhookSecretProtector NewProtector() => new(new EphemeralDataProtectionProvider());
 
-    private static WebhookSubscriptionService Build(Perezosoft.Infrastructure.Persistence.AppDbContext db, WebhookSecretProtector? protector = null) =>
+    private static WebhookSubscriptionService Build(Perezosoft.Host.Persistence.AppDbContext db, WebhookSecretProtector? protector = null) =>
         new(new EfRepository<WebhookSubscription>(db), new EfRepository<WebhookDelivery>(db),
             new EfOutbox(db, TimeProvider.System), new TestCurrentTenant(),
             new TokenGenerator(), protector ?? NewProtector(),

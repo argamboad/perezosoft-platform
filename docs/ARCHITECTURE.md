@@ -62,6 +62,61 @@ flowchart LR
 Tests mirror the trees: `Api.Tests` (server, Testcontainers Postgres/MinIO), `Core.Tests`,
 `Ui.Tests` (bUnit over the RCL), `E2E.Tests` (Playwright, black-box — references no project).
 
+### 1b. The packages, and what an app references (ADR-034, Packaging M3–M6)
+
+An app (`dotnet new perezosoft-app`, written from `starter/`) holds the projects on the left; everything on the right
+is a package from the platform's feed, versioned together (`PlatformPackagesVersion` in the app's
+`Directory.Packages.props`). The three test packages are split by runner; `Build`, `Tool` and `Templates` are no
+library at all. With `PLATFORM_SOURCE` set (WAYS_OF_WORKING, "Platform and app together") every arrow to a package
+becomes a project reference into a platform checkout, through the map in `platform-packages.props`.
+
+```mermaid
+flowchart LR
+    subgraph app ["An app (its repo)"]
+        AHost["src/Host<br/>Program.cs, AppComposition,<br/>Features/, AppDbContext + migrations"]
+        AUi["src/Shared.Ui<br/>the seeded pages"]
+        AWeb["src/Web"]
+        AMaui["src/Maui"]
+        AApiT["tests/Api.Tests<br/>the inherited suites"]
+        AUiT["tests/Ui.Tests"]
+        AE2E["tests/E2E.Tests"]
+    end
+    subgraph packages ["Perezosoft.Platform.* (the feed)"]
+        PApi["Api"]
+        PInfra["Infrastructure"]
+        PCore["Core"]
+        PClient["Client"]
+        PWeb["Web"]
+        PMaui["Maui"]
+        PTest["Testing<br/>xUnit: harness, suites, register"]
+        PTestUi["Testing.Ui<br/>bUnit"]
+        PTestE2E["Testing.E2E<br/>Playwright"]
+        PBuild["Build<br/>MSBuild props/targets"]
+        PTool["Tool<br/>dotnet platform"]
+        PTpl["Templates<br/>dotnet new perezosoft-app"]
+    end
+    AHost --> PApi
+    PApi --> PCore
+    PApi --> PInfra --> PCore
+    AUi --> PClient
+    AWeb --> AUi
+    AWeb --> PWeb --> PClient
+    AMaui --> AUi
+    AMaui --> PMaui --> PClient
+    AApiT --> AHost
+    AApiT --> PTest --> PApi
+    AUiT --> AUi
+    AUiT --> PTestUi --> PClient
+    AE2E --> PTestE2E
+    app -. "every project (GlobalPackageReference)" .-> PBuild
+    app -. ".config/dotnet-tools.json" .-> PTool
+    PTpl -. "writes, once" .-> app
+```
+
+What else an app holds is classed by `platform-ownership.json` (Pkg 6.4): about twenty **register** files kept equal
+to the copies `Testing` embeds (`OwnershipTests`), the **seed** it owns after `dotnet new` (the UI, its journeys, its
+config), and its own code. `dotnet platform port` merges the register from one release to the next.
+
 ## 2. The server onion and its seams
 
 `Api` depends on `Core` abstractions; `Infrastructure` implements them. A feature slice under
@@ -119,7 +174,7 @@ built once per host by `AddPlatformOptions`, a bad value stops the host at start
 | Billing-gated controllers | `options.BillingGatedControllers` | `BillingGateConvention` drops them with billing off (404) |
 | Route prefixes | `MapTenantFeatureGroup("/api/x")` (an `AppRouteGroup` per call) | `RouteTableGuard` refuses a shared prefix or one on `PlatformPrefixes` |
 | Authorization policies | `services.AddAppPolicy(name, …)` in `AddAppServices` | refused on a platform name; `EnsurePlatformPoliciesIntact` at boot |
-| Database model | `AppDbContext : PlatformDbContext` + `AppDbContext.App.cs` + its own migrations | `ApplyPlatformStep(name)` for published SQL steps (RLS); `PlatformSchemaTests` vs the embedded `platform-schema.json` |
+| Database model | `AppDbContext : PlatformDbContext` (its sets and model rules) + its own migrations | `ApplyPlatformStep(name)` for published SQL steps (RLS); `PlatformSchemaTests` vs the embedded `platform-schema.json` |
 | Configuration | `src/Host/appsettings*.json`, `.env`, environment | layered over the embedded `platform-defaults.json` (lowest source) |
 
 ## 3. Tenancy — two walls, both directions ([ADR-003](DECISIONS.md), [ADR-020](DECISIONS.md))

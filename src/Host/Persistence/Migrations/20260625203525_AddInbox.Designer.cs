@@ -9,7 +9,7 @@ using Perezosoft.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace Perezosoft.Infrastructure.Persistence.Migrations
+namespace Perezosoft.Host.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260625203525_AddInbox")]

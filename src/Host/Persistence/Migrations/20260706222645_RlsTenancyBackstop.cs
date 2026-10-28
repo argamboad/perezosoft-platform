@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore.Migrations;
+using Perezosoft.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace Perezosoft.Infrastructure.Persistence.Migrations
+namespace Perezosoft.Host.Persistence.Migrations
 {
     /// <summary>
     /// ADR-020: row-level security as the DB-level second tenancy wall. Enables + FORCEs RLS and
