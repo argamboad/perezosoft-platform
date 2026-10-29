@@ -96,6 +96,13 @@ public static void ConfigurePlatform(PlatformOptions options)
 - **The sender's display name is configuration, not brand:** `Email:Smtp:FromName` in `src/Host/appsettings.json`
   (the template set it to your name), overridden by `Email__Smtp__FromName` in `.env` or the host's environment.
 
+**Mails of your own design.** When the options cannot say it — your own layout, a webfont, more than one image, an
+illustration per mail — replace the renderer instead (Pkg 7.y): implement `IBrandedEmail` (`Otp`, `MagicLink`,
+`Invitation`, `Notification`, each returning the subject, the HTML and its inline images) and register it in
+`AppComposition.AddAppServices` with `services.AddSingleton<IBrandedEmail, YourMails>()`. It runs after the platform's
+registrations, so every platform mail goes through yours. Keep the email rules your renderer now owns: inline styles,
+images as CID PNGs, a font embedded rather than linked, every language you ship.
+
 **Product copy.** The brand name and the product's words live in `src/Shared.Ui/Resources/AppStrings.resx` (English)
 and `AppStrings.es.resx` (Spanish): read both for copy that describes the platform rather than your product (the
 Home page's hero, the sign-in page), in every language you ship. See `docs/LOCALIZATION.md`.

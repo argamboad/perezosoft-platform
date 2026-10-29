@@ -31,7 +31,7 @@ public class AuthController(
     IPasswordlessService passwordless,
     ILinkTokenService linkTokenService,
     IEmailSender emailSender,
-    BrandedEmail emails,
+    IBrandedEmail emails,
     IApplicationSettings appSettings,
     IPasswordlessSettings passwordlessSettings,
     IMfaLoginService mfaLogin,

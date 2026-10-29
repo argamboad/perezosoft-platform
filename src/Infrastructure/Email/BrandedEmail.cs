@@ -11,6 +11,27 @@ namespace Perezosoft.Infrastructure.Email;
 public sealed record EmailBody(string Subject, string Html, IReadOnlyList<EmailInlineImage> InlineImages);
 
 /// <summary>
+/// The platform's transactional mails, rendered (Pkg 7.y, #462): every sender — sign-in, invitations, notifications —
+/// asks this for the subject, HTML and inline images, then hands them to <see cref="IEmailSender"/>. The default is
+/// <see cref="BrandedEmail"/>, configured through <c>PlatformOptions.Brand</c>; an app whose mails are its own design
+/// registers its own implementation in <c>AddAppServices</c> (after the platform's, so it wins) and renders all four.
+/// </summary>
+public interface IBrandedEmail
+{
+    /// <summary>"Email me a 6-digit code": <paramref name="code"/>, valid for <paramref name="lifespanMinutes"/>.</summary>
+    EmailBody Otp(string code, int lifespanMinutes, CultureInfo culture);
+
+    /// <summary>"Email me a magic link": the single-use sign-in <paramref name="link"/>.</summary>
+    EmailBody MagicLink(string link, int lifespanMinutes, CultureInfo culture);
+
+    /// <summary>An invitation to join a household: the <paramref name="joinUrl"/> and the raw <paramref name="token"/> to paste.</summary>
+    EmailBody Invitation(string joinUrl, string token, CultureInfo culture);
+
+    /// <summary>A notification's email copy: its <paramref name="title"/> and <paramref name="body"/>, plain text to encode.</summary>
+    EmailBody Notification(string title, string body, CultureInfo culture);
+}
+
+/// <summary>
 /// Builds the branded HTML for transactional emails. Email HTML is its own
 /// world — table-based layout, inline styles, web-safe fonts only — so this does NOT reuse
 /// the app's CSS. The logo is embedded via CID (multipart/related), the one approach Gmail
@@ -27,7 +48,7 @@ public sealed record EmailBody(string Subject, string Html, IReadOnlyList<EmailI
 /// one culture at a time. The default brand renders exactly the mails the platform always sent.
 /// </para>
 /// </summary>
-public sealed class BrandedEmail
+public sealed class BrandedEmail : IBrandedEmail
 {
     private const string LogoCid = "perezosoft-logo";
     private const string Font = "'Segoe UI',Helvetica,Arial,sans-serif";

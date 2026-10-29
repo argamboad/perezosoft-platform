@@ -30,7 +30,10 @@ public static class ServiceRegistrationExtensions
         services.AddSingleton(options);
         services.AddSingleton(new PlanCatalog(options.Plans));
         services.AddSingleton(new RolePermissions(options.Permissions));
+        // The mails: the platform's renderer, built (and its brand checked) once; the senders ask IBrandedEmail, which an
+        // app may register again in AddAppServices with its own design (#462) — the last registration wins.
         services.AddSingleton(new BrandedEmail(options.Brand));
+        services.AddSingleton<IBrandedEmail>(sp => sp.GetRequiredService<BrandedEmail>());
         return options;
     }
 
