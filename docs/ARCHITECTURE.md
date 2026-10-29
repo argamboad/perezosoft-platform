@@ -171,6 +171,7 @@ built once per host by `AddPlatformOptions`, a bad value stops the host at start
 | Plans and quotas | `options.Plans` (starts as Free + Pro; must keep Free) | `PlanCatalog`, injected into entitlements, quotas, billing, admin comp |
 | Permissions | `options.Permissions.Add(new Permission("X"), roles…)` (additive; owner holds all) | `RolePermissions`, asked by `[RequireTenantPermission]`, `.RequirePermission` and `IPermissionService`; `PermissionRegistrationGateTests` |
 | Brand | `options.Brand` — name, tagline, palette, PNG logo, `Strings` (the app's resx first, per culture), `ServiceName` | `BrandedEmail` (sign-in, invitation and notification mails); the MFA issuer, the OpenAPI title and the telemetry `service.name` |
+| Mails of the app's own design | its own `IBrandedEmail`, registered in `AddAppServices` (Pkg 7.y) | every sender (sign-in, invitations, notifications) renders through it instead of `BrandedEmail` |
 | Billing-gated controllers | `options.BillingGatedControllers` | `BillingGateConvention` drops them with billing off (404) |
 | Route prefixes | `MapTenantFeatureGroup("/api/x")` (an `AppRouteGroup` per call) | `RouteTableGuard` refuses a shared prefix or one on `PlatformPrefixes` |
 | Authorization policies | `services.AddAppPolicy(name, …)` in `AddAppServices` | refused on a platform name; `EnsurePlatformPoliciesIntact` at boot |

@@ -69,7 +69,7 @@ public sealed class NotificationService(
     IRepository<NotificationPreference> preferences,
     IUserRepository users,
     IEmailSender emailSender,
-    BrandedEmail emails,
+    IBrandedEmail emails,
     TimeProvider clock) : INotificationService
 {
     public async Task NotifyAsync(Guid userId, string kind, string title, string body, object? metadata = null, CancellationToken cancellationToken = default)

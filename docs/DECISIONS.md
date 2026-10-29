@@ -2235,3 +2235,17 @@ appears in no layer of either stage (9 and 20 layers searched), nor in `docker h
 storage. Through `docker compose --profile app` (the secret from `.env`) the container migrated and served from one
 origin: `/health/ready` 200, the pages, 404 off the API's routes, 401 on a guarded one, and `/api/version` naming 1.0.0-beta.1. CI and Render are
 proven with the jigger-jot pilot: its `docker-build` job, and its staging deploy (argamboad/jigger-jot#200).
+
+*Amendment (2026-10-29, Pkg 7.y, #462) — the mails behind a seam.* The jigger-jot pilot found the first seam point 4
+had missed. Its mails are its own design: an embedded display serif, a header lockup and an illustration attached per
+mail, a card layout and strings of its own, all held by its own tests. `PlatformOptions.Brand` takes a name, a tagline,
+eight colours, one PNG logo and string overrides, so none of that design fits, and the renderer was a sealed class the
+senders took by its concrete type.
+
+The mails now render behind `IBrandedEmail`, which covers the four kinds the platform sends: the sign-in code, the magic
+link, the invitation and a notification's email copy. `BrandedEmail` stays the default. It is built once from
+`options.Brand`, checks the brand at startup as before, and renders unchanged. `AuthController`, `NotificationService` and
+`TenantInvitationService` take the interface. An app replaces the renderer by registering its own in `AddAppServices`,
+which runs after the platform's registrations. `EmailRendererSeamTests` holds the seam: by default the interface resolves
+to the platform's `BrandedEmail`, and an app's renderer receives all four mails the platform sends, over HTTP, through
+the invitation endpoint and through `INotificationService`.

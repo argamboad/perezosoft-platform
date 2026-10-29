@@ -60,7 +60,7 @@ public class TenantInvitationService(
     ITokenHasher tokenHasher,
     IUnitOfWork unitOfWork,
     IEmailSender emailSender,
-    BrandedEmail emails,
+    IBrandedEmail emails,
     IUserService userService,
     IApplicationSettings appSettings,
     IInvitationSettings invitationSettings,
