@@ -16,14 +16,14 @@
     "  producer  the publisher's alone (Pkg 2.5): the release machinery and the package map. Never ported, never in a",
     "            manifest; the gates that read these files run only in the platform (its stamp's commit is null).",
     "keep: tokens the brand map never rewrites (Pkg 2.5, ADR-034): the platform's package ids (also lower-case, as",
-    "dotnet-tools.json spells the tool's) and its feed key keep their names in every app. The port tool reads this list",
-    "from the platform release it ports to; the gate spells paths with it.",
+    "dotnet-tools.json spells the tool's), its feed key and NuGet's credential variable for it keep their names in every app.",
+    "The port tool reads this list from the platform release it ports to; the gate spells paths with it.",
     "An app classes its own top-level folders in platform-ownership.App.json (same shape, its rules apply after these).",
     "The port tool (tools/port-platform.ps1, `dotnet platform port`) merges the register from starter/ at the app's",
     "release to the target release and stamps the version (platform-stamp.json, \"commit\"); a clone's run merges register",
     "and seed files from platform commits and writes the manifest its gate compares against."
   ],
-  "keep": [ "Perezosoft.Platform.", "perezosoft.platform.", "key=\"perezosoft\"" ],
+  "keep": [ "Perezosoft.Platform.", "perezosoft.platform.", "key=\"perezosoft\"", "NuGetPackageSourceCredentials_perezosoft" ],
   "rules": [
     { "glob": ".github/workflows/release.yml", "class": "producer" },
     { "glob": ".github/release-note-template.md", "class": "producer" },

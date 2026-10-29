@@ -268,10 +268,10 @@ packages (`WAYS_OF_WORKING.md`, "Platform and app together").
 
 ## Phase 7 — Stand up staging (an afternoon, once)
 
-> **The container for an app on the packages is #459 (Pkg 7.x).** The packages are private, so the image must restore
-> them from the feed with a token that never lands in a layer (a BuildKit secret, in CI and on Render). The starter
-> ships no `Dockerfile` or `render.yaml` until it lands; the steps below are the platform's own path and apply as soon
-> as it does.
+Your app ships the template's `Dockerfile` and `render.yaml`. The packages are private, so the image restores them
+with the feed's token as the BuildKit secret `nuget`, which reaches no layer (`DEPLOYMENT.md` §0). Check it locally
+first: `docker compose --profile app up -d --build` builds it with `.env`'s `PLATFORM_PACKAGES_TOKEN` and runs it against
+the compose Postgres and Mailpit.
 
 Follow **`docs/DEPLOYMENT.md`** top to bottom — it's the runbook. The order and the accounts:
 
@@ -279,7 +279,8 @@ Follow **`docs/DEPLOYMENT.md`** top to bottom — it's the runbook. The order an
 2. **§2 Brevo** — free SMTP (300/day); the four `Email__Smtp__*` values.
 3. **§3 Stripe (test mode)** — **required**: the image runs as Production, which fail-closes
    without `Billing__Stripe__SecretKey`; a `sk_test_…` key is fine.
-4. **§4 Render** — apply `render.yaml` as a Blueprint, paste the secrets from 1–3, deploy.
+4. **§4 Render** — apply `render.yaml` as a Blueprint (rename its service first: the name is your public URL),
+   paste the secrets from 1–3, add the secret file `nuget` (the feed's token, for the image build), deploy.
 5. **§5 OAuth (optional)** — register your staging domain with Google/Microsoft, add the client
    id/secret env vars. One provider console entry per domain.
 6. **§6 CI deploy** — the **`RENDER_DEPLOY_HOOK_STAGING`** secret on GitHub; a manual *Run workflow* with `deploy=staging` deploys `develop` and runs the version-gated

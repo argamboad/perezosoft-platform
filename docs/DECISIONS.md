@@ -2210,3 +2210,28 @@ against the new map would stop receiving packaged fixes: accepted, since convers
 `PortTool_OnThePackages_MergesTheRegisterFromTheStarter_AndListsWhatChangedInTheSeed` runs the tool for real on two
 scratch repos: a platform whose `starter/` has two tagged releases, and an app made from the first as `dotnet new` makes
 it. Its clone-mode twin stays.
+
+*Amendment (2026-10-29, Pkg 7.x, #459) — the container for an app on the packages.* The packages are private (since
+2026-10-21), so an app's image restores them with a token. The starter now ships its `Dockerfile`, `.dockerignore` and
+`render.yaml`, all seed. The token reaches the build as the BuildKit secret `nuget`, which holds the raw token:
+- The restore's `RUN` mounts it (`required=true`) and hands it to NuGet as the per-source variable
+  `NuGetPackageSourceCredentials_perezosoft` for that one command. It is in no layer, no image config and no history.
+  A build arg or an `ENV` would be in all three.
+- Every builder passes it. `docker compose --profile app` takes it from `.env`'s `PLATFORM_PACKAGES_TOKEN`; the starter
+  compose file gained the `app` service its `.env.example` already named. `app-ci.yml`'s `docker-build` passes the job
+  token (`packages: read`) as a step variable. Render passes a secret file named `nuget`, set by hand on the service,
+  since a blueprint cannot carry it. Render also drops that file in the build context, so `.dockerignore` lists it.
+- The credential variable's name joins the map's keep-list: like `key="perezosoft"`, it is the feed key, which no brand
+  rename may touch.
+
+`AnAppsImage_ReadsTheFeed_OnlyThroughTheBuildSecret` holds all of that. The SDK and runtime pins, the build files copied
+before the restore and the storage folder are now gated in both Dockerfiles.
+
+Packing the template turned up a bug: NuGet reads a `PackagePath` with no extension as a folder, so the Dockerfile packed
+as `Dockerfile/Dockerfile`. The template now packs into `content/`, and the starter smoke checks the Dockerfile is a file.
+
+Proof, laptop: an app from this branch's template, packed as 1.0.0-beta.1, built its image from the feed. The token
+appears in no layer of either stage (9 and 20 layers searched), nor in `docker history`, and the app user writes its
+storage. Through `docker compose --profile app` (the secret from `.env`) the container migrated and served from one
+origin: `/health/ready` 200, the pages, 404 off the API's routes, 401 on a guarded one, and `/api/version` naming 1.0.0-beta.1. CI and Render are
+proven with the jigger-jot pilot: its `docker-build` job, and its staging deploy (argamboad/jigger-jot#200).

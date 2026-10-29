@@ -33,5 +33,37 @@ services:
       retries: 5
       start_period: 5s
 
+  # The production image, from one origin (ADR-017), behind the "app" profile: `docker compose up -d` still starts only
+  # db and mail, and `docker compose --profile app up -d --build` checks that the container that ships boots, migrates
+  # and serves. Its build reads the platform's feed with PLATFORM_PACKAGES_TOKEN from .env, as the BuildKit secret
+  # `nuget` (in no layer). It loads .env for the app's settings, then reaches the sibling containers by service name.
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets: [nuget]
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${DB_NAME:-dev_db};Username=${DB_USER:-dev};Password=${DB_PASSWORD:-devpassword}"
+      Email__Smtp__Host: mail
+      Email__Smtp__Port: "1025"
+      Email__Smtp__Username: ""
+      Email__Smtp__Password: ""
+      PORT: "8080"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      mail:
+        condition: service_healthy
+
+secrets:
+  nuget:
+    environment: PLATFORM_PACKAGES_TOKEN
+
 volumes:
   db_data:

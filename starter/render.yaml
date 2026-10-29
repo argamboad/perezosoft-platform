@@ -1,0 +1,63 @@
+# Render blueprint (ADR-017) — free-tier staging for AppBrand's single-origin container.
+# Docs: https://render.com/docs/blueprint-spec . Apply via Render → "New +" → "Blueprint" pointed at
+# this repo. Secrets (sync:false) are set once in the Render dashboard, NEVER committed here.
+#
+# The image restores the Perezosoft.Platform.* packages from their private feed, so the build needs the feed's token
+# (a classic GitHub token with only read:packages). A blueprint cannot carry it: after applying, open the service →
+# Environment → Secret Files and add one named `nuget` holding the token. Render hands it to the build as the BuildKit
+# secret `nuget` (the Dockerfile's restore mounts it; it reaches no layer), and .dockerignore keeps the copy Render also
+# puts in the build context out of the image. Without it the build stops at the restore.
+#
+# Reminders (free tier): the instance sleeps after ~15 min idle (first request cold-starts ~30–60s and
+# the outbox/scheduler pause while asleep — fine for staging, never for a paid prod). Bring your own
+# Postgres (Neon) + SMTP (Brevo); see the platform's docs/DEPLOYMENT.md.
+services:
+  - type: web
+    name: appbrand-staging           # becomes the public *.onrender.com URL — settle it before the first deploy
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health/ready   # readiness = DB reachable (Render restarts if it fails)
+    autoDeploy: false                # CI drives deploys via a hook, not on every push
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Hosting__ServeWebClient
+        value: "true"               # serve the bundled pages single-origin (also baked into the image)
+      - key: Proxy__Enabled
+        value: "true"               # behind Render's TLS proxy: honor X-Forwarded-For/-Proto
+      - key: Jwt__Secret
+        generateValue: true         # Render mints a strong secret ONCE and persists it (sessions survive redeploys)
+      # ── Secrets — set these in the dashboard (sync:false keeps them out of git) ──
+      - key: ConnectionStrings__DefaultConnection
+        sync: false                 # Neon SESSION-pooler URI + sslmode=require (see the runbook)
+      - key: Billing__Enabled
+        value: "false"              # GATES-1 (ADR-027): off = /api/billing + the webhook 404 and every tenant is Free.
+                                    # Set "true" when you charge — the Stripe key below is then required to boot.
+      # - key: Billing__Stripe__SecretKey
+      #   sync: false               # REQUIRED while Billing__Enabled is true (fail-closed guard)
+      - key: Auth__AppBaseUrl
+        sync: false                 # this service's public https URL — magic-link/invite emails link here
+      - key: Email__Smtp__Host
+        value: smtp-relay.brevo.com
+      - key: Email__Smtp__Port
+        value: "2525"               # Render free BLOCKS outbound 25/465/587 — Brevo also listens on 2525 (STARTTLS)
+      - key: Email__Smtp__Username
+        sync: false                 # Brevo SMTP login
+      - key: Email__Smtp__Password
+        sync: false                 # Brevo SMTP key
+      - key: Email__Smtp__FromAddress
+        sync: false                 # REQUIRED — a Brevo-VERIFIED sender address, else sends are rejected
+      - key: Email__Smtp__FromName
+        value: AppBrand             # display name on outgoing mail
+      # ── Optional — uncomment/set to enable ──
+      # - key: Authentication__Google__ClientId
+      #   sync: false
+      # - key: Authentication__Google__ClientSecret
+      #   sync: false
+      # Signup green list (GATES-2, ADR-027) — leave these out entirely and signup is OPEN to anyone
+      # who finds the URL. One per person, numbered from zero and CONTIGUOUS (__0, __1, __2 …).
+      # - key: Signup__AllowedEmails__0
+      #   sync: false
+      # - key: Signup__AllowedDomains__0
+      #   sync: false

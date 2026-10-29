@@ -64,7 +64,10 @@
     <BakePlatformVersion Files="@(_StarterFile)" OutputDirectory="$(BakedStarterDir)" Token="0.0.0-platform" Version="$(PackageVersion)" />
     <ItemGroup>
       <_BakedStarterFile Include="$(BakedStarterDir)**/*" />
-      <None Include="@(_BakedStarterFile)" Pack="true" PackagePath="content/%(RecursiveDir)%(Filename)%(Extension)" />
+      <!-- The folder, not the file: NuGet reads a PackagePath with no extension as a folder, so an extensionless file
+           (the Dockerfile) packed as content/Dockerfile/Dockerfile. Given a folder ending in "/", it appends the item's
+           RecursiveDir and its own name. -->
+      <None Include="@(_BakedStarterFile)" Pack="true" PackagePath="content/" />
     </ItemGroup>
   </Target>
 

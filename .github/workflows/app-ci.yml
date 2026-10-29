@@ -351,8 +351,9 @@ jobs:
           dotnet pack src/Templates/Perezosoft.Platform.Templates.csproj -c Release -o "$RUNNER_TEMP/feed" -p:MinVerVersionOverride=0.0.1-smoke
           dotnet new install "$RUNNER_TEMP/feed/Perezosoft.Platform.Templates.0.0.1-smoke.nupkg"
           dotnet new perezosoft-app -n Smoke -o "$RUNNER_TEMP/Smoke"
-          # A repo, as every app is: the ownership suite reads what git tracks.
-          cd "$RUNNER_TEMP/Smoke" && git init -q && git add -A
+          # A repo, as every app is: the ownership suite reads what git tracks. And the image's files where an app keeps
+          # them (pack once wrote the extensionless Dockerfile as a folder, #459).
+          cd "$RUNNER_TEMP/Smoke" && git init -q && git add -A && test -f Dockerfile && test -f .dockerignore
 
       - name: Build it on this checkout (the source switch)
         working-directory: ${{ runner.temp }}/Smoke
@@ -381,8 +382,13 @@ jobs:
         with:
           persist-credentials: false # v4 audit DEP-14: never leave the job token in .git/config
 
+      # An app's image restores the platform's packages from their private feed (Pkg 7.x, #459): the job token
+      # (packages: read) is its BuildKit secret `nuget`, mounted for the restore alone and in no layer. The platform's
+      # own image restores nothing from the feed and ignores it.
       - name: Build the production image
-        run: docker build -t perezosoft-app:ci .
+        env:
+          NUGET_FEED_TOKEN: ${{ github.token }}
+        run: docker build --secret id=nuget,env=NUGET_FEED_TOKEN -t perezosoft-app:ci .
 
       # The app runs as the non-root `app` user; local-disk file storage (/app/storage) must be writable by it.
       - name: The app user can write its storage folder
@@ -617,7 +623,7 @@ jobs:
           # reads: lockfiles, the workflows and scripts, the license list, .dockerignore, the config catalog,
           # tools/ (less devtools), the Postman collection, the markdown in testdocs, and starter/ (the
           # template, Pkg 6.1a). A path counts as code if in doubt; skipping a gate is the expensive mistake.
-          code=$(match "$codefiles" '^(src/|tests/|tools/|starter/|local-ports\.props$|platform-ownership(\.App)?\.json$|platform-stamp\.json$|[^/]+\.slnx?$|Directory\.Packages\.props|Directory\.Build\.props|Directory\.Build\.targets|build/|platform-packages\.props$|global\.json|nuget\.config$|Dockerfile|\.dockerignore|\.gitignore|\.gitattributes$|docker-compose\.yml|docker/db/|\.env\.example|\.config/dotnet-tools\.json|\.github/(workflows/|scripts/|forbidden-licenses\.json)|.*packages\.lock\.json|docs/postman/|docs/tutorial/gen_coverage\.py$|docs/brand/build_assets\.py$|README\.md$|CLAUDE\.md$|CONTRIBUTING\.md$|\.github/pull_request_template\.md$|\.github/release-note-template\.md$|docs/(DEPLOYMENT|DATA_MODEL|QA_TEST_PLAN|REBRANDING|DECISIONS|WAYS_OF_WORKING|TECH_STACK|NEW_APP_GUIDE|ARCHITECTURE|FLOWS)\.md$|docs/audits/v4-2026-09/FOUNDATION_RULES_v3\.md$|docs/stories/e2e\.md$)')
+          code=$(match "$codefiles" '^(src/|tests/|tools/|starter/|local-ports\.props$|platform-ownership(\.App)?\.json$|platform-stamp\.json$|[^/]+\.slnx?$|Directory\.Packages\.props|Directory\.Build\.props|Directory\.Build\.targets|build/|platform-packages\.props$|global\.json|nuget\.config$|Dockerfile|\.dockerignore|\.gitignore|\.gitattributes$|docker-compose\.yml|render\.yaml$|docker/db/|\.env\.example|\.config/dotnet-tools\.json|\.github/(workflows/|scripts/|forbidden-licenses\.json)|.*packages\.lock\.json|docs/postman/|docs/tutorial/gen_coverage\.py$|docs/brand/build_assets\.py$|README\.md$|CLAUDE\.md$|CONTRIBUTING\.md$|\.github/pull_request_template\.md$|\.github/release-note-template\.md$|docs/(DEPLOYMENT|DATA_MODEL|QA_TEST_PLAN|REBRANDING|DECISIONS|WAYS_OF_WORKING|TECH_STACK|NEW_APP_GUIDE|ARCHITECTURE|FLOWS)\.md$|docs/audits/v4-2026-09/FOUNDATION_RULES_v3\.md$|docs/stories/e2e\.md$)')
 
           # Narrower: what the native legs can actually be broken by, incl. the solution-wide build props and the
           # native publish script (v4 NAT-16). Reported for the record; the device legs run on request (ADR-031).
