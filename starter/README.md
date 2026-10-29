@@ -18,7 +18,11 @@ dotnet build src/Maui -f net10.0-android   # the native app (the MAUI workload);
 ```
 
 Copy `.env.example` to `.env` first and set `Jwt__Secret`. Restoring needs a token for the platform's feed in your user
-NuGet config (GitHub Packages, `read:packages`).
+NuGet config (GitHub Packages, `read:packages`); keep it in `.env` as `PLATFORM_PACKAGES_TOKEN` too, for the image.
+
+The production image (`Dockerfile`) serves the API and the pages from one origin. Its restore reads the feed through the
+BuildKit secret `nuget`, never a layer: `docker compose --profile app up -d --build` builds and runs it locally from
+`.env`; `render.yaml` deploys it on Render, where the token is a secret file named `nuget`.
 
 ## Grow it
 

@@ -34,6 +34,11 @@ public class EnforcementGateTests
         Assert.True(aspNetPackage == runtimeTag,
             $"Dockerfile runtime image (aspnet:{runtimeTag}) != the ASP.NET package line ({aspNetPackage}).");
 
+        // The starter's image (Pkg 7.x, #459) builds every new app on the same two: a bump here is a bump there.
+        var starterImage = File.ReadAllText(Path.Combine(root, "starter", "Dockerfile"));
+        Assert.Equal(sdk, Regex.Match(starterImage, @"dotnet/sdk:([0-9.]+)").Groups[1].Value);
+        Assert.Equal(runtimeTag, Regex.Match(starterImage, @"dotnet/aspnet:([0-9.]+)").Groups[1].Value);
+
         // CI must read the SDK from global.json, never hardcode one.
         var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
         Assert.Contains("global-json-file: global.json", ci);
@@ -53,16 +58,18 @@ public class EnforcementGateTests
         }
     }
 
-    [Fact]
-    public void Dockerfile_CopiesEveryRootBuildFile_BeforeTheRestore() // Pkg 2.4: PR #429's docker-build failed on build/PlatformSource.props
+    [Theory]
+    [InlineData("")]
+    [InlineData("starter")] // an app's image (Pkg 7.x, #459): its build files, the feed and the SDK pin, before the restore
+    public void Dockerfile_CopiesEveryRootBuildFile_BeforeTheRestore(string tree) // Pkg 2.4: PR #429's docker-build failed on build/PlatformSource.props
     {
         // The image copies the solution-wide build files by name before `dotnet restore`, then only src/. A file the root
         // Directory.Build.props/.targets imports but the Dockerfile does not copy builds everywhere except the image:
         // CI's build-test passed and docker-build failed with MSB4019 when the local source switch added build/. So every
         // root build file and every file they import is copied before the restore.
-        var root = RepoRoot();
+        var root = Path.Combine(RepoRoot(), tree);
         var dockerfile = File.ReadAllText(Path.Combine(root, "Dockerfile")).ReplaceLineEndings("\n");
-        var build = dockerfile[..dockerfile.IndexOf("RUN dotnet restore", StringComparison.Ordinal)];
+        var build = dockerfile[..dockerfile.IndexOf("dotnet restore", StringComparison.Ordinal)];
         var copied = Regex.Matches(build, @"(?m)^COPY (?!--)(.+)$")
             .SelectMany(m => m.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).SkipLast(1)) // the last word is the destination
             .Select(p => p.TrimEnd('/'))
@@ -78,19 +85,24 @@ public class EnforcementGateTests
         foreach (var file in needed.Where(f => File.Exists(Path.Combine(root, f))).ToList())
             foreach (Match m in Regex.Matches(File.ReadAllText(Path.Combine(root, file)), @"GetPathOfFileAbove\('([^']+)'"))
                 needed.Add(m.Groups[1].Value);
+        // An app takes the build settings as the Build package, which reads the same two root files by name, and restores
+        // the platform's packages through its own nuget.config at the SDK its global.json pins.
+        if (tree == "starter") needed.AddRange(["local-ports.props", "platform-stamp.json", "nuget.config", "global.json"]);
 
         var missing = needed.Where(n => !copied.Any(c => n == c || n.StartsWith(c + "/", StringComparison.Ordinal))).ToList();
         Assert.True(missing.Count == 0, "the Dockerfile does not copy, before `dotnet restore`, build files the root props/targets need: " + string.Join(", ", missing));
     }
 
-    [Fact]
-    public void Dockerfile_GivesTheAppUserAWritableStorageDir()
+    [Theory]
+    [InlineData("Dockerfile")]
+    [InlineData("starter/Dockerfile")]
+    public void Dockerfile_GivesTheAppUserAWritableStorageDir(string path)
     {
         // Local-disk file storage (ADR-010) defaults to ./storage under the app base dir = /app/storage. The runtime
         // runs as the non-root `app` user, and WORKDIR /app is created by root, so without this the first file write
         // (CSV export, report PDF, household export) fails with "Access to the path '/app/storage' is denied" —
         // found on a downstream app's staging, 2026-09-17. The directory must exist, owned by `app`, BEFORE `USER app`.
-        var dockerfile = File.ReadAllText(Path.Combine(RepoRoot(), "Dockerfile"));
+        var dockerfile = File.ReadAllText(Path.Combine(RepoRoot(), path));
         var runtime = dockerfile[dockerfile.IndexOf("AS runtime", StringComparison.Ordinal)..];
         var userAt = runtime.IndexOf("USER app", StringComparison.Ordinal);
         Assert.True(userAt > 0, "The runtime stage must switch to the non-root `app` user.");
@@ -619,6 +631,31 @@ public class EnforcementGateTests
             else if (Regex.IsMatch(tag, @"^v?\d+$"))
                 offenders.Add($"{where}: '{image}' is a bare major tag, which floats with every minor release — pin at least major.minor");
         }
+    }
+
+    [Fact]
+    public void AnAppsImage_ReadsTheFeed_OnlyThroughTheBuildSecret() // Pkg 7.x (#459)
+    {
+        // The packages are private, so an app's image restores them with a token. It arrives as the BuildKit secret
+        // `nuget`: mounted for the restore's RUN alone and handed to NuGet as its per-source variable there, so it is in
+        // no layer, no image config and no history. A build arg or an ENV would put it in all three.
+        var root = RepoRoot();
+        var image = File.ReadAllText(Path.Combine(root, "starter", "Dockerfile")).ReplaceLineEndings("\n");
+        var restore = Regex.Match(image, @"(?ms)^RUN --mount=type=secret,id=nuget,required=true \\\n.*?dotnet restore.*?(?=\n\n)");
+        Assert.True(restore.Success, "the starter's Dockerfile restores without mounting the `nuget` secret");
+        Assert.Contains("NuGetPackageSourceCredentials_perezosoft=\"Username=token;Password=$(cat /run/secrets/nuget)\"", restore.Value);
+        Assert.Equal(Regex.Matches(image, "dotnet restore").Count, Regex.Matches(restore.Value, "dotnet restore").Count); // no other restore
+        Assert.DoesNotMatch(@"(?im)^\s*(ARG|ENV)\s+\S*(TOKEN|PASSWORD|NUGET|CREDENTIAL)", image);
+        // Render copies a secret file into the build context root too: never into the image.
+        Assert.Contains("\nnuget\n", "\n" + File.ReadAllText(Path.Combine(root, "starter", ".dockerignore")).ReplaceLineEndings("\n"));
+        // Every place that builds it hands the secret over: compose from .env, Render's secret file, the platform's CI.
+        var compose = File.ReadAllText(Path.Combine(root, "starter", "docker-compose.yml")).ReplaceLineEndings("\n");
+        Assert.Contains("secrets: [nuget]", compose);
+        Assert.Matches(@"(?m)^secrets:\n  nuget:\n    environment: PLATFORM_PACKAGES_TOKEN$", compose);
+        Assert.Contains("Secret Files and add one named `nuget`", File.ReadAllText(Path.Combine(root, "starter", "render.yaml")));
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "app-ci.yml"));
+        Assert.Contains("NUGET_FEED_TOKEN: ${{ github.token }}", ci);
+        Assert.Contains("docker build --secret id=nuget,env=NUGET_FEED_TOKEN ", ci);
     }
 
     [Fact]
