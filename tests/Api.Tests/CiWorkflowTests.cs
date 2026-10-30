@@ -349,12 +349,56 @@ public class CiWorkflowTests
         Assert.DoesNotMatch(@"--forbidden-license-types \.github/", app);
         Assert.Contains("repository: ${{ job.workflow_repository }}", app, StringComparison.Ordinal);
         Assert.Contains("ref: ${{ job.workflow_sha }}", app, StringComparison.Ordinal);
-        // Every job that reads $PLATFORM checks the platform out first (on the platform itself the step is skipped).
-        foreach (var (name, body) in Jobs(app).Where(j => j.Value.Contains("$PLATFORM/", StringComparison.Ordinal)))
+        // Every job that reads $PLATFORM_DIR checks the platform out first (on the platform itself the step is skipped).
+        foreach (var (name, body) in Jobs(app).Where(j => j.Value.Contains("$PLATFORM_DIR/", StringComparison.Ordinal)))
         {
             var checkout = body.IndexOf("path: .platform", StringComparison.Ordinal);
-            Assert.True(checkout >= 0 && checkout < body.IndexOf("$PLATFORM/", StringComparison.Ordinal), $"{name} reads $PLATFORM without checking the platform out first");
+            Assert.True(checkout >= 0 && checkout < body.IndexOf("$PLATFORM_DIR/", StringComparison.Ordinal), $"{name} reads $PLATFORM_DIR without checking the platform out first");
         }
+    }
+
+    [Fact]
+    public void NoWorkflowEnv_IsAnMsBuildPropertyTheBuildReads() // perezosoft-platform#464
+    {
+        // MSBuild reads every environment variable as a property, case-insensitively. app-ci.yml's checkout path was once
+        // `PLATFORM`, i.e. $(Platform): in an app's run every build landed in bin/.platform/Debug/ and the device smokes,
+        // which install what they built by path, found nothing (on the platform itself it was `.`, so nothing showed).
+        // An env that is MEANT for MSBuild (PlatformSource, the feed credentials) is not one of these.
+        string[] buildProperties =
+        [
+            "Platform", "Platforms", "Configuration", "OutputPath", "OutDir", "BaseOutputPath", "IntermediateOutputPath",
+            "BaseIntermediateOutputPath", "TargetFramework", "TargetFrameworks", "RuntimeIdentifier", "RuntimeIdentifiers",
+            "AssemblyName", "RootNamespace", "Version", "VersionPrefix", "VersionSuffix", "DefineConstants", "Optimize",
+            "PublishDir", "SolutionDir", "ProjectDir",
+        ];
+        var names = new List<(string Where, string Name)>();
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoRoot(), ".github", "workflows"), "*.yml"))
+        {
+            var where = ".github/workflows/" + Path.GetFileName(file);
+            var lines = Read(where).Split('\n');
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var block = Regex.Match(lines[i], @"^(\s*)env:\s*$");
+                if (!block.Success) continue;
+                var indent = block.Groups[1].Value.Length;
+                for (var j = i + 1; j < lines.Length; j++)
+                {
+                    var key = Regex.Match(lines[j], @"^(\s*)([A-Za-z_][A-Za-z0-9_]*):");
+                    if (lines[j].Trim().Length == 0 || lines[j].TrimStart().StartsWith('#')) continue;
+                    if (!key.Success || key.Groups[1].Value.Length <= indent) break;
+                    if (key.Groups[1].Value.Length == indent + 2) names.Add((where, key.Groups[2].Value));
+                }
+            }
+            names.AddRange(Regex.Matches(string.Join("\n", lines), @"echo ""([A-Za-z_][A-Za-z0-9_]*)=[^\n]*>>\s*""?\$GITHUB_ENV")
+                .Select(m => (where, m.Groups[1].Value)));
+        }
+        names.AddRange(Regex.Matches(Read(".github/scripts/app-names.sh"), @"(?m)^echo ""([A-Za-z_][A-Za-z0-9_]*)=")
+            .Select(m => (".github/scripts/app-names.sh", m.Groups[1].Value)));
+        Assert.True(names.Count > 10, "probe: too few env names found — the scan is broken");
+
+        var clashes = names.Where(n => buildProperties.Contains(n.Name, StringComparer.OrdinalIgnoreCase))
+            .Select(n => $"{n.Where}: {n.Name}").ToList();
+        Assert.True(clashes.Count == 0, "env names MSBuild reads as its own build properties:\n  " + string.Join("\n  ", clashes));
     }
 
     private static string Read(string relative) =>

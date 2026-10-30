@@ -5,7 +5,7 @@
 # src/Web/*.csproj, the MAUI shell src/Maui/*.csproj, the journeys tests/E2E.Tests/*.csproj, and every other
 # tests/*/*.csproj is a test project. The MAUI app's id is its <ApplicationId>; the dev override of its API base URL is
 # <BRAND>_API_BASE_URL, the brand being what platform-stamp.json maps "Perezosoft" to. The Android smoke spec is the
-# repo's own tests/native-smoke-android, else the platform's ($PLATFORM, the workflow's checkout of the platform).
+# repo's own tests/native-smoke-android, else the platform's ($PLATFORM_DIR, the workflow's checkout of the platform).
 #
 # Prints NAME=value lines for $GITHUB_ENV, run from the repo root. A project the repo does not have prints empty.
 set -euo pipefail
@@ -34,7 +34,7 @@ if [ -f platform-stamp.json ]; then
 fi
 
 smoke=tests/native-smoke-android
-[ -d "$smoke" ] || smoke="${PLATFORM:-.}/tests/native-smoke-android"
+[ -d "$smoke" ] || smoke="${PLATFORM_DIR:-.}/tests/native-smoke-android"
 
 echo "HOST_PROJ=$host"
 echo "WEB_PROJ=$web"
