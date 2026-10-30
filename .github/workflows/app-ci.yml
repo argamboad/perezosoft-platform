@@ -1082,7 +1082,10 @@ jobs:
   native-smoke-android:
     needs: changes
     if: needs.changes.outputs.android == 'true'
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest (#466): on Ubuntu 26.04 the emulator goes offline ~40 s after the app launches, on
+    # every attempt (jigger-jot run 41100086516); the last green smokes ran on ubuntu-24.04. Move back to ubuntu-latest
+    # once a run there keeps the emulator up. The Android builds pass on 26.04 and stay on ubuntu-latest.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
