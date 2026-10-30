@@ -68,38 +68,38 @@ jobs:
       - id: plan
         name: Plan — check the version, the branch and the tag
         env:
-          VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ inputs.version }}
           DRY_RUN: ${{ inputs.dry_run }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           # ci-logic begin: release-plan
-          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$'; then
-            echo "::error::$VERSION is not a semantic version (1.0.0, 1.0.0-alpha.1; no leading v)"; exit 1
+          if ! printf '%s' "$RELEASE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$'; then
+            echo "::error::$RELEASE_VERSION is not a semantic version (1.0.0, 1.0.0-alpha.1; no leading v)"; exit 1
           fi
-          case "$VERSION" in *-dry.*) isdry=true ;; *) isdry=false ;; esac
+          case "$RELEASE_VERSION" in *-dry.*) isdry=true ;; *) isdry=false ;; esac
           if [ "$DRY_RUN" = "true" ]; then
-            [ "$isdry" = true ] || { echo "::error::a dry run publishes only a -dry. version (0.0.1-dry.1), not $VERSION"; exit 1; }
+            [ "$isdry" = true ] || { echo "::error::a dry run publishes only a -dry. version (0.0.1-dry.1), not $RELEASE_VERSION"; exit 1; }
             pack=tools/release/dry-run/Perezosoft.Platform.DryRun.csproj
           else
             [ "$isdry" = false ] || { echo "::error::a -dry. version is for a dry run only — tick dry_run, or drop the suffix"; exit 1; }
             case "$REF_NAME" in
               main) ;;
-              develop) case "$VERSION" in *-*) ;; *) echo "::error::a stable release (no prerelease suffix) comes only from main"; exit 1 ;; esac ;;
+              develop) case "$RELEASE_VERSION" in *-*) ;; *) echo "::error::a stable release (no prerelease suffix) comes only from main"; exit 1 ;; esac ;;
               *) echo "::error::a release comes from develop or main, not $REF_NAME"; exit 1 ;;
             esac
             pack=packages   # the projects of platform-packages.props, resolved by the pack step
           fi
-          if git tag --list | grep -qxF "v$VERSION"; then
-            echo "::error::tag v$VERSION already exists — a version is released once; pick the next one"; exit 1
+          if git tag --list | grep -qxF "v$RELEASE_VERSION"; then
+            echo "::error::tag v$RELEASE_VERSION already exists — a version is released once; pick the next one"; exit 1
           fi
-          case "$VERSION" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          case "$RELEASE_VERSION" in *-*) prerelease=true ;; *) prerelease=false ;; esac
           {
-            echo "tag=v$VERSION"
+            echo "tag=v$RELEASE_VERSION"
             echo "prerelease=$prerelease"
             echo "pack=$pack"
             echo "dry=$DRY_RUN"
           } >> "$GITHUB_OUTPUT"
-          echo "Release v$VERSION (prerelease=$prerelease, dry=$DRY_RUN) packing $pack from $REF_NAME"
+          echo "Release v$RELEASE_VERSION (prerelease=$prerelease, dry=$DRY_RUN) packing $pack from $REF_NAME"
           # ci-logic end: release-plan
 
       - uses: actions/setup-dotnet@v5
