@@ -1091,6 +1091,10 @@ jobs:
       # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
       # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
       NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
+      # The mail trap below (the `mail` service), not the app's own local-ports.props SMTP port (#473): an app's
+      # appsettings.Development.json carries ITS port (jigger-jot: 1027), so its OTP mail reached nothing here.
+      Email__Smtp__Host: localhost
+      Email__Smtp__Port: "1025"
     services:
       db:
         image: ghcr.io/argamboad/postgres:17.11  # our copy of the official image (same digest): Docker Hub and Amazon's mirror both limit anonymous pulls
@@ -1292,6 +1296,10 @@ jobs:
       # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
       # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
       NuGetPackageSourceCredentials_perezosoft: Username=${{ github.actor }};Password=${{ github.token }}
+      # The mail trap below (the `mail` service), not the app's own local-ports.props SMTP port (#473): an app's
+      # appsettings.Development.json carries ITS port (jigger-jot: 1027), so its OTP mail reached nothing here.
+      Email__Smtp__Host: localhost
+      Email__Smtp__Port: "1025"
     services:
       db:
         image: ghcr.io/argamboad/postgres:17.11  # our copy of the official image (same digest): Docker Hub and Amazon's mirror both limit anonymous pulls

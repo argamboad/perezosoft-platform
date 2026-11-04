@@ -117,6 +117,22 @@ public class CiWorkflowTests
     }
 
     [Fact]
+    public void JobsWithAMailTrap_SendToIt() // perezosoft-platform#473
+    {
+        // Left alone, the API sends to its appsettings.Development.json SMTP port — the app's local-ports.props one
+        // (jigger-jot: 1027), not the `mail` service here — and every OTP sign-in waits for a mail that never comes.
+        var trapped = Jobs(Read(AppCi)).Where(j => Regex.IsMatch(j.Value, @"(?m)^      mail:\s*$")).ToList();
+        Assert.NotEmpty(trapped);
+        foreach (var (name, body) in trapped)
+        {
+            var smtp = Regex.Match(body, @"ports: \[""(\d+):1025""").Groups[1].Value;
+            Assert.True(smtp.Length > 0, $"{name}: the mail service publishes no SMTP port");
+            Assert.Matches(@"(?m)^      Email__Smtp__Host: localhost\s*$", body);
+            Assert.Matches($@"(?m)^      Email__Smtp__Port: ""{smtp}""\s*$", body);
+        }
+    }
+
+    [Fact]
     public void ChangedFileLists_AreByteSafe() // v4 audit LB-DEP-2 (R137)
     {
         // By default git prints a path holding a byte >= 0x80 quoted and escaped: `src/Api/Features/Añadir.cs`
