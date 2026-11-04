@@ -7,7 +7,7 @@
 # ---- build ---------------------------------------------------------------------------------------
 # The SDK global.json pins: the WebAssembly SDK injects patch-sensitive implicit packages, so a floating tag breaks the
 # lockfiles. Bump it with global.json (dotnet platform port brings both).
-FROM mcr.microsoft.com/dotnet/sdk:10.0.402 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.403 AS build
 WORKDIR /src
 
 # What steers the restore, before it: the build settings (the Build package, a GlobalPackageReference), the package pins,
@@ -42,7 +42,7 @@ RUN dotnet publish src/Web/AppBrand.Web.csproj -c Release --no-restore -o /publi
 
 # ---- runtime -------------------------------------------------------------------------------------
 # The runtime pinned to the ASP.NET Core patch the packages compile against.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.13 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.14 AS runtime
 WORKDIR /app
 
 # curl for the health probe. The image's non-root `app` user runs the host; it owns the local-disk file storage folder
