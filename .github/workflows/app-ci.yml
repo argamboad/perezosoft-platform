@@ -1185,7 +1185,12 @@ jobs:
             echo "::error::the AVD is not visible to the emulator"; ls -la "$ANDROID_AVD_HOME" || true; exit 1; }
 
           echo "launching emulator…"
-          nohup "$SDK/emulator/emulator" -avd smoke -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > emulator.log 2>&1 &
+          # swangle_indirect, not swiftshader_indirect (#472, from jigger-jot 760dfc6, 2026-09-16). A heavier screen
+          # (jigger-jot's sign-in) froze the guest at the app's first render under swiftshader_indirect: logcat stops
+          # dead, the emulator process stays up, adb loses the device ("offline", then nothing). The platform's plain
+          # screens passed on either, which is how the app's fix never came up here.
+          nohup "$SDK/emulator/emulator" -avd smoke -no-window -no-audio -no-snapshot -no-boot-anim \
+            -gpu swangle_indirect > emulator.log 2>&1 &
           EMU_PID=$!
           echo "emulator pid $EMU_PID"
 

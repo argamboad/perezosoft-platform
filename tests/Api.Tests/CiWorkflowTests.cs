@@ -107,6 +107,16 @@ public class CiWorkflowTests
     }
 
     [Fact]
+    public void AndroidSmoke_EmulatorDrawsWithSwangle() // perezosoft-platform#472
+    {
+        // swiftshader_indirect froze the guest at a heavy screen's first render (jigger-jot's sign-in): the emulator
+        // stayed up, adb lost the device. The platform's plain screens pass on either, so only this test holds the line.
+        var gpus = Regex.Matches(Jobs(Read(AppCi))["native-smoke-android"], @"-gpu (\S+)").Select(m => m.Groups[1].Value).ToList();
+        Assert.NotEmpty(gpus);
+        Assert.All(gpus, gpu => Assert.Equal("swangle_indirect", gpu));
+    }
+
+    [Fact]
     public void ChangedFileLists_AreByteSafe() // v4 audit LB-DEP-2 (R137)
     {
         // By default git prints a path holding a byte >= 0x80 quoted and escaped: `src/Api/Features/Añadir.cs`
