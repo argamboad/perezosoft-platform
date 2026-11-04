@@ -4,3 +4,4 @@ exit 0
 +APP_ID=com.jiggerjot.app
 +API_URL_VAR=JIGGERJOT_API_BASE_URL
 +TEST_PROJS=tests/Ui.Tests/JiggerJot.Ui.Tests.csproj
++APP_API_PORT=5438

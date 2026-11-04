@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <LocalApiHttpPort>5438</LocalApiHttpPort>
+  </PropertyGroup>
+</Project>

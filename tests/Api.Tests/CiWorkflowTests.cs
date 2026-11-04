@@ -95,6 +95,18 @@ public class CiWorkflowTests
     }
 
     [Fact]
+    public void AndroidSmoke_BridgesTheAppsOwnApiPort() // perezosoft-platform#468
+    {
+        // The device side of `adb reverse` is the port the app's Debug APK has compiled in: its local-ports.props
+        // <LocalApiHttpPort>, exported by app-names.sh as APP_API_PORT. A literal there is the platform's port, and an
+        // app's APK (jigger-jot: 5438) then talks to nothing — the smoke fails with no request reaching the API.
+        var reverses = Regex.Matches(Jobs(Read(AppCi))["native-smoke-android"], @"(?m)^\s*adb reverse (\S+) (\S+)").ToList();
+        Assert.NotEmpty(reverses);
+        Assert.All(reverses, m => Assert.Equal("\"tcp:$APP_API_PORT\"", m.Groups[1].Value));
+        Assert.Contains("echo \"APP_API_PORT=", Read(".github/scripts/app-names.sh"), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ChangedFileLists_AreByteSafe() // v4 audit LB-DEP-2 (R137)
     {
         // By default git prints a path holding a byte >= 0x80 quoted and escaped: `src/Api/Features/Añadir.cs`
