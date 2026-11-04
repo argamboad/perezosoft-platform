@@ -18,9 +18,9 @@
     <!-- The WebAssembly SDK's build-time packs, pinned: left to the SDK, their versions follow the machine's latest
          installed runtime patch, and a locked restore fails (NU1004) wherever that differs. The platform's own web host
          pins them the same, and bumps them with the SDK. -->
-    <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" VersionOverride="10.0.13" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.NET.ILLink.Tasks" VersionOverride="10.0.13" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.NET.Sdk.WebAssembly.Pack" VersionOverride="10.0.13" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" VersionOverride="10.0.14" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" VersionOverride="10.0.14" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Sdk.WebAssembly.Pack" VersionOverride="10.0.14" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
