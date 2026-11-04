@@ -1229,9 +1229,11 @@ jobs:
           # WebView the smoke is driving (a hung click, or "Cannot access a disposed object"). Bounded,
           # like everything else in this step.
           timeout 120 adb shell am wait-for-broadcast-idle || echo "::warning::broadcast queue not idle after 120 s; launching anyway"
-          # The app's compiled Android base URL is http://localhost:5238 — adb reverse maps the
-          # emulator's localhost:5238 back to this runner (same trick as local dev).
-          adb reverse tcp:5238 tcp:5238
+          # The app's compiled Android base URL is http://localhost:$APP_API_PORT (its local-ports.props
+          # <LocalApiHttpPort>, from app-names.sh) — adb reverse maps the emulator's port to the API on this
+          # runner's 5238 (same trick as local dev). Never a literal device port: an app's differs from the
+          # platform's (#468, jigger-jot's is 5438).
+          adb reverse "tcp:$APP_API_PORT" tcp:5238
           adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
 
           echo "Waiting for the app process…"

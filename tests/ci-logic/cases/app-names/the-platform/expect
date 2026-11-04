@@ -9,3 +9,4 @@ exit 0
 +API_URL_VAR=PEREZOSOFT_API_BASE_URL
 +SMOKE_DIR=tests/native-smoke-android
 -Api.csproj tests/
++APP_API_PORT=5238
