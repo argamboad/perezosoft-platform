@@ -33,8 +33,8 @@ from `.env`'s `PLATFORM_PACKAGES_TOKEN`, the job token in CI (`app-ci.yml`'s `do
 named `nuget` (§4).
 
 > **SDK pin:** the SDK version lives in **`global.json`** (the single source of truth) — CI's
-> `setup-dotnet` reads it, and the Dockerfile build image (`sdk:10.0.402`) + runtime image
-> (`aspnet:10.0.13`, the ASP.NET package line) are pinned to match. The Blazor SDK injects patch-specific implicit packages, so a
+> `setup-dotnet` reads it, and the Dockerfile build image (`sdk:10.0.403`) + runtime image
+> (`aspnet:10.0.14`, the ASP.NET package line) are pinned to match. The Blazor SDK injects patch-specific implicit packages, so a
 > float breaks `--locked-mode`. To bump the SDK, follow the bump-together playbook in `CLAUDE.md` (update
 > global.json → regenerate lockfiles → the two Dockerfile tags → the docs, in one PR).
 
