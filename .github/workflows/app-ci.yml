@@ -1393,6 +1393,9 @@ jobs:
           # this stack — so the magic-link journey (E2E-4) died with ERR_CONNECTION_REFUSED (Playwright
           # attributes the refusal to the *requested* URL, which made it look like the API was down).
           Auth__AppBaseUrl: "http://localhost:5169"
+          # The CORS list comes from the APP's appsettings.Development.json, which names the app's own web port
+          # (jigger-jot: 5369); this stack serves Web on 5169, so put that origin in whatever list it ships (#477).
+          Auth__AllowedOrigins__0: "http://localhost:5169"
         run: |
           set -e
           dotnet run --project "$HOST_PROJ" -c Debug --no-build --urls http://localhost:5238 > api.log 2>&1 &
@@ -1500,6 +1503,7 @@ jobs:
           Auth__RateLimit__RefreshPermitLimit: "1000"
           Admin__StaffEmails__0: "e2e-staff@example.com"
           Auth__AppBaseUrl: "http://localhost:5169"
+          Auth__AllowedOrigins__0: "http://localhost:5169"   # #477, as above
           Signup__AllowedDomains__0: "listed.example.com"
         run: |
           set -e
