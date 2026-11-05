@@ -592,7 +592,8 @@ jobs:
               echo "native=true"
               echo "maui=true"
               echo "docs=true"
-              echo "course=true"
+              # Fail open on what this repo HAS: a downstream app has no course, and a check of it fails (#479).
+              if [ -f docs/tutorial/gen_coverage.py ]; then echo "course=true"; else echo "course=false"; fi
             } >> "$GITHUB_OUTPUT"
             echo "::notice::Diff base unavailable — running every gate."
             exit 0
