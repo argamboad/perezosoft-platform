@@ -80,3 +80,19 @@ test('household: when the fallback fails too, the run fails', async () => {
   page.goto = async () => { throw new Error('reload race'); };
   await assert.rejects(captureLog(() => smoke.navigateToHousehold(page, 1)), /reload race/);
 });
+
+// The WebView attach has a deadline (#475): webView.page() takes no timeout, and once it never answered — 25 min of
+// silence until the run was cancelled. A stalled attach now fails before the login box, which the retry covers.
+test('deadline: an answer in time passes straight through', async () => {
+  assert.equal(await smoke.withDeadline(Promise.resolve('page'), 1000, 'the attach'), 'page');
+});
+
+test('deadline: a call that never answers fails, naming what stalled', { timeout: 2000 }, async () => {
+  await assert.rejects(smoke.withDeadline(new Promise(() => {}), 20, 'the WebView attach'),
+    /the WebView attach gave no answer within 0.02s/);
+});
+
+test('deadline: a stalled webView.page() fails the boot instead of hanging it', { timeout: 2000 }, async () => {
+  const device = { webView: async () => ({ page: () => new Promise(() => {}) }) };
+  await assert.rejects(smoke.bootToLogin(device, 1, 20), /the WebView attach gave no answer/);
+});
