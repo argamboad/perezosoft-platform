@@ -133,6 +133,25 @@ public class CiWorkflowTests
     }
 
     [Fact]
+    public void StepsThatPinTheBrowserOrigin_AllowIt() // perezosoft-platform#477
+    {
+        // The API's CORS list comes from the app's appsettings.Development.json, which names the app's own web port
+        // (jigger-jot: 5369). A step that serves Web on its own origin and says so in Auth__AppBaseUrl must also put
+        // that origin in the list, or every browser call is blocked and the journeys wait on "Loading…".
+        var yml = Read(AppCi);
+        var pins = Regex.Matches(yml, @"(?m)^(\s*)Auth__AppBaseUrl: ""([^""]+)""\s*$").ToList();
+        Assert.NotEmpty(pins);
+        foreach (Match pin in pins)
+        {
+            var origin = pin.Groups[2].Value;
+            var envStart = yml.LastIndexOf("env:", pin.Index, StringComparison.Ordinal);
+            var envEnd = yml.IndexOf("run: |", pin.Index, StringComparison.Ordinal);
+            var env = yml[envStart..envEnd];
+            Assert.Matches($@"(?m)^\s*Auth__AllowedOrigins__0: ""{Regex.Escape(origin)}""", env);
+        }
+    }
+
+    [Fact]
     public void ChangedFileLists_AreByteSafe() // v4 audit LB-DEP-2 (R137)
     {
         // By default git prints a path holding a byte >= 0x80 quoted and escaped: `src/Api/Features/Añadir.cs`
