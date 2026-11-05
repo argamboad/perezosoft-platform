@@ -281,7 +281,12 @@ public class EnforcementGateTests
         var failOpen = ci[from..ci.IndexOf("exit 0", at, StringComparison.Ordinal)];
         foreach (var output in new[] { "code", "native", "maui", "docs" })
             Assert.Contains($"echo \"{output}=true\"", failOpen);
-        Assert.DoesNotContain("=false\"", failOpen);
+        // The one false it may write (#479): course, and only where the repo has no course to check — a downstream
+        // app. There the check cannot run at all, so false skips nothing; in the platform it stays true.
+        const string courseIfAny =
+            "if [ -f docs/tutorial/gen_coverage.py ]; then echo \"course=true\"; else echo \"course=false\"; fi";
+        Assert.Contains(courseIfAny, failOpen);
+        Assert.DoesNotContain("=false\"", failOpen.Replace(courseIfAny, "", StringComparison.Ordinal));
     }
 
     [Theory]
