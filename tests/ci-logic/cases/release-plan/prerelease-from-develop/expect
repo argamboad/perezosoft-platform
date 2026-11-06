@@ -4,3 +4,4 @@ exit 0
 +pack=packages
 -slnx
 +dry=false
+-major=v

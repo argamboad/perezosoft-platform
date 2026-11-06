@@ -1,8 +1,9 @@
 name: CI
 
 # The platform's gates, run on this app (ADR-031): a pull request runs the web gates; a manual "Run workflow" runs the
-# device legs (devices) and the deploys (deploy). The gates themselves are the platform's reusable workflow, at the
-# release this app is on — bump the tag with Directory.Packages.props.
+# device legs (devices) and the deploys (deploy). The gates themselves are the platform's reusable workflow at its major
+# tag: v1 follows every stable 1.x release (ADR-034), so a fix to the gates arrives without a bump here. A new major (v2)
+# is a deliberate move, with the packages.
 on:
   pull_request:
     branches: [main, develop]
@@ -29,7 +30,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: argamboad/perezosoft-platform/.github/workflows/app-ci.yml@v0.0.0-platform
+    uses: argamboad/perezosoft-platform/.github/workflows/app-ci.yml@v1
     with:
       deploy: ${{ inputs.deploy || 'none' }}
       devices: ${{ inputs.devices || 'none' }}

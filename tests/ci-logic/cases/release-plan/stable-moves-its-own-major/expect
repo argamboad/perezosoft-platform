@@ -1,0 +1,4 @@
+exit 0
++tag=v2.1.0
++prerelease=false
++major=v2
