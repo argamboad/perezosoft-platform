@@ -2249,3 +2249,9 @@ link, the invitation and a notification's email copy. `BrandedEmail` stays the d
 which runs after the platform's registrations. `EmailRendererSeamTests` holds the seam: by default the interface resolves
 to the platform's `BrandedEmail`, and an app's renderer receives all four mails the platform sends, over HTTP, through
 the invitation endpoint and through `INotificationService`.
+
+*Amendment (2026-11-06, Pkg 7.1, #426) — the gates at the major tag.* Apps call the reusable workflow as
+`app-ci.yml@v1`, not `@v<version>`: a stable release moves `v<major>` to itself (release.yml's "Move the major tag" step,
+after its own tag is pushed; prereleases and dry runs leave it), so a fix to the gates reaches every 1.x app without a
+bump, while the packages stay pinned to the exact version the app chose. The starter pins `@v1`. A new major is a
+deliberate move of both. 1.0.0 is released from `main` once the apps' conversions are done (owner, 2026-11-06).

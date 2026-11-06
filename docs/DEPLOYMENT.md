@@ -532,9 +532,9 @@ symbol package) with SourceLink to the commit; `Api` depends on the other two at
 
 What a run does, in order: check the version, the branch and that the tag is new (the `release-plan` block, held by
 its ci-logic cases) → tag locally → `dotnet pack` every project with `<IsPackable>true</IsPackable>` (MinVer gives each
-exactly the tag's version; nothing else packs) → push the packages → push the tag → create the GitHub release (a
-prerelease for a `-` version). A push that fails leaves no tag. The workflow is dispatched from the default branch, `develop`
-(`main` is not involved).
+exactly the tag's version; nothing else packs) → push the packages → push the tag → for a stable version, move the major tag (`v1` for 1.x, `git tag -f` + a forced
+push: apps call `app-ci.yml@v1`) → create the GitHub release (a prerelease for a `-` version). A push that fails leaves no tag. A prerelease is dispatched from `develop`, a stable version from
+`main` (the plan refuses a stable version anywhere else).
 
 **Producer-only (Pkg 2.5).** `release.yml`, the note template, `tools/release/**`, its ci-logic cases and
 `platform-packages.props` are classed `producer` in `platform-ownership.json`: the platform publishes, an app never

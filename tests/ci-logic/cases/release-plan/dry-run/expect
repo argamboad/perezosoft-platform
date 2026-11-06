@@ -3,3 +3,4 @@ exit 0
 +prerelease=true
 +pack=tools/release/dry-run/Perezosoft.Platform.DryRun.csproj
 +dry=true
+-major=v

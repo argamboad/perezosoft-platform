@@ -182,10 +182,12 @@ public class StarterTests
         Assert.True(constant.Count == 0, "conditions the template engine would evaluate: " + string.Join("; ", constant));
 
         // 0.0.0-platform is the release the template is packed as (Perezosoft.Platform.Templates bakes it): the package
-        // version, the CI caller's tag, the stamp's commit — and nowhere else.
+        // version and the stamp's commit — and nowhere else. The CI caller pins the moving major tag (app-ci.yml@v1, which
+        // a stable release moves), not the release.
         var baked = StarterFiles(root).Where(f => Text(f).Contains("0.0.0-platform", StringComparison.Ordinal))
             .Select(f => Path.GetRelativePath(Path.Combine(root, "starter"), f).Replace('\\', '/')).Order().ToList();
-        Assert.Equal([".github/workflows/ci.yml", "Directory.Packages.props", "platform-stamp.json"], baked);
+        Assert.Equal(["Directory.Packages.props", "platform-stamp.json"], baked);
+        Assert.Matches(@"app-ci\.yml@v1\s", Text(Path.Combine(root, "starter", ".github", "workflows", "ci.yml")));
         Assert.True(IsOnThePackages(Text(Path.Combine(root, "starter", "platform-stamp.json"))));
     }
 

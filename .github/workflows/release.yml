@@ -93,9 +93,12 @@ jobs:
             echo "::error::tag v$RELEASE_VERSION already exists — a version is released once; pick the next one"; exit 1
           fi
           case "$RELEASE_VERSION" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          # A stable release also moves its major tag (v1 for 1.x): apps pin the reusable workflow as app-ci.yml@v1.
+          major=""; [ "$prerelease" = false ] && [ "$DRY_RUN" != "true" ] && major="v${RELEASE_VERSION%%.*}"
           {
             echo "tag=v$RELEASE_VERSION"
             echo "prerelease=$prerelease"
+            echo "major=$major"
             echo "pack=$pack"
             echo "dry=$DRY_RUN"
           } >> "$GITHUB_OUTPUT"
@@ -188,6 +191,21 @@ jobs:
           # The checkout keeps no token, so this one push authenticates for itself.
           AUTH="$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
           git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin "refs/tags/$TAG"
+
+      - name: Move the major tag (stable releases)
+        if: steps.plan.outputs.dry != 'true' && steps.plan.outputs.major != ''
+        env:
+          TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          MAJOR: ${{ steps.plan.outputs.major }}
+        run: |
+          # Apps call the gates as app-ci.yml@v1 (ADR-034, amended 2026-11-06): the major tag follows every stable release
+          # of its line, so a 1.x fix reaches every app's CI without a bump. It moves only after the release's own tag is
+          # pushed, so it never points at a release that failed. Prereleases and dry runs leave it alone.
+          git tag -f "$MAJOR" "$TAG^{commit}"
+          AUTH="$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push --force origin "refs/tags/$MAJOR"
+          echo "Moved $MAJOR to $TAG."
 
       - name: Release note
         env:

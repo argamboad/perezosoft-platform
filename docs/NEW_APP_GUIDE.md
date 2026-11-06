@@ -248,8 +248,9 @@ sample builds), and nothing else of it is: `git grep DELETE-ME` finds every line
 
 A release is a bump, a port, and maybe a migration — in that order, on one branch:
 
-1. **Bump:** `PlatformPackagesVersion` in `Directory.Packages.props`, and the tag in `.github/workflows/ci.yml`
-   (`app-ci.yml@v<version>`), to the same release — both are seed, so they are yours to move. The release
+1. **Bump:** `PlatformPackagesVersion` in `Directory.Packages.props` to the release. `.github/workflows/ci.yml` calls the
+   gates at the platform's **major tag** (`app-ci.yml@v1`), which every stable 1.x release moves, so it changes only for a
+   new major; an app still on a prerelease pins `app-ci.yml@v<version>` and moves it with the packages. The release
    note says three things: **schema change**, **register change**, **breaking** (ADR-034 point 7).
 2. **Port the register:** `dotnet platform port -Platform <a platform checkout>` (a dry run: the register files it
    would merge, the seed files the platform added, changed or deleted, anything listed for removal), then the same with

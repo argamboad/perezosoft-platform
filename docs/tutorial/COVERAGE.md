@@ -820,7 +820,7 @@
 - `docs/DEPLOYMENT.md` — the runbook is a taught artifact — the learner writes their own
 - `render.yaml` — Render blueprint (ADR-017)
 
-## 8.3 — The deploy pipeline & CI gates (196 files)
+## 8.3 — The deploy pipeline & CI gates (198 files)
 
 - `.github/scripts/deploy-smoke.sh`
 - `.github/scripts/qa-runlog-append-only.sh`
@@ -983,6 +983,8 @@
 - `tests/ci-logic/cases/release-plan/release-refuses-a-dry-version/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/release-plan/stable-from-main/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/release-plan/stable-from-main/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/stable-moves-its-own-major/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
+- `tests/ci-logic/cases/release-plan/stable-moves-its-own-major/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/release-plan/stable-only-from-main/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/release-plan/stable-only-from-main/expect` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
 - `tests/ci-logic/cases/release-plan/tag-already-exists/env` — CI's own verdict logic (classifier, run plan, QA guard, sharding, reports) run for real against fixtures (v4 T8)
@@ -1816,4 +1818,4 @@
 - `tools/publish-native.ps1` — maintainer sideload tooling; native distribution is downstream (ADR-024), referenced by A.1 but never hand-typed
 - `tools/telemetry.ps1` — maintainer machine tooling: the shared local Aspire Dashboard for every app (Local Dev Alignment L13)
 
-**Totals:** 1649 tracked files · 1259 built in lessons · 390 bucketed · 0 unmapped
+**Totals:** 1651 tracked files · 1261 built in lessons · 390 bucketed · 0 unmapped

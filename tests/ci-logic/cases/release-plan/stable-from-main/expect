@@ -3,3 +3,4 @@ exit 0
 +prerelease=false
 +pack=packages
 -slnx
++major=v1
