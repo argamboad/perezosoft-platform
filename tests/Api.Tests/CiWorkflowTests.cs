@@ -458,6 +458,37 @@ public class CiWorkflowTests
         Assert.True(clashes.Count == 0, "env names MSBuild reads as its own build properties:\n  " + string.Join("\n  ", clashes));
     }
 
+    [Fact]
+    public void AStepThatCanRunOnWindows_ReadsTheJobsEnvTheWayItsShellDoes()
+    {
+        // A Windows runner's default shell is PowerShell, where "$MAUI_PROJ" is a variable of its own, empty, not the job's
+        // environment (that is $env:MAUI_PROJ): dotnet then gets no project. native-build's Windows leg shipped so in the
+        // reusable workflow and failed on its first run, in every repo. A pull request never runs that leg, so only this holds it.
+        var wrong = new List<string>();
+        var scanned = 0;
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoRoot(), ".github", "workflows"), "*.yml"))
+        {
+            var where = Path.GetFileName(file);
+            foreach (var (job, body) in Jobs(Read(".github/workflows/" + where)))
+            {
+                if (!Regex.IsMatch(body, @"runs-on: (windows-|\$\{\{ matrix\.os \}\})")) continue;
+                scanned++;
+                if (Regex.IsMatch(body, @"defaults:\s+run:\s+shell: bash")) continue;
+                foreach (var step in Regex.Split(body, @"(?m)^      - ").Skip(1))
+                {
+                    var run = Regex.Match(step, @"(?m)^\s*run:");
+                    if (!run.Success || Regex.IsMatch(step, @"(?m)^\s*shell: bash")) continue;
+                    var script = string.Join("\n", step[run.Index..].Split('\n').Where(l => !l.TrimStart().StartsWith('#')));
+                    wrong.AddRange(Regex.Matches(script, @"\$([A-Z_][A-Z0-9_]*)\b")
+                        .Where(m => m.Groups[1].Value != "LASTEXITCODE") // PowerShell's own
+                        .Select(m => $"{where} / {job}: {m.Value}"));
+                }
+            }
+        }
+        Assert.True(scanned >= 3, "probe: too few Windows-capable jobs found — the scan is broken");
+        Assert.True(wrong.Count == 0, "PowerShell steps that read the job's env as $NAME (use $env:NAME, or `shell: bash`):\n  " + string.Join("\n  ", wrong));
+    }
+
     private static string Read(string relative) =>
         File.ReadAllText(Path.Combine(RepoRoot(), relative)).ReplaceLineEndings("\n");
 

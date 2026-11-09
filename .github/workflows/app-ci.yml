@@ -408,6 +408,10 @@ jobs:
         include: ${{ fromJSON(needs.changes.outputs.buildmatrix) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    # Bash on every leg: on the Windows one the default shell is PowerShell, where "$MAUI_PROJ" is empty, not the job's env.
+    defaults:
+      run:
+        shell: bash
     env:
       # The platform's feed, by the source's key in nuget.config ("perezosoft", a keep-list token every app shares): the
       # job token, as NuGet's per-source variable, so no credential is ever written to a file. Only on jobs that restore.
